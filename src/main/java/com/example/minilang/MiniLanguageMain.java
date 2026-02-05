@@ -3,27 +3,60 @@ package com.example.minilang;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+import java.util.Map;
 
 public class MiniLanguageMain {
     public static void main(String[] args) {
-        // 1. Definition
-        String input = "3 + 5 * 2";
+        String input = "3 + 5 == 8";
 
-        // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         GrammarParser parser = new GrammarParser(tokens);
-
-        // 3. Parse and create Tree
         ParseTree tree = parser.program();
 
-        // 4. Visit the tree to calculate result
-        EvalVisitor eval = new EvalVisitor();
-        Integer result = eval.visit(tree);
+        TypeCheckerVisitor typeChecker = new TypeCheckerVisitor();
+        typeChecker.visit(tree);
+        Map<ParseTree, Type> annotations = typeChecker.getNodeTypes();
 
-        // 5. Output
-        System.out.println("Equation: " + input);
-        System.out.println("Tree: " + tree.toStringTree(parser));
-        System.out.println("Result:   " + result);
+
+        System.out.println("--- Annotated Tree (Lisp Style) ---");
+        System.out.println(toLispStyleString(tree, annotations));
+        System.out.println("-----------------------------------");
+
+
+        EvalVisitor eval = new EvalVisitor();
+        Object result = eval.visit(tree);
+        System.out.println("Result: " + result);
+    }
+
+    private static String toLispStyleString(ParseTree node, Map<ParseTree, Type> annotations) {
+        if (node.getChildCount() == 0) {
+            return node.getText();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("(");
+
+
+        String name = node.getClass().getSimpleName().replace("Context", "");
+
+        name = Character.toLowerCase(name.charAt(0)) + name.substring(1);
+        sb.append(name);
+
+        // Append Type if it exists
+        Type type = annotations.get(node);
+        if (type != null) {
+            sb.append(":").append(type);
+        }
+
+        // Process children
+        for (int i = 0; i < node.getChildCount(); i++) {
+            sb.append(" ");
+            sb.append(toLispStyleString(node.getChild(i), annotations));
+        }
+
+        sb.append(")");
+
+        return sb.toString();
     }
 }

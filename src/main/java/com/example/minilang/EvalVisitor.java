@@ -2,52 +2,34 @@ package com.example.minilang;
 
 import com.example.minilang.GrammarParser.*;
 
-public class EvalVisitor extends GrammarBaseVisitor<Integer> {
+public class EvalVisitor extends GrammarBaseVisitor<Object> {
 
-    /**
-     * Corresponds to: INT #Int
-     */
     @Override
-    public Integer visitInt(IntContext ctx) {
+    public Object visitInt(IntContext ctx) {
         return Integer.valueOf(ctx.INT().getText());
     }
 
-    /**
-     * Corresponds to: left=exp (PLUS | MINUS) right=exp #AddSub
-     */
     @Override
-    public Integer visitAddSub(AddSubContext ctx) {
-        int left = visit(ctx.left);   // Use the 'left' label
-        int right = visit(ctx.right); // Use the 'right' label
-
-        // Since 'op=' was not used in grammar, check existence of token
-        if (ctx.PLUS() != null) {
-            return left + right;
-        } else {
-            return left - right;
-        }
+    public Object visitBool(BoolContext ctx) {
+        return Boolean.valueOf(ctx.BOOL().getText());
     }
 
-    /**
-     * Corresponds to: left=exp (MULTIPLY | DIVIDE) right=exp #MulDiv
-     */
     @Override
-    public Integer visitMulDiv(MulDivContext ctx) {
-        int left = visit(ctx.left);
-        int right = visit(ctx.right);
+    public Object visitAddSub(AddSubContext ctx) {
+        int left = (int) visit(ctx.left);   // Casts work because TypeChecker proved they are Ints
+        int right = (int) visit(ctx.right);
 
-        if (ctx.MULTIPLY() != null) {
-            return left * right;
-        } else {
-            return left / right;
-        }
+        if (ctx.PLUS() != null) return left + right;
+        return left - right;
     }
 
-    /**
-     * Entry point
-     */
     @Override
-    public Integer visitProgram(ProgramContext ctx) {
-        return visit(ctx.exp());
+    public Object visitEq(EqContext ctx) {
+        Object left = visit(ctx.left);
+        Object right = visit(ctx.right);
+        return left.equals(right);
     }
+
+    @Override
+    public Object visitProgram(ProgramContext ctx) { return visit(ctx.exp()); }
 }
