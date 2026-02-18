@@ -1,4 +1,4 @@
-﻿package com.example.minilang; // AST Definition
+package com.example.minilang; // AST Definition
 
 /**
  * One file to rule them all.
