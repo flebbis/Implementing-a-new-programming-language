@@ -15,6 +15,8 @@ exp: '(' exp ')'                               #ParensExp
 
 // java.GrammarLexer Rules
 INT         : [0-9]+;
+BOOL        : 'true' | 'false';
+DOUBLE      : [0-9]+ '.' [0-9]+;
 PLUS        : '+';
 MINUS       : '-';
 MULTIPLY    : '*';

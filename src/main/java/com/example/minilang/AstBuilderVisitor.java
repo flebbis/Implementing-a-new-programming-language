@@ -1,4 +1,4 @@
-﻿package com.example.minilang; // Builder Visitor
+package com.example.minilang; // Builder Visitor
 
 import com.example.minilang.GrammarParser.*;
 
