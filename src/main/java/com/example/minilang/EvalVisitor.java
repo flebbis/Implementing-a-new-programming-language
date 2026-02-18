@@ -2,34 +2,57 @@ package com.example.minilang;
 
 import com.example.minilang.GrammarParser.*;
 
-public class EvalVisitor extends GrammarBaseVisitor<Object> {
+public class EvalVisitor extends GrammarBaseVisitor<Integer> {
 
+    /**
+     * Corresponds to: INT #Int
+     */
     @Override
-    public Object visitInt(IntContext ctx) {
+    public Integer visitInt(IntContext ctx) {
         return Integer.valueOf(ctx.INT().getText());
     }
 
+    /**
+     * Corresponds to: left=exp (PLUS | MINUS) right=exp #AddSub
+     */
     @Override
-    public Object visitBool(BoolContext ctx) {
-        return Boolean.valueOf(ctx.BOOL().getText());
+    public Integer visitAddSub(AddSubContext ctx) {
+        int left = visit(ctx.left);   // Use the 'left' label
+        int right = visit(ctx.right); // Use the 'right' label
+
+        // Since 'op=' was not used in grammar, check existence of token
+        if (ctx.PLUS() != null) {
+            return left + right;
+        } else {
+            return left - right;
+        }
+    }
+
+    /**
+     * Corresponds to: left=exp (MULTIPLY | DIVIDE) right=exp #MulDiv
+     */
+    @Override
+    public Integer visitMulDiv(MulDivContext ctx) {
+        int left = visit(ctx.left);
+        int right = visit(ctx.right);
+
+        if (ctx.MULTIPLY() != null) {
+            return left * right;
+        } else {
+            return left / right;
+        }
     }
 
     @Override
-    public Object visitAddSub(AddSubContext ctx) {
-        int left = (int) visit(ctx.left);   // Casts work because TypeChecker proved they are Ints
-        int right = (int) visit(ctx.right);
-
-        if (ctx.PLUS() != null) return left + right;
-        return left - right;
+    public Integer visitParensExp(ParensExpContext ctx) {
+        return visit(ctx.exp());
     }
 
+    /**
+     * Entry point
+     */
     @Override
-    public Object visitEq(EqContext ctx) {
-        Object left = visit(ctx.left);
-        Object right = visit(ctx.right);
-        return left.equals(right);
+    public Integer visitProgram(ProgramContext ctx) {
+        return visit(ctx.exp());
     }
-
-    @Override
-    public Object visitProgram(ProgramContext ctx) { return visit(ctx.exp()); }
 }
