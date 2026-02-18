@@ -25,6 +25,11 @@ bin/
 
 ### VS Code ###
 .vscode/
+/src/main/antlr4/com/example/minilang/.antlr
 
 ### Mac OS ###
 .DS_Store
+
+
+### General ###
+/target
