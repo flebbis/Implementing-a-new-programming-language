@@ -12,14 +12,15 @@ import java.nio.file.Path;
 public class MiniLanguageMain {
     public static void main(String[] args) throws IOException {
         String path;
+        String testFilePath = "src/test/resources/";
 
         if(args.length != 1) {
-             path = "src/test/resources/syntax/good/good-1.lang";
+             path = testFilePath + "syntax/good/good-1.ml";
 
         } else if (args.length == 1){
              path = args[0];
         } else {
-            System.err.println("Usage: java -jar minilang.jar <file>");
+            System.err.println("Either provide a file path as an argument or no arguments to use the default file.");
             System.exit(1);
             return;
         }
