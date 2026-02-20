@@ -10,9 +10,13 @@ def: stm    #DStm
     | func  #DFunc
     ;
 
-func: TYPE 'func' ID '(' expSeparator ')' block #FuncNoInference
+func: TYPE 'func' ID '(' paramSeparator ')' block #FuncNoInference
     | 'func' ID '(' expSeparator ')' block      #FuncInference
     ;
+
+param: TYPE ID        #ParamDecl
+;
+
 
 stm: exp SEXPEND                        #SExp
     | 'return' exp                      #SReturn
@@ -65,6 +69,7 @@ exp: '(' exp ')'                                                 #EParensExp
    ;
 
 expSeparator: (exp (',' exp)* )?;
+paramSeparator: (param (',' param)* )?;
 
 // java.GrammarLexer Rules
 
