@@ -22,6 +22,7 @@ exp: '(' exp ')'                               #ParensExp
    | ID PLUS_ASSIGN exp             #PlusAssignExp
    | ID MINUS_ASSIGN exp            #MinusAssignExp
    | ID DIV_ASSIGN exp              #DivAssignExp
+   
    ;
 
 // java.GrammarLexer Rules
@@ -52,3 +53,5 @@ PLUS_ASSIGN : '+=';
 MINUS_ASSIGN: '-=';
 MULT_ASSIGN : '*=';
 DIV_ASSIGN  : '/=';
+DYNARR_START   : '[';
+DYNARR_END     : ']';

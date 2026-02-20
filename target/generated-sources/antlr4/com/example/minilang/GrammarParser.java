@@ -20,7 +20,7 @@ public class GrammarParser extends Parser {
 		T__0=1, T__1=2, STRING=3, DOUBLE=4, INT=5, BOOL=6, PLUS=7, MINUS=8, MULTIPLY=9, 
 		DIVIDE=10, WHITESPACE=11, POWER=12, GT=13, LT=14, LE=15, GE=16, EQ=17, 
 		NE=18, AND=19, OR=20, NOT=21, ID=22, ASSIGN=23, PLUS_ASSIGN=24, MINUS_ASSIGN=25, 
-		MULT_ASSIGN=26, DIV_ASSIGN=27;
+		MULT_ASSIGN=26, DIV_ASSIGN=27, DYNARR_START=28, DYNARR_END=29;
 	public static final int
 		RULE_program = 0, RULE_exp = 1;
 	private static String[] makeRuleNames() {
@@ -34,7 +34,8 @@ public class GrammarParser extends Parser {
 		return new String[] {
 			null, "'('", "')'", null, null, null, null, "'+'", "'-'", "'*'", "'/'", 
 			null, "'**'", "'>'", "'<'", "'<='", "'>='", "'=='", "'!='", "'and'", 
-			"'or'", "'not'", null, "'='", "'+='", "'-='", "'*='", "'/='"
+			"'or'", "'not'", null, "'='", "'+='", "'-='", "'*='", "'/='", "'['", 
+			"']'"
 		};
 	}
 	private static final String[] _LITERAL_NAMES = makeLiteralNames();
@@ -43,7 +44,7 @@ public class GrammarParser extends Parser {
 			null, null, null, "STRING", "DOUBLE", "INT", "BOOL", "PLUS", "MINUS", 
 			"MULTIPLY", "DIVIDE", "WHITESPACE", "POWER", "GT", "LT", "LE", "GE", 
 			"EQ", "NE", "AND", "OR", "NOT", "ID", "ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", 
-			"MULT_ASSIGN", "DIV_ASSIGN"
+			"MULT_ASSIGN", "DIV_ASSIGN", "DYNARR_START", "DYNARR_END"
 		};
 	}
 	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
@@ -781,7 +782,7 @@ public class GrammarParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\u0004\u0001\u001b6\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0001"+
+		"\u0004\u0001\u001d6\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0001"+
 		"\u0000\u0001\u0000\u0001\u0000\u0001\u0001\u0001\u0001\u0001\u0001\u0001"+
 		"\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001"+
 		"\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001\u0001"+
