@@ -1,0 +1,51 @@
+{
+  "name": "mylang",
+  "description": "language server following lsp for this unnamed language",
+  "author": "Cole",
+  "license": "MIT",
+  "version": "0.0.1",
+  "publisher": "we :)",
+  "categories": [
+    "Programming Languages"
+  ],
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "activationEvents": [
+   
+  ],
+  "main": "./client/out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mylang",
+        "extensions": [
+          ".ml"
+        ],
+        "aliases": [
+          "mylang",
+          "myLang",
+          "MyLang"
+        ],
+        "configuration": "./language-tools/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mylang",
+        "scopeName": "source.mylang",
+        "path": "./syntaxes/mylang.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.7",
+    "typescript": "^5.2.2"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "scopeName": "source.mylang",
+  "patterns": [{"include": "#expression"}],
+  "repository": {
+    "expression": {
+      "patterns":[{"include": "#any"}]
+    },
+    "any": {
+      "match": ".*",
+      "name": "any.all.everything"
+    }
+  }
+}
