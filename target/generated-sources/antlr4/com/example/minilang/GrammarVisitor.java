@@ -115,13 +115,6 @@ public interface GrammarVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitMinusAssignExp(GrammarParser.MinusAssignExpContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code Boolean}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitBoolean(GrammarParser.BooleanContext ctx);
-	/**
 	 * Visit a parse tree produced by the {@code Power}
 	 * labeled alternative in {@link GrammarParser#exp}.
 	 * @param ctx the parse tree

@@ -186,18 +186,6 @@ public interface GrammarListener extends ParseTreeListener {
 	 */
 	void exitMinusAssignExp(GrammarParser.MinusAssignExpContext ctx);
 	/**
-	 * Enter a parse tree produced by the {@code Boolean}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 */
-	void enterBoolean(GrammarParser.BooleanContext ctx);
-	/**
-	 * Exit a parse tree produced by the {@code Boolean}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 */
-	void exitBoolean(GrammarParser.BooleanContext ctx);
-	/**
 	 * Enter a parse tree produced by the {@code Power}
 	 * labeled alternative in {@link GrammarParser#exp}.
 	 * @param ctx the parse tree

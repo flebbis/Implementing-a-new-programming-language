@@ -16,7 +16,6 @@ exp: '(' exp ')'                               #ParensExp
    | left=exp OR right=exp                     #OrExp
    | INT                            #Int     
    | DOUBLE                         #Double    
-   | BOOLEAN                        #Boolean
    | STRING                         #String
    | ID                             #IdExp
    | ID ASSIGN exp                  #AssignmentExp
@@ -29,11 +28,9 @@ exp: '(' exp ')'                               #ParensExp
 
 STRING      : '"'  ( '\\' . | ~["\\] )* '"' |
               '\'' ( '\\' . | ~['\\] )* '\'';
-BOOLEAN     : 'True' | 'False';
 DOUBLE      : [0-9]+ '.'? [0-9]*;
 INT         : [0-9]+;
 BOOL        : 'true' | 'false';
-DOUBLE      : [0-9]+ '.' [0-9]+;
 PLUS        : '+';
 MINUS       : '-';
 MULTIPLY    : '*';
