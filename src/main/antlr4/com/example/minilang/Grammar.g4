@@ -60,6 +60,8 @@ exp: '(' exp ')'                                                 #EParensExp
    | ID ASSIGN DYNARR_START expSeparator DYNARR_END              #DynamicArrayInference
    | ID '(' expSeparator ')'                                     #EFunctionCall
    | ID '[' exp ']'                                              #EArrayIndexing
+   | ID INC                                                      #EInc
+   | ID DEC                                                      #EDec
    ;
 
 expSeparator: (exp (',' exp)* )?;
@@ -96,6 +98,8 @@ DYNARR_START : '[';
 DYNARR_END   : ']';
 SEXPEND   : ';' | '\n';
 TYPE        : 'int' | 'double' | 'string' | 'bool';
+INC          : '++';
+DEC          : '--';
 
 
 // Single-line comments
