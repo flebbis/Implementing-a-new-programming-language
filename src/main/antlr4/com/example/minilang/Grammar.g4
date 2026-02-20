@@ -116,4 +116,3 @@ BLOCK_COMMENT
 WS
     : [ \t\r\n]+ -> skip
     ;
-
