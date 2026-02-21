@@ -23,6 +23,12 @@
             <artifactId>antlr4-runtime</artifactId>
             <version>${antlr.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
@@ -48,12 +54,25 @@
                 </configuration>
             </plugin>
 
-
-            <!-- THIS is what fixes your error -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.example.minilang.MiniLanguageMain</mainClass>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.example.minilang.MiniLanguageMain</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
 
         </plugins>
