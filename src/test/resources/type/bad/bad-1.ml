@@ -1,0 +1,1 @@
+int i = "hello world"; // not a valid assignment, should be an int
