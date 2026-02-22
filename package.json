@@ -34,7 +34,7 @@
       {
         "language": "mylang",
         "scopeName": "source.mylang",
-        "path": "./syntaxes/mylang.tmLanguage.json"
+        "path": "./language-tools/mylang.tmLanguage.json"
       }
     ]
   },
