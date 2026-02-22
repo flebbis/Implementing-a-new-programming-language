@@ -1,13 +1,72 @@
 {
   "scopeName": "source.mylang",
-  "patterns": [{"include": "#expression"}],
+  "patterns": [{"include": "#Statement"}, {"include": "#Function"}, {"include": "#Comment"}],
   "repository": {
-    "expression": {
-      "patterns":[{"include": "#any"}]
+    "Statement": {
+      "patterns": [{"include": "#Expression"}, {"include": "#StatementBlock"}]
     },
-    "any": {
-      "match": ".*",
-      "name": "any.all.everything"
+    "Expression": {
+      "name": "expression",
+      "patterns":[
+        {"include": "#ParensExp"}, 
+        {"include": "#Mul"}, 
+        {"include": "#Div"},
+        {"include": "#Add"},
+        {"include": "#Sub"},
+        {"include": "#Litteral"} 
+      ]
+    },
+    "ParensExp": {
+      "name":"expression.parens-expression",
+      "begin": "\\(",
+      "end": "\\)",
+      "patterns": [{"include":"#Expression"}]
+    },
+    "StatementBlock": {
+      "name": "statement.block",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [{"include": "#Statement"}]
+    },
+    "Litteral": {
+      "name": "constant.litteral",
+      "patterns": [
+        {"include": "#Double"},
+        {"include": "#Int"},
+        {"include": "#Bool"},
+        {"include": "#String"}]
+    },
+    "Double": {
+      "name": "constant.numeric.expression.litteral.double",
+      "match": "\\b[1-9][0-9]*\\.[0-9]*\\b"
+    },
+    "Int": {
+      "name": "constant.numeric.expression.litteral.integer",
+      "match": "\\b[1-9][0-9]*\\b"
+    },
+    "Bool": {
+      "name": "constant.language.expression.litteral.boolean",
+      "match": "\\b(true|false)\\b"
+    },
+    "String": {
+      "name": "string.quoted.double.expression.litteral.string",
+      "begin": "\"",
+      "end": "\""
+    },
+    "Comment": {
+      "name": "comment",
+      "patterns": [
+        {"include":"#CommentLine"},
+        {"include":"#CommentBlock"}]
+    },
+    "CommentLine": {
+      "name": "comment.line.double-slash",
+      "match": "//.*$"
+    },
+    "CommentBlock": {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
     }
   }
 }

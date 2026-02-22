@@ -35,7 +35,7 @@
 	},
 	"onEnterRules": [ 
 		{
-			"beforeText": "^\\s*(?for|if|else|while|do).*?\\s*$",
+			"beforeText": "^\\s*((for|if|while|do) ?\\(.*\\)|else)[ \\t]*(?!\\{)(\\/\\/.*)?$",
 			"action": { "indent": "indent" }
 		}
 	]
