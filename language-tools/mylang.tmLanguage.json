@@ -5,14 +5,17 @@
     "Statement": {
       "patterns": [{"include": "#Expression"}, {"include": "#StatementBlock"}]
     },
+    "StatementBlock": {
+      "name": "statement.block",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [{"include": "#Statement"}]
+    },
     "Expression": {
       "name": "expression",
       "patterns":[
         {"include": "#ParensExp"}, 
-        {"include": "#Mul"}, 
-        {"include": "#Div"},
-        {"include": "#Add"},
-        {"include": "#Sub"},
+        {"include": "#Operator"}, 
         {"include": "#Litteral"} 
       ]
     },
@@ -22,11 +25,86 @@
       "end": "\\)",
       "patterns": [{"include":"#Expression"}]
     },
-    "StatementBlock": {
-      "name": "statement.block",
-      "begin": "\\{",
-      "end": "\\}",
-      "patterns": [{"include": "#Statement"}]
+    "Operator": {
+      "name": "keyword.operator",
+      "patterns": [
+        {"include": "#ArithmeticOperator"},
+        {"include": "#BooleanOperator"}
+      ]
+    },
+    "ArithmeticOperator": {
+      "name": "keyword.operator.arithmetic",
+      "patterns": [
+        {"include": "#AddOp"},
+        {"include": "#MulOp"},
+        {"include": "#SubOp"},
+        {"include": "#DivOp"}]
+    },
+    "AddOp" : {
+      "name": "keyword.operator.arithmetic.addition",
+      "match": "\\+"
+    },
+    "MulOp" : {
+      "name": "keyword.operator.arithmetic.multiplication",
+      "match": "\\*"
+    },
+    "SubOp" : {
+      "name": "keyword.operator.arithmetic.subtraction",
+      "match": "\\-"
+    },
+    "DivOp" : {
+      "name": "keyword.operator.arithmetic.division",
+      "match": "\/"
+    },
+    "BooleanOperator": {
+      "name": "keyword.operator.boolean",
+      "patterns" : [
+        {"include": "#Equality"},
+        {"include": "#NegatedEquality"},
+        {"include": "#Negation"},
+        {"include": "#LessThanOrEqual"},
+        {"include": "#GreaterThanOrEqual"},
+        {"include": "#LessThan"},
+        {"include": "#GreaterThan"},
+        {"include": "#Disjuntion"},
+        {"include": "#Conjunction"}
+      ]
+    },
+    "Equality": {
+      "name": "keyword.operator.boolean.equality",
+      "match": "=="
+    },
+    "Negation": {
+      "name": "keyword.operator.boolean.negation",
+      "match" : "!"
+    },
+    "NegatedEquality": {
+      "name": "keyword.operator.boolean.negated-equality",
+      "match" : "!="
+    },
+    "LessThan": {
+      "name": "keyword.operator.boolean.less-than",
+      "match" : "<"
+    },
+    "GreaterThan": {
+      "name": "keyword.operator.boolean.greater-than",
+      "match" : ">"
+    },
+    "LessThanOrEqual": {
+      "name": "keyword.operator.boolean.less-or-equal",
+      "match" : "<="
+    },
+    "GreaterThanOrEqual": {
+      "name": "keyword.operator.boolean.greater-or-equal",
+      "match" : ">="
+    },
+    "Disjuntion": {
+      "name": "keyword.operator.boolean.logic.disjunction",
+      "match": "OR"
+    },
+    "Conjunction": {
+      "name": "keyword.operator.boolean.logic.conjunction",
+      "match": "AND"
     },
     "Litteral": {
       "name": "constant.litteral",
