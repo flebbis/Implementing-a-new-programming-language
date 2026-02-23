@@ -1,6 +1,6 @@
 {
   "scopeName": "source.mylang",
-  "patterns": [{"include": "#Statement"}, {"include": "#Function"}, {"include": "#Comment"}],
+  "patterns": [{"include": "#Comment"}, {"include": "#Statement"}, {"include": "#Function"}],
   "repository": {
     "Statement": {
       "patterns": [{"include": "#Expression"}, {"include": "#StatementBlock"}]
