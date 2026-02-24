@@ -34,3 +34,8 @@ bin/
 ### General ###
 /target
 target/
+/target/
+/target/**
+*.class
+*.interp
+*.tokens

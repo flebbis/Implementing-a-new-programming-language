@@ -3,10 +3,11 @@ grammar Grammar;
 
 
 // Root rule: allow optional statement-end tokens between/after definitions
-program : (def SEXPEND?)* EOF;
+program : (def)* EOF;
 
-def: stm    #DStm
-    | func  #DFunc
+def
+    : func  #DFunc
+    | stm    #DStm
     ;
 
 func: TYPE 'func' ID '(' paramSeparator ')' block #FuncNoInference
@@ -17,25 +18,15 @@ param: TYPE ID        #ParamDecl
 ;
 
 stm
-    : init SEXPEND?                     #SInit
-    | decl SEXPEND?                     #SDecl
-    | 'return' exp SEXPEND?             #SReturn
-    | 'while' exp '{' stm '}'           #SWhile
-    | 'do' exp '{' stm '}'              #SDo
-    | ifStmt                            #SIfElse
-    | block                             #SBlock
-    | exp SEXPEND?                      #SExp
+    : init terminator?                      #SInit
+    | decl terminator?                      #SDecl
+    | 'return' exp terminator?              #SReturn
+    | 'while' exp stm                       #SWhile
+    | 'do' exp stm                          #SDo
+    | ifStmt                                #SIfElse
+    | block                                 #SBlock
+    | exp terminator?                       #SExp
     ;
-//
-//stm: exp SEXPEND                        #SExp
-//    | 'return' exp                      #SReturn
-//    | 'while' exp '{' stm '}'           #SWhile
-//    | 'do' exp '{' stm '}'              #SDo
-//    | ifStmt                            #SIfElse
-//    | block                             #SBlock
-//    | decl SEXPEND                      #SDecl
-//    | init SEXPEND                      #SInit
-//    ;
 
 decl: TYPE ID  #DeclNoInference
     | ID       #DeclInference
@@ -45,7 +36,9 @@ init: TYPE ID ASSIGN exp  #InitNoInference
     | ID ASSIGN exp       #InitInference
     ;
 
-block: '{' stm* '}';
+//block: '{' stm* '}';
+block: '{' (terminator | stm)* '}';
+
 
 ifStmt  : 'if' exp block ('else' ifStmt)?   #IfElseIf
         | 'if' exp block 'else' block       #IfElse
@@ -134,7 +127,9 @@ primary
     | ID ASSIGN DYNARR_START expSeparator DYNARR_END
     ;
 
-
+terminator
+    : (SEMI| NL)+
+    ;
 
 expSeparator: (exp (',' exp)* )?;
 paramSeparator: (param (',' param)* )?;
@@ -171,16 +166,11 @@ DYNARR_END   : ']';
 INC          : '++';
 DEC          : '--';
 BOM : '\uFEFF' -> skip;
-SEXPEND
-    : SEMI
-    | NL
-    | SEMI NL
-    ;
 
 
 // To this (Newlines are no longer skipped)
 WS : [ \t]+ -> skip;
-NL : [\r\n]+;
+NL : '\r'? '\n' ;
 SEMI : ';';
 
 //WHITESPACE  : [ \t\r\n]+ -> skip;
