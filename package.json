@@ -11,9 +11,7 @@
   "engines": {
     "vscode": "^1.75.0"
   },
-  "activationEvents": [
-   
-  ],
+  "activationEvents": [],
   "main": "./client/out/extension",
   "contributes": {
     "languages": [
@@ -36,6 +34,12 @@
         "scopeName": "source.mylang",
         "path": "./language-tools/mylang.tmLanguage.json"
       }
+    ],
+    "commands": [
+      {
+        "command": "assembly-preview.show",
+        "title": "Show Assembly"
+      }
     ]
   },
   "scripts": {
@@ -46,6 +50,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.5.7",
+    "@types/vscode": "^1.109.0",
     "typescript": "^5.2.2"
   }
 }

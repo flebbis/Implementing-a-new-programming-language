@@ -1,5 +1,7 @@
 import * as path from "path";
 import { workspace, ExtensionContext } from "vscode";
+import * as vscode from 'vscode';
+import { execFileSync } from 'child_process';
 
 import {
   LanguageClient,
@@ -7,6 +9,24 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+// felix JAR
+const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
+class AsmProvider implements vscode.TextDocumentContentProvider {
+  private content = '; No assembly yet.\n; Open a file and run "Show Assembly".';
+  private emitter = new vscode.EventEmitter<vscode.Uri>();  // tell vsCode that the file has changed
+  readonly onDidChange = this.emitter.event;
+
+  static readonly uri = vscode.Uri.parse('asm-preview://output/assembly.asm');
+
+  setContent(text: string) {
+      this.content = text;
+      this.emitter.fire(AsmProvider.uri);
+  }
+
+  provideTextDocumentContent(): string {
+      return this.content;
+  }
+}
 
 let client: LanguageClient;
 
@@ -47,6 +67,40 @@ export function activate(context: ExtensionContext) {
 
   // Start the client. This will also launch the server
   client.start();
+     
+  // ------ Show assembly -------- AI ville bara se hur det skulle se ut
+  const asmProvider = new AsmProvider();
+    context.subscriptions.push(
+        vscode.workspace.registerTextDocumentContentProvider('asm-preview', asmProvider)
+    );
+
+    const showAsmCmd = vscode.commands.registerCommand('assembly-preview.show', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('Open a source file first.');
+            return;
+        }
+
+        await editor.document.save();
+        const srcPath = editor.document.uri.fsPath;
+
+        let asm: string;
+        try {
+            const result = execFileSync('java', ['-jar', JAR_PATH, srcPath]);
+            asm = result.toString();
+        } catch (e: any) {
+            const stderr = e.stderr?.toString() ?? '';
+            asm = '; ── Compiler Error ──\n' +
+                  (stderr || e.message).split('\n').map((l: string) => '; ' + l).join('\n');
+        }
+
+        asmProvider.setContent(asm);
+
+        const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
+    });
+
+    context.subscriptions.push(showAsmCmd);
 }
 
 export function deactivate(): Thenable<void> | undefined {
