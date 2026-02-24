@@ -39,3 +39,5 @@ target/
 *.class
 *.interp
 *.tokens
+/.idea/
+*.iml
