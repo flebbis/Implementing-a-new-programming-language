@@ -4,31 +4,26 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 public class MiniLanguageMain {
-    public static void main(String[] args) {
-        // 1. Definition
-        String input = "(4 + 3) + 5 * 2";
+    public static void main(String[] args) throws IOException {
+        String path;
+        String testFilePath = "src/test/resources/";
 
-        // 2. Infrastructure
-        GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        GrammarParser parser = new GrammarParser(tokens);
+        if(args.length == 0) {
+             path = testFilePath + "syntax/good/good-1.ml";
 
-        // 3. Parse and create Tree
-        ParseTree tree = parser.program();
-
-        // 4. Visit the tree to calculate result
-        EvalVisitor eval = new EvalVisitor();
-        Integer result = eval.visit(tree);
-
-        // 5. Output
-        System.out.println("Equation: " + input);
-        System.out.println("Tree: " + tree.toStringTree(parser));
-        System.out.println("Result:   " + result);
-
-        // 6. Build AST
-        AstBuilderVisitor astBuilder = new AstBuilderVisitor();
-        Ast.Exp astRoot = astBuilder.visit(tree);
-        System.out.println("AST:      " + astRoot);
+        } else if (args.length == 1){
+             path = args[0];
+        } else {
+            System.err.println("Either provide a file path as an argument or no arguments to use the default file.");
+            System.exit(1);
+            return;
+        }
+        Compiler.parseFile(Path.of(path));
     }
 }
