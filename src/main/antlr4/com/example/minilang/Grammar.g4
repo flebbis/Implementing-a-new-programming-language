@@ -72,7 +72,7 @@ expSeparator: (exp (',' exp)* )?;
 paramSeparator: (param (',' param)* )?;
 
 // java.GrammarLexer Rules
-
+TYPE        : 'int' | 'double' | 'string' | 'bool';
 STRING      : '"'  ( '\\' . | ~["\\] )* '"' |
               '\'' ( '\\' . | ~['\\] )* '\'';
 DOUBLE      : [0-9]+ '.'? [0-9]*;
@@ -101,8 +101,6 @@ MULT_ASSIGN : '*=';
 DIV_ASSIGN  : '/=';
 DYNARR_START : '[';
 DYNARR_END   : ']';
-SEXPEND   : ';' | '\n';
-TYPE        : 'int' | 'double' | 'string' | 'bool';
 INC          : '++';
 DEC          : '--';
 
