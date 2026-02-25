@@ -10,20 +10,22 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 // felix JAR
+//; No assembly yet.\n; Open a file and run "Show Assembly".
 const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
 class AsmProvider implements vscode.TextDocumentContentProvider {
-  private content = '; No assembly yet.\n; Open a file and run "Show Assembly".';
+  private content = ''; // content of the file
   private emitter = new vscode.EventEmitter<vscode.Uri>();  // tell vsCode that the file has changed
   readonly onDidChange = this.emitter.event;
 
-  static readonly uri = vscode.Uri.parse('asm-preview://output/assembly.asm');
+  static readonly uri = vscode.Uri.parse('asm-preview://output/assembly.asm'); // creates a Uri object
 
   setContent(text: string) {
       this.content = text;
+      // emitter.fire notify vsCode that the document has changed
       this.emitter.fire(AsmProvider.uri);
   }
 
-  provideTextDocumentContent(): string {
+  getContent(): string {
       return this.content;
   }
 }
@@ -95,7 +97,7 @@ export function activate(context: ExtensionContext) {
         }
 
         asmProvider.setContent(asm);
-
+        // open a new file 
         const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
     });
