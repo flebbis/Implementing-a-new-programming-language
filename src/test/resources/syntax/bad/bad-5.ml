@@ -1,0 +1,1 @@
+﻿int i =* test; // * is not a valid operator in this context

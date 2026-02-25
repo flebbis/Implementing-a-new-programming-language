@@ -11,18 +11,17 @@ import org.antlr.v4.runtime.tree.ParseTreeVisitor;
  */
 public interface GrammarVisitor<T> extends ParseTreeVisitor<T> {
 	/**
+	 * Visit a parse tree produced by {@link GrammarParser#separator}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSeparator(GrammarParser.SeparatorContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link GrammarParser#program}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitProgram(GrammarParser.ProgramContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code DStm}
-	 * labeled alternative in {@link GrammarParser#def}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitDStm(GrammarParser.DStmContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code DFunc}
 	 * labeled alternative in {@link GrammarParser#def}.
@@ -30,6 +29,13 @@ public interface GrammarVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitDFunc(GrammarParser.DFuncContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code DStm}
+	 * labeled alternative in {@link GrammarParser#def}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDStm(GrammarParser.DStmContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code FuncNoInference}
 	 * labeled alternative in {@link GrammarParser#func}.
@@ -52,61 +58,68 @@ public interface GrammarVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitParamDecl(GrammarParser.ParamDeclContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SExp}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#stmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSExp(GrammarParser.SExpContext ctx);
+	T visitStmt(GrammarParser.StmtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SReturn}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#simpleStmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSReturn(GrammarParser.SReturnContext ctx);
+	T visitSimpleStmt(GrammarParser.SimpleStmtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SWhile}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#blockStmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSWhile(GrammarParser.SWhileContext ctx);
+	T visitBlockStmt(GrammarParser.BlockStmtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SDo}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#block}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSDo(GrammarParser.SDoContext ctx);
+	T visitBlock(GrammarParser.BlockContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SIfElse}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#returnStmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSIfElse(GrammarParser.SIfElseContext ctx);
+	T visitReturnStmt(GrammarParser.ReturnStmtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SBlock}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#whileStmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSBlock(GrammarParser.SBlockContext ctx);
+	T visitWhileStmt(GrammarParser.WhileStmtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SDecl}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by {@link GrammarParser#doStmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSDecl(GrammarParser.SDeclContext ctx);
+	T visitDoStmt(GrammarParser.DoStmtContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code SInit}
-	 * labeled alternative in {@link GrammarParser#stm}.
+	 * Visit a parse tree produced by the {@code IfElseIf}
+	 * labeled alternative in {@link GrammarParser#ifStmt}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSInit(GrammarParser.SInitContext ctx);
+	T visitIfElseIf(GrammarParser.IfElseIfContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code IfElse}
+	 * labeled alternative in {@link GrammarParser#ifStmt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitIfElse(GrammarParser.IfElseContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code If}
+	 * labeled alternative in {@link GrammarParser#ifStmt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitIf(GrammarParser.IfContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code DeclNoInference}
 	 * labeled alternative in {@link GrammarParser#decl}.
@@ -136,179 +149,83 @@ public interface GrammarVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitInitInference(GrammarParser.InitInferenceContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link GrammarParser#block}.
+	 * Visit a parse tree produced by {@link GrammarParser#terminator}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBlock(GrammarParser.BlockContext ctx);
+	T visitTerminator(GrammarParser.TerminatorContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code IfElseIf}
-	 * labeled alternative in {@link GrammarParser#ifStmt}.
+	 * Visit a parse tree produced by {@link GrammarParser#exp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIfElseIf(GrammarParser.IfElseIfContext ctx);
+	T visitExp(GrammarParser.ExpContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code IfElse}
-	 * labeled alternative in {@link GrammarParser#ifStmt}.
+	 * Visit a parse tree produced by {@link GrammarParser#assignExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIfElse(GrammarParser.IfElseContext ctx);
+	T visitAssignExpr(GrammarParser.AssignExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code If}
-	 * labeled alternative in {@link GrammarParser#ifStmt}.
+	 * Visit a parse tree produced by {@link GrammarParser#orExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIf(GrammarParser.IfContext ctx);
+	T visitOrExpr(GrammarParser.OrExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EPlusAssignExp}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#andExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEPlusAssignExp(GrammarParser.EPlusAssignExpContext ctx);
+	T visitAndExpr(GrammarParser.AndExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EMulDiv}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#equalityExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEMulDiv(GrammarParser.EMulDivContext ctx);
+	T visitEqualityExpr(GrammarParser.EqualityExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EDivAssignExp}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#relational}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEDivAssignExp(GrammarParser.EDivAssignExpContext ctx);
+	T visitRelational(GrammarParser.RelationalContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code DynamicArrayNoInferrence}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#addExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitDynamicArrayNoInferrence(GrammarParser.DynamicArrayNoInferrenceContext ctx);
+	T visitAddExpr(GrammarParser.AddExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EFunctionCall}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#mulExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEFunctionCall(GrammarParser.EFunctionCallContext ctx);
+	T visitMulExpr(GrammarParser.MulExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EAssignmentExp}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#powerExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEAssignmentExp(GrammarParser.EAssignmentExpContext ctx);
+	T visitPowerExpr(GrammarParser.PowerExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EOr}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#unaryExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEOr(GrammarParser.EOrContext ctx);
+	T visitUnaryExpr(GrammarParser.UnaryExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EInt}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#postfixExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEInt(GrammarParser.EIntContext ctx);
+	T visitPostfixExpr(GrammarParser.PostfixExprContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code EParensExp}
-	 * labeled alternative in {@link GrammarParser#exp}.
+	 * Visit a parse tree produced by {@link GrammarParser#primary}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitEParensExp(GrammarParser.EParensExpContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EIdExp}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEIdExp(GrammarParser.EIdExpContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EAddSub}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEAddSub(GrammarParser.EAddSubContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EMinusAssignExp}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEMinusAssignExp(GrammarParser.EMinusAssignExpContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code DynamicArrayInference}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitDynamicArrayInference(GrammarParser.DynamicArrayInferenceContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EAnd}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEAnd(GrammarParser.EAndContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EInc}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEInc(GrammarParser.EIncContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EPower}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEPower(GrammarParser.EPowerContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EDouble}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEDouble(GrammarParser.EDoubleContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EDec}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEDec(GrammarParser.EDecContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EString}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEString(GrammarParser.EStringContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code EArrayIndexing}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEArrayIndexing(GrammarParser.EArrayIndexingContext ctx);
-	/**
-	 * Visit a parse tree produced by the {@code ERelational}
-	 * labeled alternative in {@link GrammarParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitERelational(GrammarParser.ERelationalContext ctx);
+	T visitPrimary(GrammarParser.PrimaryContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link GrammarParser#expSeparator}.
 	 * @param ctx the parse tree
