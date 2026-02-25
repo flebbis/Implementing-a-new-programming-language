@@ -16,16 +16,17 @@
     },
     "Statement": {
       "patterns": [
-        {"include": "#Expression"},
         {"include": "#ControllStatement"},
         {"include": "#BlockStatement"},
-        {"include": "#DeclareInitStatement"}
+        {"include": "#DeclareInitStatement"},
+        {"include": "#Expression"}
       ]
     },
     "Expression": {
       "name": "expression",
       "patterns": [
         {"include": "#ParensExp"},
+        {"include": "#Assignment"},
         {"include": "#Operator"},
         {"include": "#Litteral"}
       ]
@@ -93,6 +94,21 @@
           "begin": "\"",
           "end": "\""}]
     },
+    "Assignment": {
+      "name": "keyword.operator.assignment",
+      "patterns": [
+        { "name": "keyword.operator.assignment.lhs-equal-rhs",
+          "match": "\\="},
+        { "name":"keyword.operator.assignment.add-rhs",
+          "match": "\\+\\="},
+        { "name":"keyword.operator.assignment.sub-rhs",
+          "match": "\\-\\="},
+        { "name":"keyword.operator.assignment.mul-rhs",
+          "match": "\\*\\="},
+        { "name":"keyword.operator.assignment.div-rhs",
+          "match": "\\/\\="}
+      ]
+    },
     "ControllStatement": {
       "name": "keyword.controll.statement",
       "patterns": [
@@ -122,11 +138,12 @@
     "DeclareInitStatement": {
       "name": "meta.variable.declaration-initialization",
       "patterns": [
-        
+
       ]
     },
     "Function" : {
-      "name": ""
+      "name": "meta.function-definition",
+      "match": "()()()"
     }
   }
 }
