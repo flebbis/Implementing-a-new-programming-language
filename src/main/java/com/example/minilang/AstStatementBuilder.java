@@ -77,13 +77,21 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
     @Override
     public Ast.SIf visitIfStmt(GrammarParser.IfStmtContext ctx) {
         Ast.Exp condition = astExpressionBuilder.visitExp(ctx.exp());
-        Ast.Stmt body = visit(ctx.block(0));
+        Ast.Stmt thenBranch = visit(ctx.block(0));
+
         Ast.Stmt elseBranch = null;
-//        if (ctx. != null) {
-//            elseBranch = visit(ctx.elsePart);
-//        }
+
+        // else if ...
+        if (ctx.ifStmt() != null) {
+            elseBranch = visitIfStmt(ctx.ifStmt()); // eller visit(ctx.ifStmt())
+        }
+        // else { ... }
+        else if (ctx.block().size() > 1) {
+            elseBranch = visit(ctx.block(1));
+        }
+
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-        return new Ast.SIf(condition, body, elseBranch, pos);
+        return new Ast.SIf(condition, thenBranch, elseBranch, pos);
     }
 
 
