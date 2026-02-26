@@ -67,8 +67,8 @@ public class Ast {
     public record SIf(Exp condition, Stmt thenBranch, Stmt elseBranch, Pos pos) implements BlockStmt {}
     public record SBlock(List<Stmt> statements, Pos pos) implements BlockStmt {}
 
-    public record SDecl(Type type, String name, Exp value, Pos pos) implements SimpleStmt {}
-    public record SInit(String name, Exp value, Pos pos) implements SimpleStmt {}
+    public record SDecl(Type type, String name, Pos pos) implements SimpleStmt {}
+    public record SInit(Type type, String name, Exp value, Pos pos) implements SimpleStmt {}
     public record SReturn(Exp value, Pos pos) implements SimpleStmt {}
     public record SExp(Exp exp, Pos pos) implements SimpleStmt {}
 

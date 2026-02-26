@@ -42,10 +42,10 @@ whileStmt: 'while' exp stmt;
 
 doStmt: 'do' exp stmt;
 
-ifStmt  : 'if' exp block ('else' ifStmt)?   #IfElseIf
-        | 'if' exp block 'else' block       #IfElse
-        | 'if' exp block                    #If
-        ;
+ifStmt
+    : 'if' exp block (separator* 'else' (ifStmt | block))?
+    ;
+
 
 decl: TYPE? ID
     ;
@@ -166,6 +166,3 @@ LINE_COMMENT
 BLOCK_COMMENT
     : '/*' .*? '*/' -> skip
     ;
-
-
-
