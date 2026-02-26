@@ -10,12 +10,10 @@ def
     | stmt    #DStm
     ;
 
-func: TYPE 'func' ID '(' paramSeparator ')' block #FuncNoInference
-    | 'func' ID '(' expSeparator ')' block      #FuncInference
+func: TYPE? 'func' ID '(' paramSeparator ')' block
     ;
 
-param: TYPE ID        #ParamDecl
-;
+param: TYPE? ID;
 
 stmt
     : simpleStmt
@@ -49,12 +47,10 @@ ifStmt  : 'if' exp block ('else' ifStmt)?   #IfElseIf
         | 'if' exp block                    #If
         ;
 
-decl: TYPE ID  #DeclNoInference
-    | ID       #DeclInference
+decl: TYPE? ID
     ;
 
-init: TYPE ID ASSIGN exp  #InitNoInference
-    | ID ASSIGN exp       #InitInference
+init: TYPE? ID ASSIGN exp
     ;
 
 
@@ -120,8 +116,8 @@ primary
     | ID ASSIGN DYNARR_START expSeparator DYNARR_END
     ;
 
-expSeparator: (exp (',' exp)* )?;
-paramSeparator: (param (',' param)* )?;
+expSeparator: (exp (',' exp)* )?; //x, y, z
+paramSeparator: (param (',' param)* )?; //int x, double y, string z
 
 // java.GrammarLexer Rules
 TYPE        : 'int' | 'double' | 'string' | 'bool';
