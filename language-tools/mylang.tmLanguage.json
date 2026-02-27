@@ -5,15 +5,6 @@
     {"include": "#Statement"},
     {"include": "#FunctionDeclaration"}],
   "repository": {
-    "Comment": {
-      "name": "comment",
-      "patterns": [
-        { "name": "comment.line.double-slash",
-          "match": "//.*$"},
-        { "name": "comment.block",
-          "begin": "/\\*",
-          "end": "\\*/"}]
-    },
     "Statement": {
       "patterns": [
         {"include": "#ControllStatement"},
