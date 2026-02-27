@@ -2,8 +2,15 @@ package com.example.minilang;
 import com.example.minilang.Ast.*;
 
 public class CodeGenerator {
+
+
+
     private StringBuilder sb = new StringBuilder();
     private int tempCounter = 0;
+
+    public String getCode() {
+    return sb.toString();
+    }
 
     public String Visit(Exp exp){
         if (exp instanceof EInt eInt) {

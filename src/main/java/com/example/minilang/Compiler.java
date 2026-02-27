@@ -34,5 +34,10 @@ public class Compiler {
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Exp astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
+
+        // Exp exp = new EOpp(new EInt(3), new EInt(5), Op.ADD);
+        CodeGenerator generator = new CodeGenerator();
+        generator.Visit(astRoot);
+        System.out.println("Generated code:\n" + generator.getCode());
     }
 }

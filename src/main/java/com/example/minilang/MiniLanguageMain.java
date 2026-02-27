@@ -9,8 +9,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import com.example.minilang.CodeGenerator.*;
+import com.example.minilang.Ast.*;
+
+
 public class MiniLanguageMain {
+
     public static void main(String[] args) throws IOException {
+        // Example usage
+       
+
+    
         String path;
         String testFilePath = "src/test/resources/";
 
@@ -24,6 +33,6 @@ public class MiniLanguageMain {
             System.exit(1);
             return;
         }
-        Compiler.parseFile(Path.of(path));
+        Compiler.parseFile(Path.of(path)); 
     }
 }
