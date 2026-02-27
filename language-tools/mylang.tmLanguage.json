@@ -235,7 +235,7 @@
     },
     "ArgumentDeclaration": {
       "name": "meta.argument-declaration",
-      "match": "([a-z]+) ?([a-z]\\w*)",
+      "match": "([a-z]+) *([a-z]\\w*)",
       "captures":{
         "1": {"name": "storage.type"},
         "2": {"name": "variable.parameter"}
