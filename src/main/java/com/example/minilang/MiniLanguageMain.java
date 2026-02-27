@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "syntax/good/plusequals.ml";
+             path = testFilePath + "syntax/good/inc.ml";
 
         } else if (args.length == 1){
              path = args[0];

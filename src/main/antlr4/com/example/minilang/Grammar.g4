@@ -123,8 +123,8 @@ paramSeparator: (param (',' param)* )?; //int x, double y, string z
 TYPE        : 'int' | 'double' | 'string' | 'bool';
 STRING      : '"'  ( '\\' . | ~["\\] )* '"' |
               '\'' ( '\\' . | ~['\\] )* '\'';
+INT         : [0-9]+; //int over double, so if i = 5 it chooses int
 DOUBLE      : [0-9]+ '.'? [0-9]*;
-INT         : [0-9]+;
 BOOL        : 'true' | 'false';
 PLUS_ASSIGN : '+=';
 MINUS_ASSIGN: '-=';
