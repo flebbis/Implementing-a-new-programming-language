@@ -5,6 +5,15 @@
     {"include": "#Statement"},
     {"include": "#FunctionDeclaration"}],
   "repository": {
+    "Comment": {
+      "name": "comment",
+      "patterns": [
+        { "name": "comment.line.double-slash",
+          "match": "//.*$"},
+        { "name": "comment.block",
+          "begin": "/\\*",
+          "end": "\\*/"}]
+    },
     "Statement": {
       "patterns": [
         {"include": "#ControllStatement"},
@@ -34,7 +43,9 @@
       "name":"expression.parens-expression",
       "begin": "\\(",
       "end": "\\)",
-      "patterns": [{"include":"#Expression"}]
+      "patterns": [
+        {"include": "#Comment"},
+        {"include":"#Expression"}]
     },
     "Operator": {
       "name": "keyword.operator",
@@ -72,26 +83,14 @@
     "ArithmeticOperator": {
       "name": "keyword.operator.arithmetic",
       "patterns": [
-        {"include": "#AddOp"},
-        {"include": "#MulOp"},
-        {"include": "#SubOp"},
-        {"include": "#DivOp"}]
-    },
-    "AddOp" : {
-      "name": "keyword.operator.arithmetic.addition",
-      "match": "\\+"
-    },
-    "MulOp" : {
-      "name": "keyword.operator.arithmetic.multiplication",
-      "match": "\\*"
-    },
-    "SubOp" : {
-      "name": "keyword.operator.arithmetic.subtraction",
-      "match": "\\-"
-    },
-    "DivOp" : {
-      "name": "keyword.operator.arithmetic.division",
-      "match": "\/"
+        { "name": "keyword.operator.arithmetic.addition",
+          "match": "\\+" },
+        { "name": "keyword.operator.arithmetic.multiplication",
+          "match": "\\*" },
+        { "name": "keyword.operator.arithmetic.subtraction",
+          "match": "\\-"},
+        { "name": "keyword.operator.arithmetic.division",
+          "match": "\/"}]
     },
     "BooleanOperator": {
       "name": "keyword.operator.boolean",
@@ -146,27 +145,15 @@
     "Litteral": {
       "name": "constant.litteral",
       "patterns": [
-        {"include": "#Double"},
-        {"include": "#Int"},
-        {"include": "#Bool"},
-        {"include": "#String"}]
-    },
-    "Double": {
-      "name": "constant.numeric.expression.litteral.double",
-      "match": "\\b[1-9][0-9]*\\.[0-9]*\\b"
-    },
-    "Int": {
-      "name": "constant.numeric.expression.litteral.integer",
-      "match": "\\b[1-9][0-9]*\\b"
-    },
-    "Bool": {
-      "name": "constant.language.expression.litteral.boolean",
-      "match": "\\b(true|false)\\b"
-    },
-    "String": {
-      "name": "string.quoted.double.expression.litteral.string",
-      "begin": "\"",
-      "end": "\""
+        { "name": "constant.numeric.expression.litteral.double",
+          "match": "\\b[1-9][0-9]*\\.[0-9]*\\b"},
+        { "name": "constant.numeric.expression.litteral.integer",
+          "match": "\\b[1-9][0-9]*\\b"},
+        { "name": "constant.language.expression.litteral.boolean",
+          "match": "\\b(true|false)\\b"},
+        { "name": "string.quoted.double.expression.litteral.string",
+          "begin": "\"",
+          "end": "\""}]
     },
     "FunctionApplication": {
       "name": "meta.function-application",

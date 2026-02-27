@@ -1,7 +1,7 @@
 {
   "name": "mylang",
   "description": "language server following lsp for this unnamed language",
-  "author": "Cole",
+  "author": "Gruppen",
   "license": "MIT",
   "version": "0.0.1",
   "publisher": "we :)",
