@@ -16,7 +16,7 @@ public class Ast {
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
             EInc, EDec, ECall, ENot, EPower, EOpp, ELt, EGt, EGe, ELe, ENe, EEq, EAnd, EOr,
-            EAss, EPlusAss, EMinusAss, EDivAss {}
+            EAss, EPlusAss, EMinusAss, EDivAss, EMultAss {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
@@ -48,6 +48,7 @@ public class Ast {
     public record EPlusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
     public record EMinusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
     public record EDivAss(String name, Exp value, Type type, Pos pos) implements Exp {}
+    public record EMultAss(String name, Exp value, Type type, Pos pos) implements Exp {}
 
     // The operators we support
     public enum Op {

@@ -65,7 +65,7 @@ exp
     ;
 
 assignExpr
-    : orExpr ( (ASSIGN | PLUS_ASSIGN | MINUS_ASSIGN | DIV_ASSIGN) assignExpr )?
+    : orExpr ( (ASSIGN | PLUS_ASSIGN | MINUS_ASSIGN | DIV_ASSIGN | MULT_ASSIGN) assignExpr )?
     ;
 
 orExpr

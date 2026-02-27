@@ -94,6 +94,9 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
         return new Ast.SIf(condition, thenBranch, elseBranch, pos);
     }
 
-
+    @Override
+    public Ast.SExp visitExp(GrammarParser.ExpContext ctx) {
+        return new Ast.SExp(astExpressionBuilder.visitExp(ctx), new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine()));
+    }
 
 }
