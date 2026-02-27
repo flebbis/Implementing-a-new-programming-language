@@ -27,36 +27,48 @@
     </dependencies>
 
     <build>
-        <plugins>
+    <plugins>
 
-            <!-- ANTLR generator -->
-            <plugin>
-                <groupId>org.antlr</groupId>
-                <artifactId>antlr4-maven-plugin</artifactId>
-                <version>${antlr.version}</version>
+        <!-- ANTLR generator -->
+        <plugin>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-maven-plugin</artifactId>
+            <version>${antlr.version}</version>
 
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>antlr4</goal>
-                        </goals>
-                    </execution>
-                </executions>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>antlr4</goal>
+                    </goals>
+                </execution>
+            </executions>
 
+            <configuration>
+                <visitor>true</visitor>
+            </configuration>
+        </plugin>
+
+        <!-- Sets the main class for the JAR manifest -->
+          <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
                 <configuration>
-                    <visitor>true</visitor>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.example.minilang.Compiler</mainClass>
+                        </manifest>
+                    </archive>
                 </configuration>
             </plugin>
+        <!-- THIS is what fixes your error -->
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.1.0</version>
+        </plugin>
 
-
-            <!-- THIS is what fixes your error -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-            </plugin>
-
-        </plugins>
-    </build>
+    </plugins>
+</build>
 
 </project>

@@ -9,15 +9,22 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
-// felix JAR
-//; No assembly yet.\n; Open a file and run "Show Assembly".
+
+// my own jar file,, fix later
 const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
+
+// a custom API, that makes the document readonly 
 class AsmProvider implements vscode.TextDocumentContentProvider {
   private content = ''; // content of the file
-  private emitter = new vscode.EventEmitter<vscode.Uri>();  // tell vsCode that the file has changed
+  private emitter = new vscode.EventEmitter<vscode.Uri>();  //a emitter to update the file 
   readonly onDidChange = this.emitter.event;
 
   static readonly uri = vscode.Uri.parse('asm-preview://output/assembly.asm'); // creates a Uri object
+  // display the assembly code, vscode calls this to when a file is open and 
+  // when emitter.fire is called 
+  provideTextDocumentContent(uri: vscode.Uri): string {
+    return this.content;
+  }
 
   setContent(text: string) {
       this.content = text;
@@ -70,39 +77,42 @@ export function activate(context: ExtensionContext) {
   // Start the client. This will also launch the server
   client.start();
      
-  // ------ Show assembly -------- AI ville bara se hur det skulle se ut
+  // ------ Show assembly -------- 
   const asmProvider = new AsmProvider();
-    context.subscriptions.push(
-        vscode.workspace.registerTextDocumentContentProvider('asm-preview', asmProvider)
-    );
+  // clean up from memory when the extension closes down subscriptions.push
 
-    const showAsmCmd = vscode.commands.registerCommand('assembly-preview.show', async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            vscode.window.showErrorMessage('Open a source file first.');
+  // ask asmProvider for the content when a document is opened with asm-preview://
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider('asm-preview', asmProvider)
+  );
+  //vsCode trigger this when show assembly opens, runs what is inside
+  context.subscriptions.push(
+  vscode.commands.registerCommand('asm-preview.show', async () => {
+    try {
+        // no file open
+        if (!vscode.window.activeTextEditor) {
+            vscode.window.showErrorMessage('No active editor!');
             return;
         }
-
+        // get the editor and the filepath then save the file
+        const editor = vscode.window.activeTextEditor;
+        const filePath = editor.document.uri.fsPath;
         await editor.document.save();
-        const srcPath = editor.document.uri.fsPath;
-
-        let asm: string;
-        try {
-            const result = execFileSync('java', ['-jar', JAR_PATH, srcPath]);
-            asm = result.toString();
-        } catch (e: any) {
-            const stderr = e.stderr?.toString() ?? '';
-            asm = '; ── Compiler Error ──\n' +
-                  (stderr || e.message).split('\n').map((l: string) => '; ' + l).join('\n');
-        }
-
+        
+        //execute the file, store the content into a string and run setContent
+        //fires the emitter which tells vsCode that the file has changed
+        const result = execFileSync('java', ['-jar', JAR_PATH, filePath]);
+        const asm = result.toString();
         asmProvider.setContent(asm);
-        // open a new file 
+        
+        // open and show the assembly document to the right of the screen
         const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
-    });
+    } catch(e: any) {
+        vscode.window.showErrorMessage('Error: ' + e.message);
+    }
+}));
 
-    context.subscriptions.push(showAsmCmd);
 }
 
 export function deactivate(): Thenable<void> | undefined {
@@ -111,3 +121,4 @@ export function deactivate(): Thenable<void> | undefined {
   }
   return client.stop();
 }
+
