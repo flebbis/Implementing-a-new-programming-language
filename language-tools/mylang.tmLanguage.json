@@ -1,22 +1,33 @@
 {
   "scopeName": "source.mylang",
-  "patterns": [{"include": "#Comment"}, {"include": "#Statement"}, {"include": "#Function"}],
+  "patterns": [
+    {"include": "#Comment"},
+    {"include": "#Statement"},
+    {"include": "#FunctionDeclaration"}],
   "repository": {
     "Statement": {
-      "patterns": [{"include": "#Expression"}, {"include": "#StatementBlock"}]
+      "patterns": [
+        {"include": "#ControllStatement"},
+        {"include": "#Expression"},
+        {"include": "#StatementBlock"}
+      ]
     },
     "StatementBlock": {
       "name": "statement.block",
       "begin": "\\{",
       "end": "\\}",
-      "patterns": [{"include": "#Statement"}]
+      "patterns": [
+        {"include": "#Comment"},
+        {"include": "#Statement"}
+      ]
     },
     "Expression": {
       "name": "expression",
       "patterns":[
-        {"include": "#ParensExp"}, 
-        {"include": "#Operator"}, 
-        {"include": "#Litteral"} 
+        {"include": "#ParensExp"},
+        {"include": "#Operator"},
+        {"include": "#FunctionApplication"},
+        {"include": "#Litteral"}
       ]
     },
     "ParensExp": {
@@ -28,8 +39,34 @@
     "Operator": {
       "name": "keyword.operator",
       "patterns": [
+        {"include": "#AssignmentOperator"},
+        {"include": "#IncrementDecrementOperator"},
         {"include": "#ArithmeticOperator"},
         {"include": "#BooleanOperator"}
+      ]
+    },
+    "AssignmentOperator": {
+      "name": "keyword.operator.assignment",
+      "patterns":[
+        { "name": "keyword.operator.assignment.assign",
+          "match": "="},
+        { "name": "keyword.operator.assignment.addition-assign",
+          "match": "\\+="},
+        { "name": "keyword.operator.assignment.subtraction-assign",
+          "match": "-="},
+        { "name": "keyword.operator.assignment.multiplication-assign",
+          "match": "\\*="},
+        { "name": "keyword.operator.assignment.division-assign",
+          "match": "\\/="}
+      ]
+    },
+    "IncrementDecrementOperator": {
+      "name": "keyword.operator.increment-decrement",
+      "patterns": [
+        { "name": "keyword.operator.increment",
+          "match": "\\+\\+"},
+        { "name": "keyword.operator.decrement",
+          "match": "--"}
       ]
     },
     "ArithmeticOperator": {
@@ -100,11 +137,11 @@
     },
     "Disjuntion": {
       "name": "keyword.operator.boolean.logic.disjunction",
-      "match": "OR"
+      "match": "\\bor\\b"
     },
     "Conjunction": {
       "name": "keyword.operator.boolean.logic.conjunction",
-      "match": "AND"
+      "match": "\\band\\b"
     },
     "Litteral": {
       "name": "constant.litteral",
@@ -131,20 +168,78 @@
       "begin": "\"",
       "end": "\""
     },
+    "FunctionApplication": {
+      "name": "meta.function-application",
+      "begin": "\\b([a-z]\\w*)\\(",
+      "end": "\\)",
+      "beginCaptures": {
+        "1": {"name": "entity.name.function.function-id"}
+      },
+      "patterns": [
+        {"include": "#Expression"}
+      ]
+    },
+    "ControllStatement": {
+      "name": "keyword.controll.statement",
+      "patterns": [
+        { "name": "keyword.controll.statement.return",
+          "match": "\\breturn\\b"},
+        { "name": "keyword.controll.statement.while",
+          "match": "\\bwhile\\b"},
+        { "name": "keyword.controll.statement.do",
+          "match": "\\bdo\\b"},
+        {"include": "#IfStatement"}]
+    },
+    "IfStatement": {
+      "patterns": [
+        { "name": "keyword.controll.statement.if",
+          "match": "\\bif\\b"},
+        { "name": "keyword.controll.statement.else",
+          "match": "\\belse\\b"}]
+    },
     "Comment": {
       "name": "comment",
       "patterns": [
+        {"include":"#CommentTODO"},
         {"include":"#CommentLine"},
         {"include":"#CommentBlock"}]
     },
     "CommentLine": {
       "name": "comment.line.double-slash",
-      "match": "//.*$"
+      "match": "(//)( ?TODO:?)?(.*$)",
+      "captures" : {
+        "2": {"name": "constant.other.todo"}
+      }
     },
     "CommentBlock": {
       "name": "comment.block",
-      "begin": "/\\*",
-      "end": "\\*/"
+      "begin": "(/\\*)( ?TODO:?)?",
+      "end": "\\*/",
+      "beginCaptures": {
+        "1": {"name": "comment.block"},
+        "2": {"name": "constant.other.todo"}
+      }
+    },
+    "FunctionDeclaration": {
+      "name": "meta.funciton-definition",
+      "begin": "(\\b[a-z][a-zA-Z0-9]*\\b)? *(\\bfunc\\b) *(\\b[a-z][a-zA-Z0-9]*\\b) *\\(",
+      "end": "\\)",
+      "patterns": [
+        {"include": "#ArgumentDeclaration"}
+      ],
+      "beginCaptures": {
+        "1": {"name": "entity.name.type"},
+        "2": {"name": "entity.name.tag"},
+        "3": {"name": "entity.name.function.function-id"}
+      }
+    },
+    "ArgumentDeclaration": {
+      "name": "meta.argument-declaration",
+      "match": "([a-z]+) ?([a-z]\\w*)",
+      "captures":{
+        "1": {"name": "storage.type"},
+        "2": {"name": "variable.parameter"}
+      }
     }
   }
 }
