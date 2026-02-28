@@ -1,7 +1,5 @@
 package com.example.minilang;
 
-import org.antlr.v4.runtime.tree.ParseTree;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -158,40 +156,39 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
     }
     @Override
     public Ast.Exp visitUnaryExpr(GrammarParser.UnaryExprContext ctx) {
-        //okej lite tankar här!
-        //1. istället för left.type kan vi gö en sån INT/DOUBLE wrapper grej
-        //2. Venne om returnsen är helt rätt här egentligen, lite trött just nu lol
-        Ast.Exp left = visit(ctx.postfixExpr());
+        if(ctx.postfixExpr() != null) { // if there is no unary operator, just return the postfix expression
+            return visit(ctx.postfixExpr());
+        }
+
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-        if (ctx.NOT() != null) {
-            Ast.Exp right = visit(ctx.unaryExpr()); // kod duplicering oops
-            return new Ast.EOpp(left, right, Ast.Op.NOT ,left.type() , pos);
-        }
-        if (ctx.PLUS() != null) {
-            Ast.Exp right = visit(ctx.unaryExpr());
-            return new Ast.EOpp(left, right, Ast.Op.ADD,left.type() , pos);
-        }
-        if (ctx.MINUS() != null) {
-            Ast.Exp right = visit(ctx.unaryExpr());
-            return new Ast.EOpp(left, right, Ast.Op.SUB,left.type() , pos);
-        }
-        return left;
+        Ast.Exp exp = visit(ctx.unaryExpr()); // kod duplicering oops
+        return new Ast.ENot(exp, exp.type() , pos);
     }
+
     @Override
     public Ast.Exp visitPostfixExpr(GrammarParser.PostfixExprContext ctx) {
-        Ast.Exp left = visit(ctx.primary());
-        if (ctx.INC() != null && !ctx.INC().isEmpty()) {
-            if (left instanceof Ast.EId id) {
-                return new Ast.EInc(id.name(), id.type(), id.pos());
+        Ast.Exp expr = visit(ctx.primary());
+
+        for(GrammarParser.PostFixOpContext op : ctx.postFixOp()) {
+            if(op.INC() != null) {
+                expr = new Ast.EInc(expr, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+            } else if(op.DEC() != null) {
+                expr = new Ast.EDec(expr, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+            } else if(op.exp() != null) {
+                Ast.Exp index = visit(op.exp());
+                expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+            } else {
+                // function call
+                List<Ast.Exp> args = new ArrayList<>();
+                for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
+                    args.add(visit(expCtx));
+                }
+                expr = new Ast.ECall(expr, args, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             }
         }
-        else if (ctx.DEC() != null && !ctx.DEC().isEmpty()) {
-            if (left instanceof Ast.EId id) {
-                return new Ast.EDec(id.name(), id.type(), id.pos());
-            }
-        }
-        return left;
+        return expr;
     }
+
 
 
     @Override
@@ -208,7 +205,7 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 // Requires implementing array logic later. For now, return null or throw.
                 return null;
             }
-            return new Ast.EId(ctx.ID().getText(), Ast.Type.TInt, pos);
+            return new Ast.EId(ctx.ID().getText(), Ast.Type.TUnknown, pos);
         } else if (ctx.DOUBLE() != null) {
             return new Ast.EDouble(Double.parseDouble(ctx.DOUBLE().getText()), Ast.Type.TDouble, pos);
         } else if (ctx.STRING() != null) {

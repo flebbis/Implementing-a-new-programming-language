@@ -16,7 +16,7 @@ public class Ast {
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
             EInc, EDec, ECall, ENot, EPower, EOpp, ELt, EGt, EGe, ELe, ENe, EEq, EAnd, EOr,
-            EAss, EPlusAss, EMinusAss, EDivAss, EMultAss {}
+            EAss, EPlusAss, EMinusAss, EDivAss, EMultAss, EArrayIndex {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
@@ -31,9 +31,9 @@ public class Ast {
     public record EString(String value, Type type, Pos pos) implements Exp {}
     public record EBool(boolean value, Type type, Pos pos) implements Exp {}
     public record EId(String name, Type type, Pos pos) implements Exp {}
-    public record EInc(String name, Type type, Pos pos) implements Exp {}
-    public record EDec(String name, Type type, Pos pos) implements Exp {}
-    public record ECall(String name, List<Exp> args, Type type, Pos pos) implements Exp {}
+    public record EInc(Exp exp, Type type, Pos pos) implements Exp {}
+    public record EDec(Exp exp, Type type, Pos pos) implements Exp {}
+    public record ECall(Exp exp, List<Exp> args, Type type, Pos pos) implements Exp {}
     public record ENot(Exp exp, Type type, Pos pos) implements Exp {}
     public record EPower(Exp base, Exp exponent, Type type, Pos pos) implements Exp {}
     public record ELt(Exp left, Exp right, Type type, Pos pos) implements Exp {}
@@ -49,6 +49,7 @@ public class Ast {
     public record EMinusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
     public record EDivAss(String name, Exp value, Type type, Pos pos) implements Exp {}
     public record EMultAss(String name, Exp value, Type type, Pos pos) implements Exp {}
+    public record EArrayIndex(Exp array, Exp index, Type type, Pos pos) implements Exp {}
 
     // The operators we support
     public enum Op {

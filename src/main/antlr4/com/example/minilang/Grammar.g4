@@ -97,12 +97,19 @@ powerExpr
     ;
 
 unaryExpr
-    : (NOT | PLUS | MINUS) unaryExpr
+    : (NOT) unaryExpr
     | postfixExpr
     ;
 
 postfixExpr
-    : primary ( INC | DEC | '[' exp ']' | '(' expSeparator ')' )*
+    : primary postFixOp*
+    ;
+
+postFixOp
+    : INC
+    | DEC
+    | '[' exp ']'
+    | '(' expSeparator ')'
     ;
 
 primary
