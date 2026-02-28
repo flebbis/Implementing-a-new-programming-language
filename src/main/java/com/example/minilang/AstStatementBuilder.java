@@ -81,12 +81,13 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
 
         Ast.Stmt elseBranch = null;
 
-        // else if ...
+        // Check for 'else if'
         if (ctx.ifStmt() != null) {
-            elseBranch = visitIfStmt(ctx.ifStmt()); // eller visit(ctx.ifStmt())
+            elseBranch = visit(ctx.ifStmt());
         }
-        // else { ... }
-        else if (!ctx.block().isEmpty()) {
+        // Check for 'else' block
+        // We only have a second block (index 1) if an 'else { ... }' part exists
+        else if (ctx.block().size() > 1) {
             elseBranch = visit(ctx.block(1));
         }
 

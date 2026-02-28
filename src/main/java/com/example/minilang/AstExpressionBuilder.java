@@ -14,7 +14,6 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
     @Override
     public Ast.Exp visitAssignExpr(GrammarParser.AssignExprContext ctx) {
-        System.out.println("assign expression");
         Ast.Exp left = visit(ctx.orExpr());
 
         // Right is also an assignExpr, check if present
@@ -43,7 +42,6 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
     @Override
     public Ast.Exp visitOrExpr(GrammarParser.OrExprContext ctx) {
-        System.out.println("or expression");
         Ast.Exp left = visit(ctx.andExpr(0));
         if (ctx.andExpr(1) != null) {
             for (int i = 1; i < ctx.andExpr().size(); i++) {
@@ -58,13 +56,96 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
     @Override
     public Ast.Exp visitAndExpr(GrammarParser.AndExprContext ctx) {
-        System.out.println("and expression");
         Ast.Exp left = visit(ctx.equalityExpr(0));
         if (ctx.equalityExpr(1) != null) {
             for (int i = 1; i < ctx.equalityExpr().size(); i++) {
                 Ast.Exp right = visit(ctx.equalityExpr(i));
                 Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-                left = new Ast.EOr(left, right, Ast.Type.TBool, pos);
+                left = new Ast.EAnd(left, right, Ast.Type.TBool, pos);
+            }
+        }
+
+        return left; //venne ens om detta e rätt return
+    }
+
+    @Override
+    public Ast.Exp visitEqualityExpr(GrammarParser.EqualityExprContext ctx) {
+        Ast.Exp left = visit(ctx.relational(0));
+        if (ctx.relational(1) != null) {
+            for (int i = 1; i < ctx.relational().size(); i++) {
+                Ast.Exp right = visit(ctx.relational(i));
+                Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+
+                if (ctx.EQ(i - 1) != null) {
+                    left = new Ast.EEq(left, right, Ast.Type.TBool, pos);
+                } else if (ctx.NE(i - 1) != null) {
+                    left = new Ast.ENe(left, right, Ast.Type.TBool, pos);
+                }
+            }
+        }
+        return left;
+    }
+
+    @Override
+    public Ast.Exp visitRelational(GrammarParser.RelationalContext ctx) {
+        Ast.Exp left = visit(ctx.addExpr(0));
+        if (ctx.addExpr(1) != null) {
+            for (int i = 1; i < ctx.addExpr().size(); i++) {
+                Ast.Exp right = visit(ctx.addExpr(i));
+                Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+
+                if (ctx.LT(i - 1) != null) {
+                    left = new Ast.ELt(left, right, Ast.Type.TBool, pos);
+                } else if (ctx.GT(i - 1) != null) {
+                    left = new Ast.EGt(left, right, Ast.Type.TBool, pos);
+                } else if (ctx.LE(i - 1) != null) {
+                    left = new Ast.ELe(left, right, Ast.Type.TBool, pos);
+                } else if (ctx.GE(i - 1) != null) {
+                    left = new Ast.EGe(left, right, Ast.Type.TBool, pos);
+                }
+            }
+        }
+        return left;
+    }
+
+    @Override
+    public Ast.Exp visitAddExpr(GrammarParser.AddExprContext ctx) {
+        Ast.Exp left = visit(ctx.mulExpr(0));
+
+        if (ctx.mulExpr(1) != null) {
+        // Iterate through the rest of the expressions
+            for (int i = 1; i < ctx.mulExpr().size(); i++) {
+                Ast.Exp right = visit(ctx.mulExpr(i));
+                Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+
+                // Check which operator was used at this position
+                // The list of operators is at index i-1 relative to the right operand loop
+                if (ctx.PLUS(i - 1) != null) {
+                    left = new Ast.EOpp(left, right, Ast.Op.ADD, Ast.Type.TInt, pos);
+                } else if (ctx.MINUS(i - 1) != null) {
+                    left = new Ast.EOpp(left, right, Ast.Op.SUB, Ast.Type.TInt, pos);
+                }
+            }
+        }
+        return left;
+    }
+
+    @Override
+    public Ast.Exp visitMulExpr(GrammarParser.MulExprContext ctx) {
+        Ast.Exp left = visit(ctx.powerExpr(0));
+        if (ctx.powerExpr(1) != null) {
+            // Loop starts at 1
+            for (int i = 1; i < ctx.powerExpr().size(); i++) {
+                Ast.Exp right = visit(ctx.powerExpr(i));
+                Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+
+                // Check operator (index i-1)
+                Ast.Op op = Ast.Op.MUL;
+                if (ctx.DIVIDE(i - 1) != null) {
+                    op = Ast.Op.DIV;
+                }
+
+                left = new Ast.EOpp(left, right, op, Ast.Type.TInt, pos);
             }
         }
 
@@ -72,56 +153,35 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
     }
 
     @Override
-    public Ast.Exp visitEqualityExpr(GrammarParser.EqualityExprContext ctx) {
-        System.out.println("equality expression");
-        return visit(ctx.relational(0));
-    }
-
-    @Override
-    public Ast.Exp visitRelational(GrammarParser.RelationalContext ctx) {
-        System.out.println("relational expression");
-        return visit(ctx.addExpr(0));
-    }
-
-    @Override
-    public Ast.Exp visitAddExpr(GrammarParser.AddExprContext ctx) {
-        System.out.println("add expression");
-        return visit(ctx.mulExpr(0));
-    }
-
-    @Override
-    public Ast.Exp visitMulExpr(GrammarParser.MulExprContext ctx) {
-        System.out.println("mul expression");
-        return visit(ctx.powerExpr(0));
-    }
-
-    @Override
     public Ast.Exp visitPowerExpr(GrammarParser.PowerExprContext ctx) {
-        System.out.println("power expression");
         return visit(ctx.unaryExpr());
     }
     @Override
     public Ast.Exp visitUnaryExpr(GrammarParser.UnaryExprContext ctx) {
-        System.out.println("unary expression");
+        //okej lite tankar här!
+        //1. istället för left.type kan vi gö en sån INT/DOUBLE wrapper grej
+        //2. Venne om returnsen är helt rätt här egentligen, lite trött just nu lol
+        Ast.Exp left = visit(ctx.postfixExpr());
+        Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
         if (ctx.NOT() != null) {
-            return visit(ctx.unaryExpr()); // Recursive call for NOT
+            Ast.Exp right = visit(ctx.unaryExpr()); // kod duplicering oops
+            return new Ast.EOpp(left, right, Ast.Op.NOT ,left.type() , pos);
         }
         if (ctx.PLUS() != null) {
-            return visit(ctx.unaryExpr()); // Recursive call for PLUS
+            Ast.Exp right = visit(ctx.unaryExpr());
+            return new Ast.EOpp(left, right, Ast.Op.ADD,left.type() , pos);
         }
         if (ctx.MINUS() != null) {
-            return visit(ctx.unaryExpr()); // Recursive call for MINUS
+            Ast.Exp right = visit(ctx.unaryExpr());
+            return new Ast.EOpp(left, right, Ast.Op.SUB,left.type() , pos);
         }
-        return visit(ctx.postfixExpr());
+        return left;
     }
     @Override
     public Ast.Exp visitPostfixExpr(GrammarParser.PostfixExprContext ctx) {
-        System.out.println("postfix expression");
         Ast.Exp left = visit(ctx.primary());
         if (ctx.INC() != null && !ctx.INC().isEmpty()) {
-            System.out.println(ctx.INC());
             if (left instanceof Ast.EId id) {
-                System.out.println("hej");
                 return new Ast.EInc(id.name(), id.type(), id.pos());
             }
         }
@@ -136,18 +196,34 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
     @Override
     public Ast.Exp visitPrimary(GrammarParser.PrimaryContext ctx) {
-        System.out.println("primary expression");
 
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+
         if (ctx.INT() != null) {
             return new Ast.EInt(Integer.parseInt(ctx.INT().getText()), Ast.Type.TInt, pos);
         } else if (ctx.ID() != null) {
+            // Check if this is an array assignment (ID ASSIGN ...) which also starts with ID
+            // The grammar rule: ID ASSIGN DYNARR_START expSeparator DYNARR_END
+            if (ctx.ASSIGN() != null) {
+                // Requires implementing array logic later. For now, return null or throw.
+                return null;
+            }
             return new Ast.EId(ctx.ID().getText(), Ast.Type.TInt, pos);
-        }
-        else if (ctx.DOUBLE() != null) {
-            System.out.println("ad");
+        } else if (ctx.DOUBLE() != null) {
             return new Ast.EDouble(Double.parseDouble(ctx.DOUBLE().getText()), Ast.Type.TDouble, pos);
+        } else if (ctx.STRING() != null) {
+            return new Ast.EString(ctx.STRING().getText(), Ast.Type.TString, pos);
+        } else if (ctx.BOOL() != null) {
+            return new Ast.EBool(Boolean.parseBoolean(ctx.BOOL().getText()), Ast.Type.TBool, pos);
+        } else if (ctx.exp() != null) {
+            // Handle parenthesized expression: '(' exp ')'
+            // Just return the inner expression
+            return visit(ctx.exp());
+        } else if (ctx.getStart().getText().equals("[")) {
+            // Handle array declaration/init: '[' TYPE ']' ID ...
+            // Pending implementation
         }
+
         return null;
     }
 

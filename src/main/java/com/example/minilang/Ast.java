@@ -52,7 +52,7 @@ public class Ast {
 
     // The operators we support
     public enum Op {
-        ADD, SUB, MUL, DIV
+        ADD, SUB, MUL, DIV, NOT
     }
 
     public enum Type {
