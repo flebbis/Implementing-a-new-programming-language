@@ -131,16 +131,21 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
     @Override
     public Ast.Exp visitMulExpr(GrammarParser.MulExprContext ctx) {
         Ast.Exp left = visit(ctx.powerExpr(0));
-        if (ctx.powerExpr(1) != null) {
-            // Loop starts at 1
+
+        // Loop through subsequent expressions if they exist
+        if (ctx.powerExpr().size() > 1) {
             for (int i = 1; i < ctx.powerExpr().size(); i++) {
                 Ast.Exp right = visit(ctx.powerExpr(i));
                 Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
 
-                // Check operator (index i-1)
+                // Default to multiply
                 Ast.Op op = Ast.Op.MUL;
+
+                // Check which operator exists at the current index (i-1)
                 if (ctx.DIVIDE(i - 1) != null) {
                     op = Ast.Op.DIV;
+                } else if (ctx.MODULO(i - 1) != null) {
+                    op = Ast.Op.MOD;
                 }
 
                 left = new Ast.EOpp(left, right, op, Ast.Type.TInt, pos);
@@ -152,7 +157,13 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
     @Override
     public Ast.Exp visitPowerExpr(GrammarParser.PowerExprContext ctx) {
-        return visit(ctx.unaryExpr());
+        Ast.Exp left = visit(ctx.unaryExpr());
+        if (ctx.POWER() != null) {
+            Ast.Exp right = visit(ctx.powerExpr());
+            Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+            return new Ast.EPower(left, right, Ast.Type.TInt, pos);
+        }
+        return left;
     }
     @Override
     public Ast.Exp visitUnaryExpr(GrammarParser.UnaryExprContext ctx) {

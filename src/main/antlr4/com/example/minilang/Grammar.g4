@@ -89,7 +89,7 @@ addExpr
     ;
 
 mulExpr
-    : powerExpr ( (MULTIPLY | DIVIDE) powerExpr )*
+    : powerExpr ( (MULTIPLY | DIVIDE | MODULO) powerExpr )*
     ;
 
 powerExpr
@@ -142,6 +142,7 @@ MINUS       : '-';
 MULTIPLY    : '*';
 DIVIDE      : '/';
 POWER       : '**';
+MODULO      : '%';
 GT          : '>';
 LT          : '<';
 LE          : '<=';
