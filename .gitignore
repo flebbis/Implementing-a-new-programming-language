@@ -40,3 +40,11 @@ tsconfig.tsbuildinfo
 
 ### General ###
 /target
+target/
+/target/
+/target/**
+*.class
+*.interp
+*.tokens
+/.idea/
+*.iml

@@ -34,3 +34,42 @@ public class Compiler {
         System.out.print(sb);
     }
 }
+package com.example.minilang;
+
+import org.antlr.v4.runtime.BailErrorStrategy;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+public class Compiler {
+
+    public static void parseFile(Path path) throws IOException {
+        String input = Files.readString(path);
+
+        // 2. Infrastructure
+        GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        GrammarParser parser = new GrammarParser(tokens);
+
+        //parser.setErrorHandler(new BailErrorStrategy());
+        //lexer.removeErrorListeners();
+        //lexer.addErrorListener();
+
+        // 3. Parse and create Tree
+        ParseTree tree = parser.program();
+
+
+        // 5. Output
+        System.out.println("Equation: " + input);
+        System.out.println("Tree: " + tree.toStringTree(parser));
+
+        // 6. Build AST
+        AstBuilderVisitor astBuilder = new AstBuilderVisitor();
+        Ast.Program astRoot = astBuilder.visit(tree);
+        System.out.println("AST:      " + astRoot);
+    }
+}
