@@ -1,12 +1,6 @@
 package com.example.minilang;
 
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
-
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class MiniLanguageMain {
@@ -15,7 +9,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "syntax/good/mulOpp.ml";
+             path = testFilePath + "syntax/good/good-1.ml";
 
         } else if (args.length == 1){
              path = args[0];

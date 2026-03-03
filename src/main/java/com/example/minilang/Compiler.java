@@ -18,26 +18,7 @@ public class Compiler {
             System.exit(1);
         }
         parseFile(Path.of(args[0]));
-        /* 
-        // läser rad för rad för filen
-        String sourceFile = args[0];
-        List<String> lines = Files.readAllLines(Paths.get(sourceFile));
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("; Generated assembly for: ").append(sourceFile).append("\n\n");
-        sb.append("section .text\n");
-        sb.append("global main\n\n");
-        sb.append("main:\n");
-
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i).trim();
-            if (line.isEmpty()) continue;
-           // sb.append("    ; Line ").append(i + 1).append(": ").append(line).append("\n");
-            sb.append("    mov  eax, ").append(i).append("\n");
-        }
-
-        System.out.print(sb);
-        */
+   
     }
 
      public static void parseFile(Path path) throws IOException {
@@ -57,20 +38,20 @@ public class Compiler {
 
 
         // 5. Output
-        System.out.println("Equation: " + input);
-        System.out.println("Tree: " + tree.toStringTree(parser));
+      //  System.out.println("Equation: " + input);
+        //System.out.println("Tree: " + tree.toStringTree(parser));
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        System.out.println("AST:      " + astRoot);
+        //System.out.println("AST:      " + astRoot);
 
         // generate llvm ir to a string
         CodeGenerator codeGen = new CodeGenerator();
-        String ir = codeGen.generate(astRoot);
+        String ir = codeGen.Generate(astRoot);
         // a new os process that can process the llvm ir, llc which is for assembly and -filetype=asm 
         // what llc should output which is assembly
-        ProcessBuilder pb = new ProcessBuilder("llc", "-filetype=asm");
+        ProcessBuilder pb = new ProcessBuilder("llc", "-filetype=asm, -0=1");
         //starts a process
         Process process = pb.start();
 
