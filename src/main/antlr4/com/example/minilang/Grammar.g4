@@ -1,24 +1,175 @@
-
 grammar Grammar;
 
+separator: (NL | SEMI)+ ;
+
+// Root rule:
+program : separator* (def (separator+ def)*)? separator* EOF;
+
+def
+    : func  #DFunc
+    | stmt    #DStm
+    ;
+
+func: TYPE 'func' ID '(' paramSeparator ')' block #FuncNoInference
+    | 'func' ID '(' expSeparator ')' block      #FuncInference
+    ;
+
+param: TYPE ID        #ParamDecl
+;
+
+stmt
+    : simpleStmt
+    | blockStmt
+    ;
+
+simpleStmt
+    : decl
+    | init
+    | returnStmt
+    | exp
+    ;
+
+blockStmt
+    : whileStmt
+    | doStmt
+    | ifStmt
+    | block
+    ;
+
+block :  '{' separator* (stmt (separator+ stmt)*)? separator* '}' ;
+
+returnStmt: 'return' exp?;
+
+whileStmt: 'while' exp stmt;
+
+doStmt: 'do' exp stmt;
+
+ifStmt  : 'if' exp block ('else' ifStmt)?   #IfElseIf
+        | 'if' exp block 'else' block       #IfElse
+        | 'if' exp block                    #If
+        ;
+
+decl: TYPE ID  #DeclNoInference
+    | ID       #DeclInference
+    ;
+
+init: TYPE ID ASSIGN exp  #InitNoInference
+    | ID ASSIGN exp       #InitInference
+    ;
 
 
-// Root rule
-program : exp EOF;
+terminator
+    : SEMI
+    | NL+
+    | EOF;
 
-// java.GrammarParser Rules
-exp: '(' exp ')'                               #ParensExp
-   | left=exp (MULTIPLY | DIVIDE) right=exp    #MulDiv
-   | left=exp (PLUS | MINUS) right=exp         #AddSub
-   | INT                            #Int
-   ;
+// Precedence-based expression rules
+exp
+    : assignExpr
+    ;
+
+assignExpr
+    : orExpr ( (ASSIGN | PLUS_ASSIGN | MINUS_ASSIGN | DIV_ASSIGN) assignExpr )?
+    ;
+
+orExpr
+    : andExpr (OR andExpr)*
+    ;
+
+andExpr
+    : equalityExpr (AND equalityExpr)*
+    ;
+
+equalityExpr
+    : relational ( (EQ | NE) relational )*
+    ;
+
+relational
+    : addExpr ( (GT | LT | GE | LE) addExpr )*
+    ;
+
+addExpr
+    : mulExpr ( (PLUS | MINUS) mulExpr )*
+    ;
+
+mulExpr
+    : powerExpr ( (MULTIPLY | DIVIDE) powerExpr )*
+    ;
+
+powerExpr
+    : unaryExpr (POWER powerExpr)?
+    ;
+
+unaryExpr
+    : (NOT | PLUS | MINUS) unaryExpr
+    | postfixExpr
+    ;
+
+postfixExpr
+    : primary ( INC | DEC | '[' exp ']' | '(' expSeparator ')' )*
+    ;
+
+primary
+    : '(' exp ')'
+    | INT
+    | DOUBLE
+    | STRING
+    | BOOL
+    | ID
+    | '[' TYPE ']' ID ASSIGN DYNARR_START expSeparator DYNARR_END
+    | ID ASSIGN DYNARR_START expSeparator DYNARR_END
+    ;
+
+expSeparator: (exp (',' exp)* )?;
+paramSeparator: (param (',' param)* )?;
 
 // java.GrammarLexer Rules
+TYPE        : 'int' | 'double' | 'string' | 'bool';
+STRING      : '"'  ( '\\' . | ~["\\] )* '"' |
+              '\'' ( '\\' . | ~['\\] )* '\'';
+DOUBLE      : [0-9]+ '.'? [0-9]*;
 INT         : [0-9]+;
 BOOL        : 'true' | 'false';
-DOUBLE      : [0-9]+ '.' [0-9]+;
+PLUS_ASSIGN : '+=';
+MINUS_ASSIGN: '-=';
+MULT_ASSIGN : '*=';
+DIV_ASSIGN  : '/=';
 PLUS        : '+';
 MINUS       : '-';
 MULTIPLY    : '*';
 DIVIDE      : '/';
-WHITESPACE  : [ \t\r\n]+ -> skip;
+POWER       : '**';
+GT          : '>';
+LT          : '<';
+LE          : '<=';
+GE          : '>=';
+EQ          : '==';
+NE          : '!=';
+AND         : 'and';
+OR          : 'or';
+NOT         : 'not';
+ID          : [a-zA-Z_][a-zA-Z0-9_]*; // need help
+ASSIGN      : '=';
+DYNARR_START : '[';
+DYNARR_END   : ']';
+INC          : '++';
+DEC          : '--';
+BOM : '\uFEFF' -> skip;
+
+
+WS : [ \t]+ -> skip;
+NL : ('\r'? '\n') ;
+SEMI : ';';
+
+// Single-line comments
+LINE_COMMENT
+    : '//' ~[\r\n]* -> skip
+    ;
+
+// Multi-line comments
+BLOCK_COMMENT
+    : '/*' .*? '*/' -> skip
+    ;
+
+
+

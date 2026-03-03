@@ -1,5 +1,6 @@
 package com.example.minilang;
 
+import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -18,17 +19,17 @@ public class Compiler {
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         GrammarParser parser = new GrammarParser(tokens);
 
+        //parser.setErrorHandler(new BailErrorStrategy());
+        //lexer.removeErrorListeners();
+        //lexer.addErrorListener();
+
         // 3. Parse and create Tree
         ParseTree tree = parser.program();
 
-        // 4. Visit the tree to calculate result
-        EvalVisitor eval = new EvalVisitor();
-        Integer result = eval.visit(tree);
 
         // 5. Output
         System.out.println("Equation: " + input);
         System.out.println("Tree: " + tree.toStringTree(parser));
-        System.out.println("Result:   " + result);
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
