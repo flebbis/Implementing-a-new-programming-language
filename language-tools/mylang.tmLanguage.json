@@ -2,14 +2,15 @@
   "scopeName": "source.mylang",
   "patterns": [
     {"include": "#Comment"},
-    {"include": "#Statement"},
-    {"include": "#FunctionDeclaration"}],
+    {"include": "#FunctionDeclaration"},
+    {"include": "#Statement"}],
   "repository": {
     "Statement": {
       "patterns": [
         {"include": "#ControllStatement"},
         {"include": "#Expression"},
-        {"include": "#StatementBlock"}
+        {"include": "#StatementBlock"},
+        {"include": "#VariableDeclaration"}
       ]
     },
     "StatementBlock": {
@@ -199,7 +200,7 @@
       }
     },
     "FunctionDeclaration": {
-      "name": "meta.funciton-definition",
+      "name": "meta.statement.definition.function",
       "begin": "(\\b[a-zA-Z_][a-zA-Z0-9]*\\b)? *(\\bfunc\\b) *(\\b[a-zA-Z_][a-zA-Z0-9]*\\b) *\\(",
       "end": "\\)",
       "patterns": [
@@ -212,11 +213,19 @@
       }
     },
     "ArgumentDeclaration": {
-      "name": "meta.argument-declaration",
+      "name": "meta.function.declaration.argument",
       "match": "([a-z]+) *([a-zA-Z_][a-zA-Z0-9]*)",
       "captures":{
         "1": {"name": "storage.type"},
         "2": {"name": "variable.parameter"}
+      }
+    },
+    "VariableDeclaration": {
+      "name": "meta.statement.declaration.variable",
+      "match": "(?=^|.*;) *([a-z]+)? *\\b([a-zA-Z_][a-zA-Z0-9]*) *(?=;|$|//|/\\*)",
+      "captures":{
+        "1":{"name": "storage.type"},
+        "2":{"name": "variable"}
       }
     }
   }
