@@ -1,10 +1,14 @@
 {
   "name": "mylang",
   "description": "language server following lsp for this unnamed language",
-  "author": "Gruppen",
+  "author": "Cole",
   "license": "MIT",
   "version": "0.0.1",
-  "publisher": "we :)",
+  "publisher": "Cole",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
+  },
   "categories": [
     "Programming Languages"
   ],

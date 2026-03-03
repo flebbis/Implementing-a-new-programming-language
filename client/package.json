@@ -4,10 +4,10 @@
   "author": "Cole",
   "license": "MIT",
   "version": "0.0.1",
-  "publisher": "we :)",
+  "publisher": "Cole",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MindokRuvaak/LS-experimenting"
+    "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
   },
   "engines": {
     "vscode": "^1.75.0"

@@ -2,14 +2,14 @@
   "name": "mylang-server",
   "description": "language server server for unnamed language",
   "version": "0.0.1",
-  "publisher": "we :)",
+  "publisher": "Cole",
   "license": "MIT",
   "engines": {
     "node": "*"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/MindokRuvaak/LS-experimenting"
+    "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
   },
   "dependencies": {
     "vscode-languageserver": "^8.1.0",
