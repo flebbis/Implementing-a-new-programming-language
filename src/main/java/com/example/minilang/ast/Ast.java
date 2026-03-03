@@ -12,7 +12,9 @@ public class Ast {
 
     public record Program(List<Stmt> stmts, List<Func> functions) {}
 
-    public record Func(String name, List<Exp> params, Type returnType, Stmt body, Pos pos) {}
+    public record Func(String name, List<Arg> params, Type returnType, Stmt body, Pos pos) {}
+
+    public record Arg(String name, Type type, Pos pos) {}
 
     // The base type for all nodes
     // 'sealed' = only the specific records listed below can implement this.
