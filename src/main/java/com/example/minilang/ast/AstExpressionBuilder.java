@@ -1,4 +1,8 @@
-package com.example.minilang;
+package com.example.minilang.ast;
+
+import com.example.minilang.GrammarBaseVisitor;
+import com.example.minilang.GrammarParser;
+import com.example.minilang.Pos;
 
 import java.util.ArrayList;
 import java.util.List;

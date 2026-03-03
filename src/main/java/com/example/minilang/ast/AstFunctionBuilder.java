@@ -1,4 +1,6 @@
-package com.example.minilang;
+package com.example.minilang.ast;
+
+import com.example.minilang.*;
 
 import java.util.ArrayList;
 import java.util.List;

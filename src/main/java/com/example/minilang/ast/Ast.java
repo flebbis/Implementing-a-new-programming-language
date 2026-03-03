@@ -1,4 +1,6 @@
-package com.example.minilang; // AST Definition
+package com.example.minilang.ast; // AST Definition
+
+import com.example.minilang.Pos;
 
 import java.util.List;
 

@@ -1,5 +1,7 @@
 package com.example.minilang;
 
+import com.example.minilang.ast.Ast;
+
 //Singleton pattern for type conversion
 public class TypeConverter {
 
