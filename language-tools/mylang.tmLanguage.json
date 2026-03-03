@@ -179,7 +179,6 @@
     "Comment": {
       "name": "comment",
       "patterns": [
-        {"include":"#CommentTODO"},
         {"include":"#CommentLine"},
         {"include":"#CommentBlock"}]
     },
@@ -201,7 +200,7 @@
     },
     "FunctionDeclaration": {
       "name": "meta.funciton-definition",
-      "begin": "(\\b[a-z][a-zA-Z0-9]*\\b)? *(\\bfunc\\b) *(\\b[a-z][a-zA-Z0-9]*\\b) *\\(",
+      "begin": "(\\b[a-zA-Z_][a-zA-Z0-9]*\\b)? *(\\bfunc\\b) *(\\b[a-zA-Z_][a-zA-Z0-9]*\\b) *\\(",
       "end": "\\)",
       "patterns": [
         {"include": "#ArgumentDeclaration"}
@@ -214,7 +213,7 @@
     },
     "ArgumentDeclaration": {
       "name": "meta.argument-declaration",
-      "match": "([a-z]+) *([a-z]\\w*)",
+      "match": "([a-z]+) *([a-zA-Z_][a-zA-Z0-9]*)",
       "captures":{
         "1": {"name": "storage.type"},
         "2": {"name": "variable.parameter"}
