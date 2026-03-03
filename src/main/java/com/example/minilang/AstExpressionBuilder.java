@@ -23,15 +23,15 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 Ast.Type type = id.type();
                 Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
                 if (ctx.ASSIGN() != null) {
-                    return new Ast.EAss(id.name(), right, type, pos);
+                    return new Ast.EAss(id.name(), right, Ast.AssOp.ASSIGN, type, pos);
                 } else if (ctx.PLUS_ASSIGN() != null) {
-                    return new Ast.EPlusAss(id.name(), right, type, pos);
+                    return new Ast.EAss(id.name(), right, Ast.AssOp.PLUS_ASSIGN, type, pos);
                 } else if (ctx.MINUS_ASSIGN() != null) {
-                    return new Ast.EMinusAss(id.name(), right, type, pos);
+                    return new Ast.EAss(id.name(), right, Ast.AssOp.MINUS_ASSIGN, type, pos);
                 } else if (ctx.DIV_ASSIGN() != null) {
-                    return new Ast.EDivAss(id.name(), right, type, pos);
+                    return new Ast.EAss(id.name(), right, Ast.AssOp.DIV_ASSIGN, type, pos);
                 } else if (ctx.MULT_ASSIGN() != null) {
-                    return new Ast.EMultAss(id.name(), right, type, pos);
+                    return new Ast.EAss(id.name(), right, Ast.AssOp.MULT_ASSIGN, type, pos);
                 }
             }
         }
@@ -45,7 +45,7 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
             for (int i = 1; i < ctx.andExpr().size(); i++) {
             Ast.Exp right = visit(ctx.andExpr(i));
             Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-            left = new Ast.EOr(left, right, Ast.Type.TBool, pos);
+            left = new Ast.ELogic(left, right, Ast.LogicOp.OR, Ast.Type.TBool, pos);
             }
         }
 
@@ -59,7 +59,7 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
             for (int i = 1; i < ctx.equalityExpr().size(); i++) {
                 Ast.Exp right = visit(ctx.equalityExpr(i));
                 Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-                left = new Ast.EAnd(left, right, Ast.Type.TBool, pos);
+                left = new Ast.ELogic(left, right, Ast.LogicOp.AND, Ast.Type.TBool, pos);
             }
         }
 
@@ -75,9 +75,9 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
 
                 if (ctx.EQ(i - 1) != null) {
-                    left = new Ast.EEq(left, right, Ast.Type.TBool, pos);
+                    left = new Ast.ECmp(left, right, Ast.CmpOp.EQ, Ast.Type.TBool, pos);
                 } else if (ctx.NE(i - 1) != null) {
-                    left = new Ast.ENe(left, right, Ast.Type.TBool, pos);
+                    left = new Ast.ECmp(left, right, Ast.CmpOp.NE, Ast.Type.TBool, pos);
                 }
             }
         }
@@ -93,13 +93,13 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
 
                 if (ctx.LT(i - 1) != null) {
-                    left = new Ast.ELt(left, right, Ast.Type.TBool, pos);
+                    left = new Ast.ECmp(left, right, Ast.CmpOp.LT, Ast.Type.TBool, pos);
                 } else if (ctx.GT(i - 1) != null) {
-                    left = new Ast.EGt(left, right, Ast.Type.TBool, pos);
+                    left = new Ast.ECmp(left, right, Ast.CmpOp.GT, Ast.Type.TBool, pos);
                 } else if (ctx.LE(i - 1) != null) {
-                    left = new Ast.ELe(left, right, Ast.Type.TBool, pos);
+                    left = new Ast.ECmp(left, right, Ast.CmpOp.LE, Ast.Type.TBool, pos);
                 } else if (ctx.GE(i - 1) != null) {
-                    left = new Ast.EGe(left, right, Ast.Type.TBool, pos);
+                    left = new Ast.ECmp(left, right, Ast.CmpOp.GE, Ast.Type.TBool, pos);
                 }
             }
         }
@@ -182,9 +182,9 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
         for(GrammarParser.PostFixOpContext op : ctx.postFixOp()) {
             if(op.INC() != null) {
-                expr = new Ast.EInc(expr, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+                expr = new Ast.EUnary(expr, Ast.UnaryOp.INC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             } else if(op.DEC() != null) {
-                expr = new Ast.EDec(expr, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+                expr = new Ast.EUnary(expr, Ast.UnaryOp.DEC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             } else if(op.exp() != null) {
                 Ast.Exp index = visit(op.exp());
                 expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));

@@ -15,41 +15,40 @@ public class Ast {
     // The base type for all nodes
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
-            EInc, EDec, ECall, ENot, EPower, EOpp, ELt, EGt, EGe, ELe, ENe, EEq, EAnd, EOr,
-            EAss, EPlusAss, EMinusAss, EDivAss, EMultAss, EArrayIndex {}
+            ECall, ENot, EPower, EOpp, ECmp, ELogic,
+            EAss, EArrayIndex, EUnary {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
     public sealed interface SimpleStmt extends Stmt permits SDecl, SInit, SReturn, SExp {}
 
-    // A leaf node representing a number (e.g., 3)
-    public record EInt(int value, Type type, Pos pos) implements Exp {}
 
-    // A node representing an operation (e.g., 3 + 5)
-    public record EOpp(Exp left, Exp right, Op op, Type type, Pos pos) implements Exp {}
+    // Expressions
+    public record EInt(int value, Type type, Pos pos) implements Exp {}
     public record EDouble(double value, Type type, Pos pos) implements Exp {}
     public record EString(String value, Type type, Pos pos) implements Exp {}
     public record EBool(boolean value, Type type, Pos pos) implements Exp {}
     public record EId(String name, Type type, Pos pos) implements Exp {}
-    public record EInc(Exp exp, Type type, Pos pos) implements Exp {}
-    public record EDec(Exp exp, Type type, Pos pos) implements Exp {}
     public record ECall(Exp exp, List<Exp> args, Type type, Pos pos) implements Exp {}
     public record ENot(Exp exp, Type type, Pos pos) implements Exp {}
     public record EPower(Exp base, Exp exponent, Type type, Pos pos) implements Exp {}
-    public record ELt(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record EGt(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record EGe(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record ELe(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record ENe(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record EEq(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record EAnd(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record EOr(Exp left, Exp right, Type type, Pos pos) implements Exp {}
-    public record EAss(String name, Exp value, Type type, Pos pos) implements Exp {}
-    public record EPlusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
-    public record EMinusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
-    public record EDivAss(String name, Exp value, Type type, Pos pos) implements Exp {}
-    public record EMultAss(String name, Exp value, Type type, Pos pos) implements Exp {}
+    public record EOpp(Exp left, Exp right, Op op, Type type, Pos pos) implements Exp {}
+    public record ECmp(Exp left, Exp right, CmpOp op, Type type, Pos pos) implements Exp {}
+    public record ELogic(Exp left, Exp right, LogicOp op, Type type, Pos pos) implements Exp {}
+    public record EAss(String name, Exp value, AssOp op, Type type, Pos pos) implements Exp {}
     public record EArrayIndex(Exp array, Exp index, Type type, Pos pos) implements Exp {}
+    public record EUnary(Exp exp, UnaryOp op, Type type, Pos pos) implements Exp {}
+
+    public enum UnaryOp { INC, DEC }
+
+    // Logical operators (AND, OR)
+    public enum LogicOp { AND, OR }
+
+    // Comparison operators (LT, GT, LE, GE, EQ, NE)
+    public enum CmpOp { LT, GT, LE, GE, EQ, NE }
+
+    // Assignment operators (ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN, DIV_ASSIGN, MULT_ASSIGN)
+    public enum AssOp { ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN, DIV_ASSIGN, MULT_ASSIGN }
 
     // The operators we support
     public enum Op {
