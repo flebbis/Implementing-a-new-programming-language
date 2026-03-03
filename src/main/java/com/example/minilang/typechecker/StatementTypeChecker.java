@@ -1,8 +1,11 @@
-﻿package com.example.minilang.typechecker;
+package com.example.minilang.typechecker;
 
 import com.example.minilang.ast.Ast;
 
 public class StatementTypeChecker {
+
+    private ExpressionTypeChecker expressionTypeChecker = new ExpressionTypeChecker();
+
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
         return switch (stmt) {
             case Ast.SWhile SWhile -> typeCheck(SWhile);
@@ -14,6 +17,11 @@ public class StatementTypeChecker {
             case Ast.SInit SInit -> typeCheck(SInit);
             case Ast.SExp SExp -> typeCheck(SExp);
         };
+    }
+
+    public Ast.SExp typeCheck(Ast.SExp stmt) {
+        expressionTypeChecker.typeCheck(stmt.exp());
+        return stmt;
     }
 
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {

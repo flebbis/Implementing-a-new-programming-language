@@ -1,4 +1,4 @@
-﻿package com.example.minilang.typechecker;
+package com.example.minilang.typechecker;
 
 import com.example.minilang.ast.Ast;
 

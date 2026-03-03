@@ -2,6 +2,7 @@ package com.example.minilang;
 
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
+import com.example.minilang.typechecker.TypeChecker;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -28,6 +29,7 @@ public class Compiler {
         ParseTree tree = parser.program();
 
 
+
         // 5. Output
         System.out.println("Equation: " + input);
         System.out.println("Tree: " + tree.toStringTree(parser));
@@ -36,5 +38,8 @@ public class Compiler {
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
+
+        TypeChecker typeChecker = new TypeChecker();
+        typeChecker.typeCheck(astRoot);
     }
 }
