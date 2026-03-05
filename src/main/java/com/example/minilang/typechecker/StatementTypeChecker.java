@@ -4,7 +4,13 @@ import com.example.minilang.ast.Ast;
 
 public class StatementTypeChecker {
 
-    private ExpressionTypeChecker expressionTypeChecker = new ExpressionTypeChecker();
+    private Context context;
+    private ExpressionTypeChecker expressionTypeChecker;
+
+    public StatementTypeChecker(Context context) {
+        this.context = context;
+        this.expressionTypeChecker = new ExpressionTypeChecker(context);
+    }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
         return switch (stmt) {
@@ -19,9 +25,26 @@ public class StatementTypeChecker {
         };
     }
 
+
+    public Ast.SInit typeCheck(Ast.SInit sInit) {
+        if(sInit.type() == Ast.Type.TUnknown) {
+            // TODO: OBSERVE THIS HELLOOO LANGUAGE SERVER
+            Ast.Exp exp = expressionTypeChecker.typeCheck(sInit.value());
+            context.pushToCurrentScope(sInit.name(), exp.type());
+            return new Ast.SInit(exp.type(), sInit.name(), exp, sInit.pos());
+        } else {
+            Ast.Exp exp = expressionTypeChecker.typeCheck(sInit.value());
+            if(sInit.type() != exp.type()) {
+                throw new TypeException("Incorrect initialisation of type: " + exp.type() + exp.pos());
+            }
+            context.pushToCurrentScope(sInit.name(), sInit.type());
+            return new Ast.SInit(exp.type(), sInit.name(), exp, sInit.pos());
+        }
+    }
+
     public Ast.SExp typeCheck(Ast.SExp stmt) {
-        expressionTypeChecker.typeCheck(stmt.exp());
-        return stmt;
+        Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.exp());
+        return new Ast.SExp(exp, stmt.pos());
     }
 
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {

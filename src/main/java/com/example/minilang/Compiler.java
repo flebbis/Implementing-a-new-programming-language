@@ -37,9 +37,10 @@ public class Compiler {
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        System.out.println("AST:      " + astRoot);
+        System.out.println("AST:      " + astRoot + "\n\n");
 
         TypeChecker typeChecker = new TypeChecker();
-        typeChecker.typeCheck(astRoot);
+        Ast.Program typeAnnotatedProgram = typeChecker.typeCheck(astRoot);
+        System.out.println("Type Annotated AST: " + typeAnnotatedProgram);
     }
 }
