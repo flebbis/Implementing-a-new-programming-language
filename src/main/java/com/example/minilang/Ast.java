@@ -31,7 +31,7 @@ public class Ast {
     public record EString(String value, Type type, Pos pos) implements Exp {}
     public record EBool(boolean value, Type type, Pos pos) implements Exp {}
     public record EId(String name, Type type, Pos pos) implements Exp {}
-    public record ECall(Exp exp, List<Exp> args, Type type, Pos pos) implements Exp {}
+    public record ECall(String name, List<Exp> args, Type type, Pos pos) implements Exp {}
     public record ENot(Exp exp, Type type, Pos pos) implements Exp {}
     public record EPower(Exp base, Exp exponent, Type type, Pos pos) implements Exp {}
     public record EOpp(Exp left, Exp right, Op op, Type type, Pos pos) implements Exp {}
@@ -58,7 +58,7 @@ public class Ast {
     }
 
     public enum Type {
-        TInt, TBool, TString, TDouble, TUnknown;
+        TInt, TBool, TString, TDouble, TUnknown, TVoid;
     }
 
     public interface HasPos { Pos pos(); }
