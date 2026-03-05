@@ -35,14 +35,35 @@ public class TypeChecker {
     private List<Ast.Func> extractFunctionSignatures(List<Ast.Func> functions) {
         List<Ast.Func> funcs = new ArrayList<>();
         for(Ast.Func func : functions) {
+            context.pushNewScope();
             String name = func.name();
+            statementTypeChecker.setCurrentFunction(name);
             Ast.Type returnType = func.returnType();
+
+            // Extract parameter types
             List<Ast.Type> paramTypes = new ArrayList<>();
             for(int i = 0; i < func.params().size(); i++) {
+                context.pushToCurrentScope(func.params().get(i).name(), func.params().get(i).type()); // add args to current scope
                 paramTypes.add(func.params().get(i).type());
             }
+
+            // Store the function signature for later use in type checking function calls
             functionSignatures.put(name, new Signature(name, returnType, paramTypes));
-            funcs.add(new Ast.Func(name, func.params(), returnType, func.body(), func.pos()));
+
+            // Check if the function body is a block statement
+            if(!(func.body() instanceof Ast.SBlock) ) {
+                throw new TypeException("Function body must be a block statement", func.body().pos());
+            }
+
+            // Type check the function body
+            List<Ast.Stmt> bodyStmts = new ArrayList<>();
+            for(Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
+                bodyStmts.add(statementTypeChecker.typeCheck(stmt));
+            }
+
+
+            funcs.add(new Ast.Func(name, func.params(), returnType, new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
+            context.popScope();
         }
         return funcs;
     }

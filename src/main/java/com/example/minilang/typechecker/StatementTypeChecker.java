@@ -10,7 +10,7 @@ public class StatementTypeChecker {
 
     private Context context;
     private ExpressionTypeChecker expressionTypeChecker;
-
+    private String currentFunction;
     private HashMap<String, Signature> functionSignatures;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature>  functionSignatures) {
@@ -88,10 +88,21 @@ public class StatementTypeChecker {
     }
 
     public Ast.Stmt typeCheck(Ast.SReturn stmt) {
-        // Type check the return expression
-        // Ensure it matches the expected return type of the function
-        // Return an annotated SReturn statement
-        return stmt; // Placeholder
+        Ast.Exp value = expressionTypeChecker.typeCheck(stmt.value());
+        if(currentFunction == null) {
+            throw new TypeException("Return statement not inside a function", stmt.pos());
+        }
+        Signature signature = functionSignatures.get(currentFunction);
+        if(signature.returnType != value.type()) {
+            // Allow implicit conversion from int to double
+            if(signature.returnType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+                value = new Ast.EDInt(value, value.type(), value.pos());
+            } else {
+                throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
+            }
+        }
+
+        return new Ast.SReturn(value, stmt.pos());
     }
 
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
@@ -99,5 +110,9 @@ public class StatementTypeChecker {
         // Ensure the condition is of type bool
         // Return an annotated SIf statement
         return stmt; // Placeholder
+    }
+
+    public void setCurrentFunction(String currentFunction) {
+        this.currentFunction = currentFunction;
     }
 }

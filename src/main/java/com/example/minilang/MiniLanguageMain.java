@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/bad/while-2.ml";
+             path = testFilePath + "type/good/function-call.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {
