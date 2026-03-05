@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -17,11 +19,13 @@ public class Compiler {
             System.err.println("Usage: java -jar compiler.jar <sourcefile>");
             System.exit(1);
         }
-        parseFile(Path.of(args[0]));
+        String optLevel = args.length > 1 ? args[1] : "-O3";
+        parseFile(Path.of(args[0]), optLevel);
    
     }
 
-     public static void parseFile(Path path) throws IOException {
+     public static void parseFile(Path path, String optLevel) throws IOException {
+        
         String input = Files.readString(path);
 
         // 2. Infrastructure
@@ -34,6 +38,7 @@ public class Compiler {
         //lexer.addErrorListener();
 
         // 3. Parse and create Tree
+
         ParseTree tree = parser.program();
 
 
@@ -44,14 +49,16 @@ public class Compiler {
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
+
         //System.out.println("AST:      " + astRoot);
 
         // generate llvm ir to a string
         CodeGenerator codeGen = new CodeGenerator();
         String ir = codeGen.Generate(astRoot);
+
         // a new os process that can process the llvm ir, llc which is for assembly and -filetype=asm 
         // what llc should output which is assembly
-        ProcessBuilder pb = new ProcessBuilder("llc", "-filetype=asm, -0=1");
+        ProcessBuilder pb = new ProcessBuilder("llc", "-filetype=asm", optLevel);
         //starts a process
         Process process = pb.start();
 
@@ -64,7 +71,12 @@ public class Compiler {
         byte[] bytes = is.readAllBytes();
         String assembly = new String(bytes,StandardCharsets.UTF_8);
 
-        System.out.print(assembly);
+        String filtered = Arrays.stream(assembly.split("\n")).filter(line -> !line.trim().startsWith("."))
+        .collect(Collectors.joining("\n"));
+
+        System.out.print(filtered);
+        
+        
         
         };
     }

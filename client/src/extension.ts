@@ -85,33 +85,79 @@ export function activate(context: ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider('asm-preview', asmProvider)
   );
+  
+  let lastPath: string | undefined;
+  async function showAssembly(optLevel: string) {
+    
+    vscode.window.showInformationMessage('Optimazation level' + optLevel);
+    try {
+      // get the editor and the filepath then save the file
+      const editor = vscode.window.activeTextEditor;
+        
+      if (editor && editor.document.uri.scheme === 'file') {
+        lastPath = editor.document.uri.fsPath;
+        await editor.document.save();
+    }
+        
+      if (!lastPath) {
+          vscode.window.showErrorMessage('No active .mylang file!');
+          return;
+      }
+        
+          // no file open
+      if (!vscode.window.activeTextEditor) {
+          vscode.window.showErrorMessage('No active editor!');
+          return;
+      }
+
+      //execute the file, store the content into a string and run setContent
+      //fires the emitter which tells vsCode that the file has changed
+      const result = execFileSync('java', ['-jar', JAR_PATH, lastPath, optLevel]);
+      const asm = result.toString(); 
+      asmProvider.setContent(asm);
+            
+      // open and show the assembly document to the right of the screen
+      const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
+      await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
+      } catch(e: any) {
+        vscode.window.showErrorMessage('Error: ' + e.message);
+      }
+  }
+ 
+  // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
   context.subscriptions.push(
-  vscode.commands.registerCommand('asm-preview.show', async () => {
-    try {
-        // no file open
-        if (!vscode.window.activeTextEditor) {
-            vscode.window.showErrorMessage('No active editor!');
-            return;
-        }
-        // get the editor and the filepath then save the file
-        const editor = vscode.window.activeTextEditor;
-        const filePath = editor.document.uri.fsPath;
-        await editor.document.save();
-        
-        //execute the file, store the content into a string and run setContent
-        //fires the emitter which tells vsCode that the file has changed
-        const result = execFileSync('java', ['-jar', JAR_PATH, filePath]);
-        const asm = result.toString();
-        asmProvider.setContent(asm);
-        
-        // open and show the assembly document to the right of the screen
-        const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
-        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
-    } catch(e: any) {
-        vscode.window.showErrorMessage('Error: ' + e.message);
-    }
-}));
+    vscode.commands.registerCommand('asm-preview.show', async() => showAssembly('-O0'))
+);
+  context.subscriptions.push(
+    vscode.commands.registerCommand('opt.buttons', async() => {})
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('O0', async() => {
+      showAssembly('-O0');
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('O1', async() => {
+      showAssembly('-O1');
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('O2', async() => {
+      showAssembly('-O2');
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('O3', async() => {
+      showAssembly('-O3');
+    })
+  )
+
+
 
 }
 
