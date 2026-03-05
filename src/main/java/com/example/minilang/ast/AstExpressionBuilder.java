@@ -198,7 +198,12 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
                     args.add(visit(expCtx));
                 }
-                expr = new Ast.ECall(expr, args, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+                // Should always be an EId if it's a function call, but we can check to be safe
+                if (expr instanceof Ast.EId id) {
+                    expr = new Ast.ECall(id.name(), args, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+                } else {
+                    throw new IllegalArgumentException("Function call target must be an identifier");
+                }
             }
         }
         return expr;

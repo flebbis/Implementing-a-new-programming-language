@@ -3,17 +3,18 @@ package com.example.minilang.typechecker;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class TypeChecker {
 
-    private List<Signature> signatures = new ArrayList<>();
-    StatementTypeChecker statementTypeChecker;
-    Context context;
+    private HashMap<String, Signature> functionSignatures = new HashMap<>();
+    private StatementTypeChecker statementTypeChecker;
+    private Context context;
 
     public TypeChecker() {
         this.context = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context);
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures);
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -40,7 +41,7 @@ public class TypeChecker {
             for(int i = 0; i < func.params().size(); i++) {
                 paramTypes.add(func.params().get(i).type());
             }
-            signatures.add(new Signature(name, returnType, paramTypes));
+            functionSignatures.put(name, new Signature(name, returnType, paramTypes));
             funcs.add(new Ast.Func(name, func.params(), returnType, func.body(), func.pos()));
         }
         return funcs;

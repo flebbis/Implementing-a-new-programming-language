@@ -1,14 +1,19 @@
 package com.example.minilang.typechecker;
 
-import com.example.minilang.Pos;
 import com.example.minilang.ast.Ast;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 public class ExpressionTypeChecker {
 
     private Context context = new Context();
+    private HashMap<String, Signature> functionSignatures;
 
-    public ExpressionTypeChecker(Context context) {
+    public ExpressionTypeChecker(Context context, HashMap<String, Signature> signature) {
         this.context = context;
+        this.functionSignatures = signature;
     }
 
     public Ast.Exp typeCheck(Ast.Exp exp) {
@@ -44,7 +49,6 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.EBool eBool) {
         return eBool;
     }
-
 
     public Ast.Exp typeCheck(Ast.EId eId) {
         Ast.Type type = context.lookupLatest(eId.name());
@@ -84,7 +88,7 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.ECmp eCmp) {
         Ast.Exp left = typeCheck(eCmp.left());
         Ast.Exp right = typeCheck(eCmp.right());
-        System.out.println("LEEEFT " + left);
+
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
 
@@ -120,9 +124,12 @@ public class ExpressionTypeChecker {
             }
         }
 
-        // String concatenation: "hello " + 2 => "hello 2"
+        // String addition
         if(eOpp.op() == Ast.Op.ADD) {
-            if(left.type() == Ast.Type.TString || right.type() == Ast.Type.TString) {
+            if(left.type() == Ast.Type.TString && right.type() == Ast.Type.TString) {
+                return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TString, eOpp.pos());
+            }
+            else if(left.type() == Ast.Type.TString || right.type() == Ast.Type.TString) {
                 // Wrap non-string operand in EStringCast
                 if(left.type() != Ast.Type.TString) {
                     left = new Ast.EStringCast(left, Ast.Type.TString, left.pos());
@@ -148,6 +155,7 @@ public class ExpressionTypeChecker {
         }
     }
 
+
     public Ast.EUnary typeCheck(Ast.EUnary eUnary) {
         Ast.Exp exp = typeCheck(eUnary.exp());
         if(exp.type() == Ast.Type.TInt) {
@@ -160,4 +168,48 @@ public class ExpressionTypeChecker {
         }
     }
 
+    public Ast.EAss typeCheck(Ast.EAss eAss) {
+        Ast.Exp value = typeCheck(eAss.value());
+        Ast.Type varType = context.lookupLatest(eAss.name());
+        if (varType == null) {
+            throw new TypeException("Variable " + eAss.name() + " is not declared", eAss.pos());
+        }
+        if (varType != value.type()) {
+            // Allow implicit conversion from int to double
+            if (varType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+                value = new Ast.EDInt(value, value.type(), value.pos());
+            } else {
+                throw new TypeException("Cannot assign type " + value.type() + " to variable of type " + varType, eAss.pos());
+            }
+        }
+        return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
+    }
+
+    public Ast.ECall typeCheck(Ast.ECall eCall) {
+        // Type check the arguments first
+        List<Ast.Exp> args = new ArrayList<>();
+        for(Ast.Exp arg : eCall.args()) {
+            args.add(typeCheck(arg));
+        }
+
+        // Then look up the function signature
+        if(functionSignatures.containsKey(eCall.name())) {
+            int i = 0;
+            for(Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
+                if(args.get(i).type() != paramType) {
+                    // Allow implicit conversion from int to double
+                    if(paramType == Ast.Type.TDouble && args.get(i).type() == Ast.Type.TInt) {
+                        args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
+                    } else {
+                        throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
+                    }
+                }
+                i++;
+            }
+        } else {
+            throw new TypeException("Function " + eCall.name() + " is not declared", eCall.pos());
+        }
+
+        return new Ast.ECall(eCall.name(), args, functionSignatures.get(eCall.name()).returnType, eCall.pos());
+    }
 }

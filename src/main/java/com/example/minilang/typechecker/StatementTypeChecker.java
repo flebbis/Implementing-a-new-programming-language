@@ -2,14 +2,21 @@ package com.example.minilang.typechecker;
 
 import com.example.minilang.ast.Ast;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 public class StatementTypeChecker {
 
     private Context context;
     private ExpressionTypeChecker expressionTypeChecker;
 
-    public StatementTypeChecker(Context context) {
+    private HashMap<String, Signature> functionSignatures;
+
+    public StatementTypeChecker(Context context, HashMap<String, Signature>  functionSignatures) {
         this.context = context;
-        this.expressionTypeChecker = new ExpressionTypeChecker(context);
+        this.functionSignatures = functionSignatures;
+        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -55,10 +62,22 @@ public class StatementTypeChecker {
     }
 
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {
-        // Type check the condition and body of the while loop
-        // Ensure the condition is of type bool
-        // Return an annotated SWhile statement
-        return stmt; // Placeholder
+        context.pushNewScope();
+        Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
+        if(condition.type() != Ast.Type.TBool) {
+            throw new TypeException("Condition of while loop must be of type bool", condition.pos());
+        }
+
+        List<Ast.Stmt> bodyStmts = new ArrayList<>();
+        // Check body
+        if(!(stmt.body() instanceof Ast.SBlock)) {
+            throw new TypeException("Body of while loop must be a block statement", stmt.body().pos());
+        }
+        for(Ast.Stmt s : ((Ast.SBlock) stmt.body()).statements()) {
+            bodyStmts.add(typeCheck(s));
+        }
+        context.popScope();
+        return new Ast.SWhile(condition, new Ast.SBlock(bodyStmts, stmt.body().pos()), stmt.pos());
     }
 
     public Ast.Stmt typeCheck(Ast.SDo stmt) {
