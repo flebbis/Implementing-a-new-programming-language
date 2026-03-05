@@ -35,10 +35,17 @@ public class StatementTypeChecker {
         } else {
             Ast.Exp exp = expressionTypeChecker.typeCheck(sInit.value());
             if(sInit.type() != exp.type()) {
-                throw new TypeException("Incorrect initialisation of type: " + exp.type() + exp.pos());
+
+                // Allow implicit conversion from int to double
+                if(sInit.type() == Ast.Type.TDouble && exp.type() == Ast.Type.TInt) {
+                    exp = new Ast.EDInt(exp, exp.type(), exp.pos());
+
+                } else {
+                    throw new TypeException("Incorrect initialisation of type " + exp.type(), exp.pos());
+                }
             }
             context.pushToCurrentScope(sInit.name(), sInit.type());
-            return new Ast.SInit(exp.type(), sInit.name(), exp, sInit.pos());
+            return new Ast.SInit(sInit.type(), sInit.name(), exp, sInit.pos());
         }
     }
 

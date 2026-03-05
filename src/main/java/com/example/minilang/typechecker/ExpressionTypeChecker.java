@@ -12,7 +12,6 @@ public class ExpressionTypeChecker {
     }
 
     public Ast.Exp typeCheck(Ast.Exp exp) {
-        System.out.println("Type checking expression: " + exp.getClass().getSimpleName());
         return switch(exp) {
             case Ast.EInt eInt -> typeCheck(eInt);
             case Ast.EDouble eDouble -> typeCheck(eDouble);
@@ -28,7 +27,6 @@ public class ExpressionTypeChecker {
             case Ast.EAss eAss -> typeCheck(eAss);
             case Ast.EArrayIndex eArrayIndex -> typeCheck(eArrayIndex);
             case Ast.EUnary eUnary -> typeCheck(eUnary);
-
 
             // More to be implemented
             default -> throw new TypeException("Unknown expression type: " + exp.getClass().getSimpleName(), exp.pos());
@@ -58,6 +56,31 @@ public class ExpressionTypeChecker {
         }
     }
 
+    public Ast.Exp typeCheck(Ast.ENot enot){
+        Ast.Exp exp = typeCheck(enot.exp());
+        if(exp.type() == Ast.Type.TBool) {
+            return new Ast.ENot(exp, Ast.Type.TBool, enot.pos());
+        } else {
+            throw new TypeException("Logical NOT operator requires boolean operand", enot.pos());
+        }
+    }
+
+    public Ast.Exp typeCheck(Ast.EPower ePower){
+        //TODO: should one of the types be EDINT????
+        Ast.Exp base = typeCheck(ePower.base());
+        Ast.Exp exponent = typeCheck(ePower.exponent());
+        if (base.type() == Ast.Type.TInt || base.type() == Ast.Type.TDouble) {
+            if (exponent.type() == Ast.Type.TInt || exponent.type() == Ast.Type.TDouble) {
+                // If either is double, the result is double
+                Ast.Type resultType = (base.type() == Ast.Type.TDouble || exponent.type() == Ast.Type.TDouble) ? Ast.Type.TDouble : Ast.Type.TInt;
+                return new Ast.EPower(base, exponent, resultType, ePower.pos());
+            } else {
+                throw new TypeException("Exponent must be of type int or double", ePower.pos());
+            }
+        }
+        return null;
+    }
+
     public Ast.Exp typeCheck(Ast.ECmp eCmp) {
         Ast.Exp left = typeCheck(eCmp.left());
         Ast.Exp right = typeCheck(eCmp.right());
@@ -74,5 +97,67 @@ public class ExpressionTypeChecker {
         }
     }
 
+    public Ast.Exp typeCheck(Ast.ELogic eLogic) {
+        Ast.Exp left = typeCheck(eLogic.left());
+        Ast.Exp right = typeCheck(eLogic.right());
+        if(left.type() == Ast.Type.TBool && right.type() == Ast.Type.TBool) {
+            return new Ast.ELogic(left, right, eLogic.op(), Ast.Type.TBool, eLogic.pos());
+        } else {
+            throw new TypeException("Logical operators require boolean operands", eLogic.pos());
+        }
+    }
+
+    public Ast.Exp typeCheck(Ast.EOpp eOpp) {
+        Ast.Exp left = typeCheck(eOpp.left());
+        Ast.Exp right = typeCheck(eOpp.right());
+
+        // Modulus operator only works for integers
+        if(eOpp.op() == Ast.Op.MOD) {
+            if(left.type() == Ast.Type.TInt && right.type() == Ast.Type.TInt) {
+                return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TInt, eOpp.pos());
+            } else {
+                throw new TypeException("Modulus operator requires integer operands", eOpp.pos());
+            }
+        }
+
+        // String concatenation: "hello " + 2 => "hello 2"
+        if(eOpp.op() == Ast.Op.ADD) {
+            if(left.type() == Ast.Type.TString || right.type() == Ast.Type.TString) {
+                // Wrap non-string operand in EStringCast
+                if(left.type() != Ast.Type.TString) {
+                    left = new Ast.EStringCast(left, Ast.Type.TString, left.pos());
+                }
+                if(right.type() != Ast.Type.TString) {
+                    right = new Ast.EStringCast(right, Ast.Type.TString, right.pos());
+                }
+                return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TString, eOpp.pos());
+            }
+        }
+
+        // For other arithmetic operators, we allow int and double, with implicit conversion from int to double if needed
+        if(left.type() == Ast.Type.TInt && right.type() == Ast.Type.TInt) {
+            return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TInt, eOpp.pos());
+        } else if(left.type() == Ast.Type.TDouble && right.type() == Ast.Type.TDouble) {
+            return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TDouble, eOpp.pos());
+        } else if(left.type() == Ast.Type.TInt && right.type() == Ast.Type.TDouble) {
+            return new Ast.EOpp(new Ast.EDInt(left, left.type(), left.pos()), right, eOpp.op(), Ast.Type.TDouble, eOpp.pos());
+        } else if(left.type() == Ast.Type.TDouble && right.type() == Ast.Type.TInt) {
+            return new Ast.EOpp(left, new Ast.EDInt(right, right.type(), right.pos()), eOpp.op(), Ast.Type.TDouble, eOpp.pos());
+        } else {
+            throw new TypeException("Arithmetic operators require numeric operands", eOpp.pos());
+        }
+    }
+
+    public Ast.EUnary typeCheck(Ast.EUnary eUnary) {
+        Ast.Exp exp = typeCheck(eUnary.exp());
+        if(exp.type() == Ast.Type.TInt) {
+            return new Ast.EUnary(exp, eUnary.op(), exp.type(), eUnary.pos());
+        }
+        if(eUnary.op() == Ast.UnaryOp.INC) {
+            throw new TypeException("Increment operator requires integer operand", eUnary.pos());
+        } else {
+                throw new TypeException("Decrement operator requires integer operand", eUnary.pos());
+        }
+    }
 
 }
