@@ -39,4 +39,24 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
         return left;
     }
 
+@Override
+public Ast.Exp visitPrimary(GrammarParser.PrimaryContext ctx) {
+    Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+    
+    if (ctx.exp() != null) {
+        return visit(ctx.exp());
+    } else if (ctx.INT() != null) {
+        return new Ast.EInt(Integer.parseInt(ctx.INT().getText()), Ast.Type.TInt, pos);
+    } else if (ctx.ID() != null) {
+        return new Ast.EId(ctx.ID().getText(), Ast.Type.TUnknown, pos);
+    }
+    
+    return null;
+}
+
+    @Override
+    public Ast.Exp aggregateResult(Ast.Exp aggregate, Ast.Exp nextResult) {
+        return nextResult != null ? nextResult : aggregate;
+    }
+
 }

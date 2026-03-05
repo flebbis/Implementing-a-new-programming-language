@@ -25,6 +25,9 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
     @Override
     public Ast.SReturn visitReturnStmt(GrammarParser.ReturnStmtContext ctx) {
         Ast.Exp exp = null;
+        System.out.println("DEBUG: visitReturnStmt called");
+        System.out.println("DEBUG: ctx.exp() == null? " + (ctx.exp() == null));
+        System.out.println("DEBUG: ctx.getText() = " + ctx.getText());
         if(ctx.exp() != null) {
             exp = astExpressionBuilder.visitExp(ctx.exp());
         }

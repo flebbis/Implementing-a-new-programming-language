@@ -1,0 +1,314 @@
+package com.example.minilang;
+import java.util.List;
+
+public class ExpressionCodeGen {
+
+
+    private StringBuilder sb;
+    private LabelGenerator labelGen;
+    private List<Ast.Func> functions;
+    private int regCounter = 0;  // Counter for generating unique registers
+    
+    public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
+        this.sb = sb;
+        this.labelGen = labelGen;
+        this.functions = functions;
+    }
+    
+    /**
+     * Generate code for an expression and return the register holding the result
+     */
+    public String codeGenExp(Ast.Exp exp) {
+    if (exp instanceof Ast.EInt eInt) return codeGenInt(eInt);
+    if (exp instanceof Ast.EDouble eDouble) return codeGenDouble(eDouble);
+    if (exp instanceof Ast.EString eString) return codeGenString(eString);
+    if (exp instanceof Ast.EBool eBool) return codeGenBool(eBool);
+    if (exp instanceof Ast.EId eId) return codeGenId(eId);
+    if (exp instanceof Ast.EOpp eOpp) return codeGenOpp(eOpp);
+    if (exp instanceof Ast.ECall eCall) return codeGenCall(eCall);
+    if (exp instanceof Ast.ENot eNot) return codeGenNot(eNot);
+    if (exp instanceof Ast.EPower ePower) return codeGenPower(ePower);
+    if (exp instanceof Ast.ELt eLt) return codeGenLt(eLt);
+    if (exp instanceof Ast.EGt eGt) return codeGenGt(eGt);
+    if (exp instanceof Ast.EGe eGe) return codeGenGe(eGe);
+    if (exp instanceof Ast.ELe eLe) return codeGenLe(eLe);
+    if (exp instanceof Ast.ENe eNe) return codeGenNe(eNe);
+    if (exp instanceof Ast.EEq eEq) return codeGenEq(eEq);
+    if (exp instanceof Ast.EAnd eAnd) return codeGenAnd(eAnd);
+    if (exp instanceof Ast.EOr eOr) return codeGenOr(eOr);
+    if (exp instanceof Ast.EAss eAss) return codeGenAss(eAss);
+    if (exp instanceof Ast.EPlusAss ePlusAss) return codeGenPlusAss(ePlusAss);
+    if (exp instanceof Ast.EMinusAss eMinusAss) return codeGenMinusAss(eMinusAss);
+    if (exp instanceof Ast.EDivAss eDivAss) return codeGenDivAss(eDivAss);
+    if (exp instanceof Ast.EMultAss eMultAss) return codeGenMultAss(eMultAss);
+    if (exp instanceof Ast.EInc eInc) return codeGenInc(eInc);
+    if (exp instanceof Ast.EDec eDec) return codeGenDec(eDec);
+    return "0";
+    }
+    
+    // ===== LITERALS =====
+    private String codeGenInt(Ast.EInt eInt) {
+        return String.valueOf(eInt.value());
+    }
+    
+    private String codeGenDouble(Ast.EDouble eDouble) {
+        return String.valueOf(eDouble.value());
+    }
+    
+    private String codeGenString(Ast.EString eString) {
+        // Strings are more complex - for now, simplified
+        return "\"" + eString.value() + "\"";
+    }
+    
+    private String codeGenBool(Ast.EBool eBool) {
+        return eBool.value() ? "1" : "0";
+    }
+    
+    // ===== VARIABLES =====
+    private String codeGenId(Ast.EId eId) {
+        // Load variable from memory
+        String llvmType = toLLVMType(eId.type());
+        String reg = nextReg();
+        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("\n");
+        return reg;
+    }
+    
+    // ===== ARITHMETIC OPERATIONS =====
+    private String codeGenOpp(Ast.EOpp eOpp) {
+        String left = codeGenExp(eOpp.left());
+        String right = codeGenExp(eOpp.right());
+        String llvmType = toLLVMType(eOpp.type());
+        String result = nextReg();
+        
+        String op = switch(eOpp.op()) {
+            case ADD -> "add";
+            case SUB -> "sub";
+            case MUL -> "mul";
+            case DIV -> "sdiv";  // signed division
+        };
+        
+        sb.append("  ").append(result).append(" = ").append(op).append(" ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+private String codeGenPower(Ast.EPower ePower) {
+    String base = codeGenExp(ePower.base());
+    String exponent = codeGenExp(ePower.exponent());
+    String result = nextReg();
+    
+    // Convert to double for pow()
+    String baseDouble = nextReg();
+    String expDouble = nextReg();
+    
+    sb.append("  ").append(baseDouble).append(" = sitofp i32 ").append(base).append(" to double\n");
+    sb.append("  ").append(expDouble).append(" = sitofp i32 ").append(exponent).append(" to double\n");
+    
+    // Call pow()
+    String powResult = nextReg();
+    sb.append("  ").append(powResult).append(" = call double @pow(double ").append(baseDouble).append(", double ").append(expDouble).append(")\n");
+    
+    // Convert back to int if needed
+    String finalResult = nextReg();
+    sb.append("  ").append(finalResult).append(" = fptosi double ").append(powResult).append(" to i32\n");
+    
+    return finalResult;
+}
+    
+    // ===== COMPARISON OPERATIONS =====
+    private String codeGenLt(Ast.ELt eLt) {
+        String left = codeGenExp(eLt.left());
+        String right = codeGenExp(eLt.right());
+        String llvmType = toLLVMType(eLt.left().type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = icmp slt ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenGt(Ast.EGt eGt) {
+        String left = codeGenExp(eGt.left());
+        String right = codeGenExp(eGt.right());
+        String llvmType = toLLVMType(eGt.left().type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = icmp sgt ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenGe(Ast.EGe eGe) {
+        String left = codeGenExp(eGe.left());
+        String right = codeGenExp(eGe.right());
+        String llvmType = toLLVMType(eGe.left().type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = icmp sge ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenLe(Ast.ELe eLe) {
+        String left = codeGenExp(eLe.left());
+        String right = codeGenExp(eLe.right());
+        String llvmType = toLLVMType(eLe.left().type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = icmp sle ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenNe(Ast.ENe eNe) {
+        String left = codeGenExp(eNe.left());
+        String right = codeGenExp(eNe.right());
+        String llvmType = toLLVMType(eNe.left().type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = icmp ne ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenEq(Ast.EEq eEq) {
+        String left = codeGenExp(eEq.left());
+        String right = codeGenExp(eEq.right());
+        String llvmType = toLLVMType(eEq.left().type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = icmp eq ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    // ===== LOGICAL OPERATIONS =====
+    private String codeGenAnd(Ast.EAnd eAnd) {
+        String left = codeGenExp(eAnd.left());
+        String right = codeGenExp(eAnd.right());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = and i1 ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenOr(Ast.EOr eOr) {
+        String left = codeGenExp(eOr.left());
+        String right = codeGenExp(eOr.right());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = or i1 ").append(left).append(", ").append(right).append("\n");
+        return result;
+    }
+    
+    private String codeGenNot(Ast.ENot eNot) {
+        String exp = codeGenExp(eNot.exp());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = xor i1 ").append(exp).append(", 1\n");
+        return result;
+    }
+    
+    // ===== ASSIGNMENT OPERATIONS =====
+    private String codeGenAss(Ast.EAss eAss) {
+        // x = value
+        String valueReg = codeGenExp(eAss.value());
+        String llvmType = toLLVMType(eAss.value().type());
+        sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append("\n");
+        return valueReg;  // Return the assigned value
+    }
+    
+    private String codeGenPlusAss(Ast.EPlusAss ePlusAss) {
+        // x += value → x = x + value
+        String currentVal = codeGenLoad(ePlusAss.name(), ePlusAss.type());
+        String valueReg = codeGenExp(ePlusAss.value());
+        String llvmType = toLLVMType(ePlusAss.type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = add ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(ePlusAss.name()).append("\n");
+        return result;
+    }
+    
+    private String codeGenMinusAss(Ast.EMinusAss eMinusAss) {
+        // x -= value → x = x - value
+        String currentVal = codeGenLoad(eMinusAss.name(), eMinusAss.type());
+        String valueReg = codeGenExp(eMinusAss.value());
+        String llvmType = toLLVMType(eMinusAss.type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = sub ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMinusAss.name()).append("\n");
+        return result;
+    }
+    
+    private String codeGenDivAss(Ast.EDivAss eDivAss) {
+        // x /= value → x = x / value
+        String currentVal = codeGenLoad(eDivAss.name(), eDivAss.type());
+        String valueReg = codeGenExp(eDivAss.value());
+        String llvmType = toLLVMType(eDivAss.type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = sdiv ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eDivAss.name()).append("\n");
+        return result;
+    }
+    
+    private String codeGenMultAss(Ast.EMultAss eMultAss) {
+        // x *= value → x = x * value
+        String currentVal = codeGenLoad(eMultAss.name(), eMultAss.type());
+        String valueReg = codeGenExp(eMultAss.value());
+        String llvmType = toLLVMType(eMultAss.type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = mul ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMultAss.name()).append("\n");
+        return result;
+    }
+    
+    // ===== INCREMENT/DECREMENT =====
+    private String codeGenInc(Ast.EInc eInc) {
+        // x++ → x = x + 1
+        String currentVal = codeGenLoad(eInc.name(), eInc.type());
+        String llvmType = toLLVMType(eInc.type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = add ").append(llvmType).append(" ").append(currentVal).append(", 1\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eInc.name()).append("\n");
+        return currentVal;  // Post-increment returns old value
+    }
+    
+    private String codeGenDec(Ast.EDec eDec) {
+        // x-- → x = x - 1
+        String currentVal = codeGenLoad(eDec.name(), eDec.type());
+        String llvmType = toLLVMType(eDec.type());
+        String result = nextReg();
+        sb.append("  ").append(result).append(" = sub ").append(llvmType).append(" ").append(currentVal).append(", 1\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eDec.name()).append("\n");
+        return currentVal;  // Post-decrement returns old value
+    }
+    
+    // ===== FUNCTION CALLS =====
+    private String codeGenCall(Ast.ECall eCall) {
+        // Function call
+        String result = nextReg();
+        String llvmReturnType = toLLVMType(eCall.type());
+        
+        sb.append("  ").append(result).append(" = call ").append(llvmReturnType).append(" @").append(eCall.name()).append("(");
+        
+        // Generate arguments
+        for(int i = 0; i < eCall.args().size(); i++) {
+            if(i > 0) sb.append(", ");
+            Ast.Exp arg = eCall.args().get(i);
+            String argReg = codeGenExp(arg);
+            String argType = toLLVMType(arg.type());
+            sb.append(argType).append(" ").append(argReg);
+        }
+        
+        sb.append(")\n");
+        return result;
+    }
+    
+    // ===== HELPERS =====
+    private String codeGenLoad(String varName, Ast.Type type) {
+        String llvmType = toLLVMType(type);
+        String reg = nextReg();
+        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(varName).append("\n");
+        return reg;
+    }
+    
+    private String nextReg() {
+        return "%" + (++regCounter);
+    }
+    
+    private String toLLVMType(Ast.Type type) {
+        return switch(type) {
+            case TInt -> "i32";
+            case TDouble -> "double";
+            case TString -> "i8*";
+            case TBool -> "i1";
+            case TVoid -> "void";
+            case TUnknown -> "i32";
+        };
+    }
+
+}

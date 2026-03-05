@@ -10,7 +10,9 @@ public class Ast {
 
     public record Program(List<Stmt> stmts, List<Func> functions) {}
 
-    public record Func(String name, List<Exp> params, Type returnType, Stmt body, Pos pos) {}
+    public record Func(String name, List<Arg> params, Type returnType, Stmt body, Pos pos) {}
+
+    public record Arg(String name, Type type, Pos pos) {}
 
     // The base type for all nodes
     // 'sealed' = only the specific records listed below can implement this.
@@ -30,10 +32,10 @@ public class Ast {
     public record EDouble(double value, Type type, Pos pos) implements Exp {}
     public record EString(String value, Type type, Pos pos) implements Exp {}
     public record EBool(boolean value, Type type, Pos pos) implements Exp {}
-    public record EId(String name, Type type, Pos pos) implements Exp {}
+    public record EId(String name, Type type, Pos pos) implements Exp {} 
     public record EInc(String name, Type type, Pos pos) implements Exp {}
     public record EDec(String name, Type type, Pos pos) implements Exp {}
-    public record ECall(String name, List<Exp> args, Type type, Pos pos) implements Exp {}
+    public record ECall(String name, List<Exp> args, Type type, Pos pos) implements Exp {} 
     public record ENot(Exp exp, Type type, Pos pos) implements Exp {}
     public record EPower(Exp base, Exp exponent, Type type, Pos pos) implements Exp {}
     public record ELt(Exp left, Exp right, Type type, Pos pos) implements Exp {}
@@ -45,7 +47,7 @@ public class Ast {
     public record EAnd(Exp left, Exp right, Type type, Pos pos) implements Exp {}
     public record EOr(Exp left, Exp right, Type type, Pos pos) implements Exp {}
     public record EAss(String name, Exp value, Type type, Pos pos) implements Exp {}
-    public record EPlusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
+    public record EPlusAss(String name, Exp value, Type type, Pos pos) implements Exp {} 
     public record EMinusAss(String name, Exp value, Type type, Pos pos) implements Exp {}
     public record EDivAss(String name, Exp value, Type type, Pos pos) implements Exp {}
     public record EMultAss(String name, Exp value, Type type, Pos pos) implements Exp {}
@@ -56,7 +58,7 @@ public class Ast {
     }
 
     public enum Type {
-        TInt, TBool, TString, TDouble, TUnknown;
+        TInt, TBool, TString, TDouble, TUnknown, TVoid;
     }
 
     public interface HasPos { Pos pos(); }

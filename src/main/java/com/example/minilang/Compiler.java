@@ -35,5 +35,47 @@ public class Compiler {
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
+
+        
+
+
+        String llvmCode = generateLLVM(astRoot);
+        
+        System.out.println("\n===== LLVM IR Code =====");
+        System.out.println(llvmCode);
+        
+        // ===== STEP 5: Write to File =====
+        String outputFileName = path.getFileName().toString().replace(".ml", ".ll");
+        Path outputPath = path.getParent().resolve(outputFileName);
+        Files.writeString(outputPath, llvmCode);
+        System.out.println("\nOutput written to: " + outputPath);
+    }
+
+    private static String generateLLVM(Ast.Program program) {
+        StringBuilder sb = new StringBuilder();
+        LabelGenerator labelGen = new LabelGenerator();
+
+        sb.append("define void @main() {\n");
+        sb.append("entry:\n");
+
+        // ===== Generate Code for Global Statements =====
+        // (These are top-level statements, if any)
+        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, labelGen, program.functions());
+        for(Ast.Stmt stmt : program.stmts()) {
+            stmtCodegen.codeGenStmt(stmt);
+        }
+
+        sb.append("  ret void\n");
+        sb.append("}\n\n");
+
+        // ===== Generate Code for Each Function =====
+        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, labelGen, program.functions());
+        for(Ast.Func func : program.functions()) {
+            funcCodegen.codeGenFunDef(func);
+        }
+
+
+
+        return sb.toString();
     }
 }
