@@ -18,9 +18,40 @@ public class TypeChecker {
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
-        List<Ast.Func> funcs = extractFunctionSignatures(program.functions()); // Begin with extracting function signatures
-        List<Ast.Stmt> stmts = typeCheckStatements(program.stmts()); // Then type check the statements
-        return new Ast.Program(stmts, funcs);
+        // 1. Extract signatures (initially TUnknown)
+        List<Ast.Func> rawFuncs = extractFunctionSignatures(program.functions());
+
+        // --- INFERENCE PHASE ---
+        // We use a temporary Context and Checker to run the logic just for the side-effects
+        // of updating the 'functionSignatures' map. We discard the AST produced here.
+        Context tempContext = new Context();
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures);
+
+        // Swap to temp environment
+        Context realContext = this.context;
+        StatementTypeChecker realChecker = this.statementTypeChecker;
+        this.context = tempContext;
+        this.statementTypeChecker = tempChecker;
+
+        // Pass 1: Scan statements -> Infers Parameter Types from calls
+        typeCheckStatements(program.stmts());
+
+        // Pass 2: Scan bodies -> Infers Return Types from return statements
+        // (Now that params are known from Pass 1, we can successfully type check the body)
+        checkFunctionBodies(rawFuncs);
+
+        // --- GENERATION PHASE ---
+        // Restore real environment
+        this.context = realContext;
+        this.statementTypeChecker = realChecker;
+
+        // Pass 3: Re-scan statements -> Generates final AST with correct ECall types
+        List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
+
+        // Pass 4: Re-scan bodies -> Generates final AST for functions
+        List<Ast.Func> checkedFuncs = checkFunctionBodies(rawFuncs);
+
+        return new Ast.Program(stmts, checkedFuncs);
     }
 
     private List<Ast.Stmt> typeCheckStatements(List<Ast.Stmt> statements) {
@@ -31,40 +62,54 @@ public class TypeChecker {
         return stmts;
     }
 
-    // TODO: infer this
     private List<Ast.Func> extractFunctionSignatures(List<Ast.Func> functions) {
         List<Ast.Func> funcs = new ArrayList<>();
+        for(Ast.Func func : functions) {
+            String name = func.name();
+            Ast.Type returnType = func.returnType();
+
+            List<Ast.Type> paramTypes = new ArrayList<>();
+            for(Ast.Arg arg : func.params()) {
+                paramTypes.add(arg.type());
+            }
+
+            functionSignatures.put(name, new Signature(name, returnType, paramTypes));
+            funcs.add(func);
+        }
+        return funcs;
+    }
+
+    private List<Ast.Func> checkFunctionBodies(List<Ast.Func> functions) {
+        List<Ast.Func> checkedFuncs = new ArrayList<>();
+
         for(Ast.Func func : functions) {
             context.pushNewScope();
             String name = func.name();
             statementTypeChecker.setCurrentFunction(name);
-            Ast.Type returnType = func.returnType();
+            Signature sig = functionSignatures.get(name);
 
-            // Extract parameter types
-            List<Ast.Type> paramTypes = new ArrayList<>();
+            // Use types from Signature (which are now updated after inference passes)
+            List<Ast.Arg> currentParams = new ArrayList<>();
             for(int i = 0; i < func.params().size(); i++) {
-                context.pushToCurrentScope(func.params().get(i).name(), func.params().get(i).type()); // add args to current scope
-                paramTypes.add(func.params().get(i).type());
+                Ast.Type type = sig.paramTypes.get(i);
+                Ast.Arg oldArg = func.params().get(i);
+
+                context.pushToCurrentScope(oldArg.name(), type);
+                currentParams.add(new Ast.Arg(oldArg.name(), type, oldArg.pos()));
             }
 
-            // Store the function signature for later use in type checking function calls
-            functionSignatures.put(name, new Signature(name, returnType, paramTypes));
-
-            // Check if the function body is a block statement
-            if(!(func.body() instanceof Ast.SBlock) ) {
+            if(!(func.body() instanceof Ast.SBlock)) {
                 throw new TypeException("Function body must be a block statement", func.body().pos());
             }
 
-            // Type check the function body
             List<Ast.Stmt> bodyStmts = new ArrayList<>();
             for(Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
                 bodyStmts.add(statementTypeChecker.typeCheck(stmt));
             }
 
-
-            funcs.add(new Ast.Func(name, func.params(), returnType, new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
+            checkedFuncs.add(new Ast.Func(name, currentParams, sig.returnType, new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
             context.popScope();
         }
-        return funcs;
+        return checkedFuncs;
     }
 }

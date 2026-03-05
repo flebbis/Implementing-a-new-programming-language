@@ -33,28 +33,54 @@ public class StatementTypeChecker {
     }
 
 
-    public Ast.SInit typeCheck(Ast.SInit sInit) {
-        if(sInit.type() == Ast.Type.TUnknown) {
-            // TODO: OBSERVE THIS HELLOOO LANGUAGE SERVER
-            Ast.Exp exp = expressionTypeChecker.typeCheck(sInit.value());
-            context.pushToCurrentScope(sInit.name(), exp.type());
-            return new Ast.SInit(exp.type(), sInit.name(), exp, sInit.pos());
-        } else {
-            Ast.Exp exp = expressionTypeChecker.typeCheck(sInit.value());
-            if(sInit.type() != exp.type()) {
+    public Ast.Stmt typeCheck(Ast.SInit sInit) {
+        Ast.Exp value = expressionTypeChecker.typeCheck(sInit.value());
+        Ast.Type typeToCheck = sInit.type();
 
-                // Allow implicit conversion from int to double
-                if(sInit.type() == Ast.Type.TDouble && exp.type() == Ast.Type.TInt) {
-                    exp = new Ast.EDInt(exp, exp.type(), exp.pos());
+        // Logical Check: Is this a redeclaration or an assignment?
+        // We look up if the variable exists in the current scope chain.
+        Ast.Type existingType = context.lookupLatest(sInit.name());
 
+        // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
+        // treat it as an Assignment to the existing variable.
+        if (existingType != null && typeToCheck == Ast.Type.TUnknown) {
+
+            // Allow TUnknown values to bypass checks during inference pass
+            if (existingType != value.type() && value.type() != Ast.Type.TUnknown) {
+                if (existingType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+                    // Implicit cast
+                    value = new Ast.EDInt(value, value.type(), value.pos());
                 } else {
-                    throw new TypeException("Incorrect initialisation of type " + exp.type(), exp.pos());
+                    throw new TypeException("Cannot assign value of type " + value.type() + " to variable " + sInit.name() + " of type " + existingType, sInit.pos());
                 }
             }
-            context.pushToCurrentScope(sInit.name(), sInit.type());
-            return new Ast.SInit(sInit.type(), sInit.name(), exp, sInit.pos());
+
+            // Transform this node into an Assignment Expression Statement
+            Ast.EAss assign = new Ast.EAss(sInit.name(), value, Ast.AssOp.ASSIGN, existingType, sInit.pos());
+            return new Ast.SExp(assign, sInit.pos());
         }
+
+        // If we reach here, it is a new Declaration.
+
+        // Infer type if unknown
+        if (typeToCheck == Ast.Type.TUnknown) {
+            typeToCheck = value.type();
+        }
+
+        // Verify types match for explicit declarations
+        // Allow TUnknown values to bypass checks during inference pass
+        if (typeToCheck != value.type() && value.type() != Ast.Type.TUnknown) {
+            if (typeToCheck == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+                value = new Ast.EDInt(value, value.type(), value.pos());
+            } else {
+                throw new TypeException("Incorrect initialisation of type " + value.type() + ", expected " + typeToCheck, value.pos());
+            }
+        }
+
+        context.pushToCurrentScope(sInit.name(), typeToCheck);
+        return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
+
 
     public Ast.SExp typeCheck(Ast.SExp stmt) {
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.exp());
@@ -93,6 +119,12 @@ public class StatementTypeChecker {
             throw new TypeException("Return statement not inside a function", stmt.pos());
         }
         Signature signature = functionSignatures.get(currentFunction);
+
+        // Inference: If return type is TUnknown, infer it from the return value
+        if (signature.returnType == Ast.Type.TUnknown && value.type() != Ast.Type.TUnknown) {
+            signature.setReturnType(value.type());
+        }
+
         if(signature.returnType != value.type()) {
             // Allow implicit conversion from int to double
             if(signature.returnType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {

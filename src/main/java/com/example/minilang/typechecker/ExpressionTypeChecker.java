@@ -55,13 +55,18 @@ public class ExpressionTypeChecker {
         if(type != null) {
             eId = new Ast.EId(eId.name(), type, eId.pos());
             return eId;
-        } else {
+        }
+        else {
             throw new TypeException("Variable " + eId.name() + " is not declared", eId.pos());
         }
     }
 
     public Ast.Exp typeCheck(Ast.ENot enot){
         Ast.Exp exp = typeCheck(enot.exp());
+        // Handle TUnknown to allow inference pass to continue
+        if(exp.type() == Ast.Type.TUnknown) {
+            return new Ast.ENot(exp, Ast.Type.TUnknown, enot.pos());
+        }
         if(exp.type() == Ast.Type.TBool) {
             return new Ast.ENot(exp, Ast.Type.TBool, enot.pos());
         } else {
@@ -70,9 +75,14 @@ public class ExpressionTypeChecker {
     }
 
     public Ast.Exp typeCheck(Ast.EPower ePower){
-        //TODO: should one of the types be EDINT????
         Ast.Exp base = typeCheck(ePower.base());
         Ast.Exp exponent = typeCheck(ePower.exponent());
+
+        // Handle TUnknown to allow inference pass to continue
+        if (base.type() == Ast.Type.TUnknown || exponent.type() == Ast.Type.TUnknown) {
+            return new Ast.EPower(base, exponent, Ast.Type.TUnknown, ePower.pos());
+        }
+
         if (base.type() == Ast.Type.TInt || base.type() == Ast.Type.TDouble) {
             if (exponent.type() == Ast.Type.TInt || exponent.type() == Ast.Type.TDouble) {
                 // If either is double, the result is double
@@ -82,12 +92,17 @@ public class ExpressionTypeChecker {
                 throw new TypeException("Exponent must be of type int or double", ePower.pos());
             }
         }
-        return null;
+        throw new TypeException("Power base must be of type int or double", ePower.pos());
     }
 
     public Ast.Exp typeCheck(Ast.ECmp eCmp) {
         Ast.Exp left = typeCheck(eCmp.left());
         Ast.Exp right = typeCheck(eCmp.right());
+
+        // Handle TUnknown to allow inference pass to continue
+        if (left.type() == Ast.Type.TUnknown || right.type() == Ast.Type.TUnknown) {
+            return new Ast.ECmp(left, right, eCmp.op(), Ast.Type.TUnknown, eCmp.pos());
+        }
 
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
@@ -104,6 +119,12 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.ELogic eLogic) {
         Ast.Exp left = typeCheck(eLogic.left());
         Ast.Exp right = typeCheck(eLogic.right());
+
+        // Handle TUnknown to allow inference pass to continue
+        if (left.type() == Ast.Type.TUnknown || right.type() == Ast.Type.TUnknown) {
+            return new Ast.ELogic(left, right, eLogic.op(), Ast.Type.TUnknown, eLogic.pos());
+        }
+
         if(left.type() == Ast.Type.TBool && right.type() == Ast.Type.TBool) {
             return new Ast.ELogic(left, right, eLogic.op(), Ast.Type.TBool, eLogic.pos());
         } else {
@@ -114,6 +135,11 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.EOpp eOpp) {
         Ast.Exp left = typeCheck(eOpp.left());
         Ast.Exp right = typeCheck(eOpp.right());
+
+        // Inference Support: If any operand is Unknown, return Unknown to avoid blocking the pass
+        if (left.type() == Ast.Type.TUnknown || right.type() == Ast.Type.TUnknown) {
+            return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TUnknown, eOpp.pos());
+        }
 
         // Modulus operator only works for integers
         if(eOpp.op() == Ast.Op.MOD) {
@@ -158,13 +184,19 @@ public class ExpressionTypeChecker {
 
     public Ast.EUnary typeCheck(Ast.EUnary eUnary) {
         Ast.Exp exp = typeCheck(eUnary.exp());
+
+        // Handle TUnknown to allow inference pass to continue
+        if (exp.type() == Ast.Type.TUnknown) {
+            return new Ast.EUnary(exp, eUnary.op(), Ast.Type.TUnknown, eUnary.pos());
+        }
+
         if(exp.type() == Ast.Type.TInt) {
             return new Ast.EUnary(exp, eUnary.op(), exp.type(), eUnary.pos());
         }
         if(eUnary.op() == Ast.UnaryOp.INC) {
             throw new TypeException("Increment operator requires integer operand", eUnary.pos());
         } else {
-                throw new TypeException("Decrement operator requires integer operand", eUnary.pos());
+            throw new TypeException("Decrement operator requires integer operand", eUnary.pos());
         }
     }
 
@@ -174,6 +206,12 @@ public class ExpressionTypeChecker {
         if (varType == null) {
             throw new TypeException("Variable " + eAss.name() + " is not declared", eAss.pos());
         }
+
+        // Allow assignment if value is TUnknown (inference phase)
+        if (value.type() == Ast.Type.TUnknown) {
+            return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
+        }
+
         if (varType != value.type()) {
             // Allow implicit conversion from int to double
             if (varType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
@@ -196,11 +234,19 @@ public class ExpressionTypeChecker {
         if(functionSignatures.containsKey(eCall.name())) {
             int i = 0;
             for(Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
+                // Check mismatch
                 if(args.get(i).type() != paramType) {
+                    // Inference: If param is TUnknown, infer from arg
+                    if ((paramType == Ast.Type.TUnknown) && (args.get(i).type() != Ast.Type.TUnknown)) {
+                        functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
+                        paramType = args.get(i).type(); // Update local variable for subsequent checks
+                    }
+
                     // Allow implicit conversion from int to double
                     if(paramType == Ast.Type.TDouble && args.get(i).type() == Ast.Type.TInt) {
                         args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
-                    } else {
+                    } else if (paramType != args.get(i).type()) {
+                        // Only throw if types still don't match after inference/conversion
                         throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
                     }
                 }
@@ -211,5 +257,12 @@ public class ExpressionTypeChecker {
         }
 
         return new Ast.ECall(eCall.name(), args, functionSignatures.get(eCall.name()).returnType, eCall.pos());
+    }
+
+    public Ast.Exp typeCheck(Ast.EArrayIndex eArrayIndex) {
+        // Assuming implementation or stub
+        Ast.Exp array = typeCheck(eArrayIndex.array());
+        Ast.Exp index = typeCheck(eArrayIndex.index());
+        return new Ast.EArrayIndex(array, index, Ast.Type.TUnknown, eArrayIndex.pos()); // Placeholder return type
     }
 }

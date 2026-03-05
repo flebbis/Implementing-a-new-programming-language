@@ -18,9 +18,9 @@ public class Context {
         if(contextStack.getFirst().containsKey(id)) {
             throw new TypeException("Duplicate context id " + id);
         } else {
-            if(type == Ast.Type.TUnknown) {
-                throw new TypeException("Cannot declare variable of type void");
-            }
+//            if(type == Ast.Type.TUnknown) {
+//                throw new TypeException("Cannot declare variable of type void");
+//            }
             contextStack.getFirst().put(id, type);
         }
 
