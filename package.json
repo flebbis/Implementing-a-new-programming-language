@@ -3,7 +3,7 @@
   "description": "language server following lsp for this unnamed language",
   "author": "Cole",
   "license": "MIT",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "Cole",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
     "Programming Languages"
   ],
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.109.0"
   },
   "activationEvents": [],
   "main": "./client/out/extension",
