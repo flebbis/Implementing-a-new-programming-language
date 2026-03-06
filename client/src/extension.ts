@@ -11,7 +11,7 @@ import {
 } from "vscode-languageclient/node";
 
 // my own jar file,, fix later
-const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
+// const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
 
 // a custom API, that makes the document readonly 
 class AsmProvider implements vscode.TextDocumentContentProvider {
@@ -90,16 +90,15 @@ export function activate(context: ExtensionContext) {
   
   let lastPath: string | undefined;
   async function showAssembly(optLevel: string) {
-/*
-    // get the path of the first open workspace folder// allmän jar
+
+
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
     if (!workspaceFolder) {
     vscode.window.showErrorMessage('No workspace folder open!');
     return;
     }
-    const JAR_PATH = path.join(workspaceFolder, '..', 'target', 'LLVMINI-1.0-SNAPSHOT.jar');
-    */
-    
+    const JAR_PATH = path.join(workspaceFolder, 'target', 'LLVMINI-1.0-SNAPSHOT.jar');
+
     vscode.window.showInformationMessage('Optimazation level' + optLevel);
     try {
       // get the editor and the filepath then save the file
@@ -156,7 +155,7 @@ export function activate(context: ExtensionContext) {
   // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
   context.subscriptions.push(
-    vscode.commands.registerCommand('asm-preview.show', async() => showAssembly('-O0'))
+    vscode.commands.registerCommand('assembly-preview.show', async() => showAssembly('-O0'))
 );
   context.subscriptions.push(
     vscode.commands.registerCommand('opt.buttons', async() => {})
