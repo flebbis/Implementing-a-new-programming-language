@@ -1,4 +1,6 @@
 package com.example.minilang;
+import com.example.minilang.ast.Ast;
+
 import java.util.List;
 
 public class FunctionCodeGen {

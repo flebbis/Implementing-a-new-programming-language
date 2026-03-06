@@ -1,4 +1,6 @@
 package com.example.minilang;
+import com.example.minilang.ast.Ast;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +10,8 @@ public class ExpressionCodeGen {
     private StringBuilder sb;
     private LabelGenerator labelGen;
     private List<Ast.Func> functions;
-    private int regCounter = 0;  // Counter for generating unique registers
-    
+    // Register names are generated via labelGen to ensure global uniqueness
+
     public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
         this.sb = sb;
         this.labelGen = labelGen;
@@ -37,7 +39,7 @@ public class ExpressionCodeGen {
     if (exp instanceof Ast.ECmp eEq && eEq.op() == Ast.CmpOp.EQ) return codeGenEq(eEq);
     if (exp instanceof Ast.ELogic eAnd && eAnd.op() == Ast.LogicOp.AND) return codeGenAnd(eAnd);
     if (exp instanceof Ast.ELogic eOr && eOr.op() == Ast.LogicOp.OR) return codeGenOr(eOr);
-    if (exp instanceof Ast.EAss eAss) return codeGenAss(eAss);
+    if (exp instanceof Ast.EAss eAss && eAss.op() == Ast.AssOp.ASSIGN) return codeGenAss(eAss);
     if (exp instanceof Ast.EAss ePlusAss && ePlusAss.op() == Ast.AssOp.PLUS_ASSIGN) return codeGenPlusAss(ePlusAss);
     if (exp instanceof Ast.EAss eMinusAss && eMinusAss.op() == Ast.AssOp.MINUS_ASSIGN) return codeGenMinusAss(eMinusAss);
     if (exp instanceof Ast.EAss eDivAss && eDivAss.op() == Ast.AssOp.DIV_ASSIGN) return codeGenDivAss(eDivAss);
@@ -86,8 +88,7 @@ public class ExpressionCodeGen {
             case SUB -> "sub";
             case MUL -> "mul";
             case DIV -> "sdiv";  // signed division
-            case MOD -> "srem";  // signed remainder, BUT DONT HAVE SUPPORT FOR MODULO IN MINILANG YET 
-            case NOT -> "xor";  // For NOT, we will XOR with 1 to flip bits, BUT DONT HAVE SUPPORT FOR NOT IN MINILANG YET
+            case MOD -> "srem";  // signed remainder, BUT DONT HAVE SUPPORT FOR MODULO IN MINILANG YET
              default -> throw new RuntimeException("Unknown operator: " + eOpp.op());
         };
         
@@ -371,7 +372,7 @@ private String codeGenPower(Ast.EPower ePower) {
     }
     
     private String nextReg() {
-        return "%" + (++regCounter);
+        return "%" + labelGen.generateLabel("r");
     }
     
     private String toLLVMType(Ast.Type type) {

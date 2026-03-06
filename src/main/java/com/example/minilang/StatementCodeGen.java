@@ -1,5 +1,7 @@
 package com.example.minilang;
 
+import com.example.minilang.ast.Ast;
+
 import java.util.List;
 import static com.example.minilang.FunctionCodeGen.toLLVMType;
 

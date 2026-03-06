@@ -1,4 +1,6 @@
-package com.example.minilang; // AST Definition
+package com.example.minilang.ast; // AST Definition
+
+import com.example.minilang.Pos;
 
 import java.util.List;
 
@@ -18,7 +20,7 @@ public class Ast {
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
             ECall, ENot, EPower, EOpp, ECmp, ELogic,
-            EAss, EArrayIndex, EUnary {}
+            EAss, EArrayIndex, EUnary, EDInt, EStringCast {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
@@ -40,6 +42,8 @@ public class Ast {
     public record EAss(String name, Exp value, AssOp op, Type type, Pos pos) implements Exp {}
     public record EArrayIndex(Exp array, Exp index, Type type, Pos pos) implements Exp {}
     public record EUnary(Exp exp, UnaryOp op, Type type, Pos pos) implements Exp {}
+    public record EDInt(Exp exp, Type type, Pos pos) implements Exp {}
+    public record EStringCast(Exp exp, Type type, Pos pos) implements Exp {}
 
     public enum UnaryOp { INC, DEC }
 
@@ -54,7 +58,7 @@ public class Ast {
 
     // The operators we support
     public enum Op {
-        ADD, SUB, MUL, DIV, NOT, MOD
+        ADD, SUB, MUL, DIV, MOD
     }
 
     public enum Type {
