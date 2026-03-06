@@ -138,10 +138,39 @@ public class StatementTypeChecker {
     }
 
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
-        // Type check the condition and both branches of the if statement
-        // Ensure the condition is of type bool
-        // Return an annotated SIf statement
-        return stmt; // Placeholder
+        Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
+
+        if(condition.type() != Ast.Type.TBool) {
+            throw new TypeException("Condition of if statement must be of type bool", stmt.condition().pos());
+        }
+
+        // Check then branch
+        context.pushNewScope();
+        if(!(stmt.thenBranch() instanceof Ast.SBlock)) {
+            throw new TypeException("Then branch of if statement must be a block statement", stmt.thenBranch().pos());
+        }
+        List<Ast.Stmt> thenStmts = new ArrayList<>();
+
+        for(Ast.Stmt s : ((Ast.SBlock) stmt.thenBranch()).statements()) {
+            thenStmts.add(typeCheck(s));
+        }
+        context.popScope();
+        List<Ast.Stmt> elseStmts = new ArrayList<>();
+        Ast.Stmt elseBranch = null;
+        if(stmt.elseBranch() != null) {
+            context.pushNewScope();
+            if(!(stmt.elseBranch() instanceof Ast.SBlock)) {
+                throw new TypeException("Else branch of if statement must be a block statement", stmt.elseBranch().pos());
+            }
+
+            for(Ast.Stmt s : ((Ast.SBlock) stmt.elseBranch()).statements()) {
+                elseStmts.add(typeCheck(s));
+            }
+            context.popScope();
+            elseBranch = new Ast.SBlock(elseStmts, stmt.elseBranch().pos());
+        }
+
+        return new Ast.SIf(condition, new Ast.SBlock(thenStmts, stmt.thenBranch().pos()), elseBranch, stmt.pos()); // Placeholder
     }
 
     public void setCurrentFunction(String currentFunction) {
