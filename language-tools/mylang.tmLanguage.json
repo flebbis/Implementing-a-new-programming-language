@@ -195,7 +195,6 @@
       "begin": "(/\\*)( ?TODO:?)?",
       "end": "\\*/",
       "beginCaptures": {
-        "1": {"name": "comment.block"},
         "2": {"name": "constant.other.todo"}
       }
     },
