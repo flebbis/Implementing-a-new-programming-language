@@ -33,7 +33,7 @@ public class Compiler {
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
-        Ast.Exp astRoot = astBuilder.visit(tree);
+        Ast.Program astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
     }
 }

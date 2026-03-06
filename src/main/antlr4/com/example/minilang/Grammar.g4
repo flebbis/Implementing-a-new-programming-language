@@ -10,12 +10,10 @@ def
     | stmt    #DStm
     ;
 
-func: TYPE 'func' ID '(' paramSeparator ')' block #FuncNoInference
-    | 'func' ID '(' expSeparator ')' block      #FuncInference
+func: TYPE? 'func' ID '(' paramSeparator ')' block
     ;
 
-param: TYPE ID        #ParamDecl
-;
+param: TYPE? ID;
 
 stmt
     : simpleStmt
@@ -44,17 +42,15 @@ whileStmt: 'while' exp stmt;
 
 doStmt: 'do' exp stmt;
 
-ifStmt  : 'if' exp block ('else' ifStmt)?   #IfElseIf
-        | 'if' exp block 'else' block       #IfElse
-        | 'if' exp block                    #If
-        ;
-
-decl: TYPE ID  #DeclNoInference
-    | ID       #DeclInference
+ifStmt
+    : 'if' exp block (separator* 'else' (ifStmt | block))?
     ;
 
-init: TYPE ID ASSIGN exp  #InitNoInference
-    | ID ASSIGN exp       #InitInference
+
+decl: TYPE? ID
+    ;
+
+init: TYPE? ID ASSIGN exp
     ;
 
 
@@ -69,7 +65,7 @@ exp
     ;
 
 assignExpr
-    : orExpr ( (ASSIGN | PLUS_ASSIGN | MINUS_ASSIGN | DIV_ASSIGN) assignExpr )?
+    : orExpr ( (ASSIGN | PLUS_ASSIGN | MINUS_ASSIGN | DIV_ASSIGN | MULT_ASSIGN) assignExpr )?
     ;
 
 orExpr
@@ -93,7 +89,7 @@ addExpr
     ;
 
 mulExpr
-    : powerExpr ( (MULTIPLY | DIVIDE) powerExpr )*
+    : powerExpr ( (MULTIPLY | DIVIDE | MODULO) powerExpr )*
     ;
 
 powerExpr
@@ -101,12 +97,19 @@ powerExpr
     ;
 
 unaryExpr
-    : (NOT | PLUS | MINUS) unaryExpr
+    : (NOT) unaryExpr
     | postfixExpr
     ;
 
 postfixExpr
-    : primary ( INC | DEC | '[' exp ']' | '(' expSeparator ')' )*
+    : primary postFixOp*
+    ;
+
+postFixOp
+    : INC
+    | DEC
+    | '[' exp ']'
+    | '(' expSeparator ')'
     ;
 
 primary
@@ -120,15 +123,15 @@ primary
     | ID ASSIGN DYNARR_START expSeparator DYNARR_END
     ;
 
-expSeparator: (exp (',' exp)* )?;
-paramSeparator: (param (',' param)* )?;
+expSeparator: (exp (',' exp)* )?; //x, y, z
+paramSeparator: (param (',' param)* )?; //int x, double y, string z
 
 // java.GrammarLexer Rules
 TYPE        : 'int' | 'double' | 'string' | 'bool';
 STRING      : '"'  ( '\\' . | ~["\\] )* '"' |
               '\'' ( '\\' . | ~['\\] )* '\'';
+INT         : [0-9]+; //int over double, so if i = 5 it chooses int
 DOUBLE      : [0-9]+ '.'? [0-9]*;
-INT         : [0-9]+;
 BOOL        : 'true' | 'false';
 PLUS_ASSIGN : '+=';
 MINUS_ASSIGN: '-=';
@@ -139,6 +142,7 @@ MINUS       : '-';
 MULTIPLY    : '*';
 DIVIDE      : '/';
 POWER       : '**';
+MODULO      : '%';
 GT          : '>';
 LT          : '<';
 LE          : '<=';
@@ -170,6 +174,3 @@ LINE_COMMENT
 BLOCK_COMMENT
     : '/*' .*? '*/' -> skip
     ;
-
-
-
