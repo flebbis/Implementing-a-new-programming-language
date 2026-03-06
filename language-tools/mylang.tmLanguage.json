@@ -1,0 +1,150 @@
+{
+  "scopeName": "source.mylang",
+  "patterns": [{"include": "#Comment"}, {"include": "#Statement"}, {"include": "#Function"}],
+  "repository": {
+    "Statement": {
+      "patterns": [{"include": "#Expression"}, {"include": "#StatementBlock"}]
+    },
+    "StatementBlock": {
+      "name": "statement.block",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [{"include": "#Statement"}]
+    },
+    "Expression": {
+      "name": "expression",
+      "patterns":[
+        {"include": "#ParensExp"}, 
+        {"include": "#Operator"}, 
+        {"include": "#Litteral"} 
+      ]
+    },
+    "ParensExp": {
+      "name":"expression.parens-expression",
+      "begin": "\\(",
+      "end": "\\)",
+      "patterns": [{"include":"#Expression"}]
+    },
+    "Operator": {
+      "name": "keyword.operator",
+      "patterns": [
+        {"include": "#ArithmeticOperator"},
+        {"include": "#BooleanOperator"}
+      ]
+    },
+    "ArithmeticOperator": {
+      "name": "keyword.operator.arithmetic",
+      "patterns": [
+        {"include": "#AddOp"},
+        {"include": "#MulOp"},
+        {"include": "#SubOp"},
+        {"include": "#DivOp"}]
+    },
+    "AddOp" : {
+      "name": "keyword.operator.arithmetic.addition",
+      "match": "\\+"
+    },
+    "MulOp" : {
+      "name": "keyword.operator.arithmetic.multiplication",
+      "match": "\\*"
+    },
+    "SubOp" : {
+      "name": "keyword.operator.arithmetic.subtraction",
+      "match": "\\-"
+    },
+    "DivOp" : {
+      "name": "keyword.operator.arithmetic.division",
+      "match": "\/"
+    },
+    "BooleanOperator": {
+      "name": "keyword.operator.boolean",
+      "patterns" : [
+        {"include": "#Equality"},
+        {"include": "#NegatedEquality"},
+        {"include": "#Negation"},
+        {"include": "#LessThanOrEqual"},
+        {"include": "#GreaterThanOrEqual"},
+        {"include": "#LessThan"},
+        {"include": "#GreaterThan"},
+        {"include": "#Disjuntion"},
+        {"include": "#Conjunction"}
+      ]
+    },
+    "Equality": {
+      "name": "keyword.operator.boolean.equality",
+      "match": "=="
+    },
+    "Negation": {
+      "name": "keyword.operator.boolean.negation",
+      "match" : "!"
+    },
+    "NegatedEquality": {
+      "name": "keyword.operator.boolean.negated-equality",
+      "match" : "!="
+    },
+    "LessThan": {
+      "name": "keyword.operator.boolean.less-than",
+      "match" : "<"
+    },
+    "GreaterThan": {
+      "name": "keyword.operator.boolean.greater-than",
+      "match" : ">"
+    },
+    "LessThanOrEqual": {
+      "name": "keyword.operator.boolean.less-or-equal",
+      "match" : "<="
+    },
+    "GreaterThanOrEqual": {
+      "name": "keyword.operator.boolean.greater-or-equal",
+      "match" : ">="
+    },
+    "Disjuntion": {
+      "name": "keyword.operator.boolean.logic.disjunction",
+      "match": "OR"
+    },
+    "Conjunction": {
+      "name": "keyword.operator.boolean.logic.conjunction",
+      "match": "AND"
+    },
+    "Litteral": {
+      "name": "constant.litteral",
+      "patterns": [
+        {"include": "#Double"},
+        {"include": "#Int"},
+        {"include": "#Bool"},
+        {"include": "#String"}]
+    },
+    "Double": {
+      "name": "constant.numeric.expression.litteral.double",
+      "match": "\\b[1-9][0-9]*\\.[0-9]*\\b"
+    },
+    "Int": {
+      "name": "constant.numeric.expression.litteral.integer",
+      "match": "\\b[1-9][0-9]*\\b"
+    },
+    "Bool": {
+      "name": "constant.language.expression.litteral.boolean",
+      "match": "\\b(true|false)\\b"
+    },
+    "String": {
+      "name": "string.quoted.double.expression.litteral.string",
+      "begin": "\"",
+      "end": "\""
+    },
+    "Comment": {
+      "name": "comment",
+      "patterns": [
+        {"include":"#CommentLine"},
+        {"include":"#CommentBlock"}]
+    },
+    "CommentLine": {
+      "name": "comment.line.double-slash",
+      "match": "//.*$"
+    },
+    "CommentBlock": {
+      "name": "comment.block",
+      "begin": "/\\*",
+      "end": "\\*/"
+    }
+  }
+}

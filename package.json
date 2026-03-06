@@ -1,0 +1,61 @@
+{
+  "name": "mylang",
+  "description": "language server following lsp for this unnamed language",
+  "author": "Cole",
+  "license": "MIT",
+  "version": "0.0.1",
+  "publisher": "we :)",
+  "categories": [
+    "Programming Languages"
+  ],
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "activationEvents": [],
+  "main": "./client/out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mylang",
+        "extensions": [
+          ".ml"
+        ],
+        "aliases": [
+          "mylang",
+          "myLang",
+          "MyLang"
+        ],
+        "configuration": "./language-tools/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mylang",
+        "scopeName": "source.mylang",
+        "path": "./language-tools/mylang.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "assembly-preview.show",
+        "title": "Show Assembly"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.7",
+    "@types/vscode": "^1.109.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  }
+}
