@@ -1,2 +1,2 @@
-﻿int i = 2;
+﻿int i = 10;
 print(i);

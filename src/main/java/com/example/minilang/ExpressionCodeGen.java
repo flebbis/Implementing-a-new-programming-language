@@ -275,6 +275,11 @@ private String codeGenPower(Ast.EPower ePower) {
     
     // ===== FUNCTION CALLS =====
     private String codeGenCall(Ast.ECall eCall) {
+        // Handle built-in print function
+        if (eCall.name().equals("print")) {
+            return codeGenPrint(eCall);
+        }
+
         List<String> argRegisters = new ArrayList<>();
         for (Ast.Exp arg : eCall.args()) {
             String argReg = codeGenExp(arg);  // This appends load instructions to sb
@@ -291,7 +296,72 @@ private String codeGenPower(Ast.EPower ePower) {
         sb.append(")\n");
         return resultReg;
     }
-    
+
+    // ===== BUILT-IN PRINT =====
+    private String codeGenPrint(Ast.ECall eCall) {
+        // print(value) → call printf with appropriate format string
+        // Supports: int (%d), double (%f), string (%s), bool (%d as 0/1)
+        if (eCall.args().isEmpty()) {
+            // print() with no args → just print a newline
+            String fmtPtr = nextReg();
+            sb.append("  ").append(fmtPtr)
+              .append(" = getelementptr [2 x i8], [2 x i8]* @.fmt.newline, i32 0, i32 0\n");
+            String resultReg = nextReg();
+            sb.append("  ").append(resultReg)
+              .append(" = call i32 (i8*, ...) @printf(i8* ").append(fmtPtr).append(")\n");
+            return resultReg;
+        }
+
+        Ast.Exp arg = eCall.args().get(0);
+        String argReg = codeGenExp(arg);
+        Ast.Type argType = arg.type();
+
+        String fmtGlobal;
+        String fmtSize;
+
+        switch (argType) {
+            case TInt -> {
+                fmtGlobal = "@.fmt.int";
+                fmtSize = "[4 x i8]";
+            }
+            case TDouble -> {
+                fmtGlobal = "@.fmt.double";
+                fmtSize = "[4 x i8]";
+            }
+            case TString -> {
+                fmtGlobal = "@.fmt.string";
+                fmtSize = "[4 x i8]";
+            }
+            case TBool -> {
+                fmtGlobal = "@.fmt.int";   // bools print as 0/1
+                fmtSize = "[4 x i8]";
+                // Extend i1 to i32 for printf
+                String extended = nextReg();
+                sb.append("  ").append(extended)
+                  .append(" = zext i1 ").append(argReg).append(" to i32\n");
+                argReg = extended;
+            }
+            default -> {
+                fmtGlobal = "@.fmt.int";
+                fmtSize = "[4 x i8]";
+            }
+        }
+
+        // Get pointer to format string
+        String fmtPtr = nextReg();
+        sb.append("  ").append(fmtPtr)
+          .append(" = getelementptr ").append(fmtSize).append(", ").append(fmtSize).append("* ")
+          .append(fmtGlobal).append(", i32 0, i32 0\n");
+
+        // Call printf
+        String llvmArgType = (argType == Ast.Type.TBool) ? "i32" : toLLVMType(argType);
+        String resultReg = nextReg();
+        sb.append("  ").append(resultReg)
+          .append(" = call i32 (i8*, ...) @printf(i8* ").append(fmtPtr)
+          .append(", ").append(llvmArgType).append(" ").append(argReg).append(")\n");
+        return resultReg;
+    }
+
     // ===== HELPERS =====
     private String codeGenLoad(String varName, Ast.Type type) {
         String llvmType = toLLVMType(type);

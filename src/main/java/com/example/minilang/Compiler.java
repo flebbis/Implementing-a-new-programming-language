@@ -1,10 +1,5 @@
 package com.example.minilang;
 
-import org.antlr.v4.runtime.BailErrorStrategy;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,9 +46,7 @@ public class Compiler {
         Ast.Program astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
 
-        
-
-
+    
         String llvmCode = generateLLVM(astRoot);
         
         System.out.println("\n===== LLVM IR Code =====");
@@ -92,8 +85,8 @@ public class Compiler {
             stmtCodegen.codeGenStmt(stmt);
         }
 
-        // sb.append("  ret void\n");
-        sb.append("  ret i32 0\n");
+         sb.append("  ret void\n");
+        //sb.append("  ret i32 0\n");
         sb.append("}\n\n");
 
         // ===== Generate Code for Each Function =====
