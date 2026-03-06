@@ -20,6 +20,10 @@ public class Compiler {
 
     }
 
+    public static void parseFile(Path path) throws IOException {
+        parseFile(path, "0");
+    }
+
      public static void parseFile(Path path, String optLevel) throws IOException {
 
         String input = Files.readString(path);
