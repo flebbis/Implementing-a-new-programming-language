@@ -1,12 +1,8 @@
 package com.example.minilang;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -49,36 +45,50 @@ public class Compiler {
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
+        System.out.println("AST:      " + astRoot);
 
-        //System.out.println("AST:      " + astRoot);
-
-        // generate llvm ir to a string
-        CodeGenerator codeGen = new CodeGenerator();
-        String ir = codeGen.Generate(astRoot);
-
-        // a new os process that can process the llvm ir, llc which is for assembly and -filetype=asm 
-        // what llc should output which is assembly
-        ProcessBuilder pb = new ProcessBuilder("llc", "-filetype=asm", optLevel);
-        //starts a process
-        Process process = pb.start();
-
-        //llc stdin gerenate LLVm, convert it to bytes and then close it 
-        process.getOutputStream().write(ir.getBytes());
-        process.getOutputStream().close();
-
-        // creats a Inputstream and read the assembly from llc stdout, convert it to string 
-        InputStream is = process.getInputStream();
-        byte[] bytes = is.readAllBytes();
-        String assembly = new String(bytes,StandardCharsets.UTF_8);
-
-        String filtered = Arrays.stream(assembly.split("\n")).filter(line -> !line.trim().startsWith("."))
-        .collect(Collectors.joining("\n"));
-
-        System.out.print(filtered);
         
+
+
+        String llvmCode = generateLLVM(astRoot);
         
+        System.out.println("\n===== LLVM IR Code =====");
+        System.out.println(llvmCode);
         
-        };
+        // ===== STEP 5: Write to File =====
+        String outputFileName = path.getFileName().toString().replace(".ml", ".ll");
+        Path outputPath = path.getParent().resolve(outputFileName);
+        Files.writeString(outputPath, llvmCode);
+        System.out.println("\nOutput written to: " + outputPath);
     }
-    
 
+    private static String generateLLVM(Ast.Program program) {
+        StringBuilder sb = new StringBuilder();
+        LabelGenerator labelGen = new LabelGenerator();
+
+        //sb.append("define void @main() {\n");
+        sb.append("define i32 @main() {\n");
+        sb.append("entry:\n");
+
+        // ===== Generate Code for Global Statements =====
+        // (These are top-level statements, if any)
+        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, labelGen, program.functions());
+        for(Ast.Stmt stmt : program.stmts()) {
+            stmtCodegen.codeGenStmt(stmt);
+        }
+
+        // sb.append("  ret void\n");
+        sb.append("  ret i32 0\n");
+        sb.append("}\n\n");
+
+        // ===== Generate Code for Each Function =====
+        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, labelGen, program.functions());
+        for(Ast.Func func : program.functions()) {
+            funcCodegen.codeGenFunDef(func);
+        }
+
+
+
+        return sb.toString();
+    }
+}

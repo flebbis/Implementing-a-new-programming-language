@@ -1,52 +1,37 @@
 package com.example.minilang;
-
+import java.util.List;
 
 public class CodeGenerator {
+    StringBuilder sb = new StringBuilder();
+
+    public String CodeGeneratorC(String name, Ast.Program program) { // name is the name of the source file, but is really unnecessary if only wokring with one file
+        //Output LLVM IR boilerplate here
 
 
+        LabelGenerator blockGenerator = new LabelGenerator();
+        List<Ast.Func> functions = program.functions();
 
-    private StringBuilder sb = new StringBuilder();
-    private int tempCounter = 0;
+        /*Signatures signatures = new Signatures();
+        
 
-    public String getCode() {
-    return sb.toString();
+        List<Ast.Func> functions = program.functions();
+
+        for(Ast.Func func : functions) {
+            signatures.addFunction(name, func.name(), func.params(), func.returnType());
+        
+        }*/
+
+        for (Ast.Func func : functions) {
+            
+        }
+
+        return "Tempoorary return avoids error";
     }
-    public String Generate(Ast.Program p) {
-        sb.append("define i32 @main() {\n");
-        String result ="";
-        for (Ast.Stmt stmt : p.stmts()) {
-            if (stmt instanceof Ast.SExp sExp) {
-                result = Visit(sExp.exp());
-            }
-        }
-        sb.append("    ret i32 ").append(result).append("\n");
-        sb.append("}\n");
-        return sb.toString();
-    }
 
-    public String Visit(Ast.Exp exp){
-        if (exp instanceof Ast.EInt eInt) {
-            return visitInt(eInt);
-        } else if (exp instanceof Ast.EOpp eOpp) {
-            return visitOpp(eOpp);
-        } else {
-            throw new IllegalArgumentException("Unknown expression type: " + exp.getClass());
-        }
-    }
-    
+    private void println(String s) {
+    // System.out.println(s); // turn on for debugging
+    sb.append(s);
+    sb.append('\n');
+  }
 
-    public String visitInt(Ast.EInt node) {
-        return Integer.toString(node.value());
-        }
-
-        public String visitOpp(Ast.EOpp node) {
-            String left = Visit(node.left());
-            String right = Visit(node.right());
-            String tempVar = "%t" + tempCounter++;
-            sb.append("    ").append(tempVar)
-              .append(" = add i32 ")
-              .append(left).append(", ")
-              .append(right).append("\n");
-            return tempVar;
-        }
 }

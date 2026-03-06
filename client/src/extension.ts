@@ -91,7 +91,7 @@ export function activate(context: ExtensionContext) {
   let lastPath: string | undefined;
   async function showAssembly(optLevel: string) {
 /*
-    // get the path of the first open workspace folder// allmän jar path
+    // get the path of the first open workspace folder// allmän jar
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
     if (!workspaceFolder) {
     vscode.window.showErrorMessage('No workspace folder open!');
@@ -120,13 +120,26 @@ export function activate(context: ExtensionContext) {
           vscode.window.showErrorMessage('No active editor!');
           return;
       }
-
+/*
       //execute the file, store the content into a string and run setContent
       //fires the emitter which tells vsCode that the file has changed
       const result = execFileSync('java', ['-jar', JAR_PATH, lastPath, optLevel]);
       const asm = result.toString(); 
       asmProvider.setContent(asm);
-            
+            */
+
+      execFileSync('java', ['-jar', JAR_PATH, lastPath]);
+
+      // run llc on the .ll file to produce assembly
+      const llFile = lastPath.replace('.ml', '.ll');
+      const asmFile = lastPath.replace('.ml', '.s');
+      execFileSync('llc', ['-filetype=asm', optLevel, llFile, '-o', asmFile]);
+
+      // read the assembly file
+      const fs = require('fs');
+      const asm = fs.readFileSync(asmFile, 'utf8');
+      asmProvider.setContent(asm);
+      
       // open and show the assembly document to the right of the screen
       const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);

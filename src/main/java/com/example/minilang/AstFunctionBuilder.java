@@ -30,7 +30,7 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         String name = ctx.ID().getText();
 
         // Parameters
-        List<Ast.Exp> params = new ArrayList<>();
+        List<Ast.Arg> params = new ArrayList<>();
         GrammarParser.ParamSeparatorContext parameterContext = ctx.paramSeparator();
         if (parameterContext != null && parameterContext.param() != null) {
             // Loop through each parameter and build the corresponding AST nodes
@@ -39,7 +39,7 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
                 Ast.Type pType = TypeConverter.mapType(pTypeText); // Map the parameter type string to our Ast.Type enum
                 String id = p.ID().getText();
                 Pos pos = new Pos(p.getStart().getLine(), p.getStart().getCharPositionInLine());
-                params.add(new Ast.EId(id, pType, pos));
+                params.add(new Ast.Arg(id, pType, pos));
             }
         }
 
