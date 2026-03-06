@@ -138,7 +138,12 @@ export function activate(context: ExtensionContext) {
       // read the assembly file
       const fs = require('fs');
       const asm = fs.readFileSync(asmFile, 'utf8');
-      asmProvider.setContent(asm);
+      const filtered = asm.split('\n')
+      .filter((line: string) => !line.trim().startsWith('.'))
+      .filter((line: string) => !line.trim().startsWith(';'))
+      .filter((line: string) => line.trim() !== '')
+      .join('\n');
+      asmProvider.setContent(filtered);
       
       // open and show the assembly document to the right of the screen
       const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
