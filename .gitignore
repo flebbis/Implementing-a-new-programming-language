@@ -37,6 +37,7 @@ client/server
 .vscode-test
 tsconfig.tsbuildinfo
 *.code-workspace
+!target\LLVMINI-1.0-SNAPSHOT.jar
 
 
 ### General ###
@@ -49,3 +50,4 @@ target/
 *.tokens
 /.idea/
 *.iml
+*.ll
