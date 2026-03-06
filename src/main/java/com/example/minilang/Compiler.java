@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import com.example.minilang.ast.Ast;
+import com.example.minilang.ast.AstBuilderVisitor;
+import com.example.minilang.typechecker.TypeChecker;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -46,8 +49,11 @@ public class Compiler {
         Ast.Program astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
 
+        TypeChecker typeChecker = new TypeChecker();
+        Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
+
     
-        String llvmCode = generateLLVM(astRoot);
+        String llvmCode = generateLLVM(typeCheckedAst);
         
         System.out.println("\n===== LLVM IR Code =====");
         System.out.println(llvmCode);
