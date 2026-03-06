@@ -1,5 +1,10 @@
 package com.example.minilang;
 
+import org.antlr.v4.runtime.BailErrorStrategy;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,11 +22,11 @@ public class Compiler {
         }
         String optLevel = args.length > 1 ? args[1] : "-O3";
         parseFile(Path.of(args[0]), optLevel);
-   
+
     }
 
      public static void parseFile(Path path, String optLevel) throws IOException {
-        
+
         String input = Files.readString(path);
 
         // 2. Infrastructure
@@ -34,7 +39,6 @@ public class Compiler {
         //lexer.addErrorListener();
 
         // 3. Parse and create Tree
-
         ParseTree tree = parser.program();
 
 
@@ -66,8 +70,19 @@ public class Compiler {
         StringBuilder sb = new StringBuilder();
         LabelGenerator labelGen = new LabelGenerator();
 
-        //sb.append("define void @main() {\n");
-        sb.append("define i32 @main() {\n");
+        // ===== External Declarations =====
+        sb.append("declare i32 @printf(i8*, ...)\n");
+        sb.append("declare double @pow(double, double)\n");
+        sb.append("\n");
+
+        // ===== Format String Constants for print() =====
+        sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");       // "%d\n\0"
+        sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");    // "%f\n\0"
+        sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");    // "%s\n\0"
+        sb.append("@.fmt.newline = private constant [2 x i8] c\"\\0A\\00\"\n");      // "\n\0"
+        sb.append("\n");
+
+        sb.append("define void @main() {\n");
         sb.append("entry:\n");
 
         // ===== Generate Code for Global Statements =====
