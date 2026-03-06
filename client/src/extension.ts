@@ -78,6 +78,8 @@ export function activate(context: ExtensionContext) {
   client.start();
      
   // ------ Show assembly -------- 
+  // ------- Kommer behöva ändras för att runna på att llc läser fil istället ----
+
   const asmProvider = new AsmProvider();
   // clean up from memory when the extension closes down subscriptions.push
 
@@ -88,6 +90,15 @@ export function activate(context: ExtensionContext) {
   
   let lastPath: string | undefined;
   async function showAssembly(optLevel: string) {
+/*
+    // get the path of the first open workspace folder// allmän jar path
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+    if (!workspaceFolder) {
+    vscode.window.showErrorMessage('No workspace folder open!');
+    return;
+    }
+    const JAR_PATH = path.join(workspaceFolder, '..', 'target', 'LLVMINI-1.0-SNAPSHOT.jar');
+    */
     
     vscode.window.showInformationMessage('Optimazation level' + optLevel);
     try {

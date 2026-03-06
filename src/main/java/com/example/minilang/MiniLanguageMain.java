@@ -18,6 +18,6 @@ public class MiniLanguageMain {
             System.exit(1);
             return;
         }
-        Compiler.parseFile(Path.of(path));
+        Compiler.parseFile(Path.of(path), "-O0");
     }
 }
