@@ -6,4 +6,5 @@ src/
 tsconfig.json
 .gitignore
 LLVMiniLanguage.iml
-pom.xml
+*.xml
+*.code-workspace

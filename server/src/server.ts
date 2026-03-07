@@ -16,17 +16,48 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
+let hasWorkspaceFolderCapability = false;
+
+
 connection.onInitialize((params: InitializeParams) => {
+	const capabilities = params.capabilities;
+
+  // probe client capabilites
+	hasWorkspaceFolderCapability = !!(
+		capabilities.workspace && !!capabilities.workspace.workspaceFolders
+	);
+
   const result: InitializeResult = {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
     },
   };
+  
+  // If client suports workspace folder
+if (hasWorkspaceFolderCapability) {
+    result.capabilities.workspace = {
+      workspaceFolders: {
+        supported: true
+      }
+    };
+  }
+
   connection.window.showInformationMessage(
     "*mylang* Language server extension initialized successfully!"
   );
   return result;
 });
+
+
+connection.onInitialized(() => {
+  if (hasWorkspaceFolderCapability) {
+		connection.workspace.onDidChangeWorkspaceFolders(_event => {
+			connection.console.log('Workspace folder change event received.');
+		});
+	}
+});
+
+
 
 documents.onDidChangeContent((change) => {
   connection.window.showInformationMessage(
