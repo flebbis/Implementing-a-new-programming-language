@@ -1,17 +1,28 @@
 package com.example.minilang;
 
 import java.util.List;
+import java.util.Set;
 import static com.example.minilang.FunctionCodeGen.toLLVMType;
 
 public class StatementCodeGen {
     private StringBuilder sb;
     private LabelGenerator labelGen;
     private List<Ast.Func> functions;
+    private Set<String> currentFunctionParameters;  // ← ADD THIS
     
     public StatementCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
         this.sb = sb;
         this.labelGen = labelGen;
         this.functions = functions;
+        this.currentFunctionParameters = Set.of();  // Empty set for main
+    }
+
+    // ← ADD THIS CONSTRUCTOR
+    public StatementCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions, Set<String> parameters) {
+        this.sb = sb;
+        this.labelGen = labelGen;
+        this.functions = functions;
+        this.currentFunctionParameters = parameters;
     }
     
     /**
@@ -55,7 +66,7 @@ public class StatementCodeGen {
         sb.append("  %").append(sInit.name()).append(" = alloca ").append(llvmType).append("\n");
         
         // Step 2: Generate code for the initialization expression
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters);
         String valueReg = exprCodeGen.codeGenExp(sInit.value());
         
         // Step 3: Store the value into the variable
@@ -65,7 +76,7 @@ public class StatementCodeGen {
     // ===== EXPRESSION STATEMENT =====
     private void codeGenExp(Ast.SExp sExp) {
         // x++; or foo(5); or just an expression on its own
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters);
         exprCodeGen.codeGenExp(sExp.exp());  // Generate code but ignore result
     }
     
@@ -75,7 +86,7 @@ public class StatementCodeGen {
         System.out.println("DEBUG: sReturn.value() == null? " + (sReturn.value() == null));
         // return x;
         if(sReturn.value() != null) {
-            ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions);
+            ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters);
             String valueReg = exprCodeGen.codeGenExp(sReturn.value());
             String llvmType = toLLVMType(sReturn.value().type());
             sb.append("  ret ").append(llvmType).append(" ").append(valueReg).append("\n");
@@ -96,7 +107,7 @@ public class StatementCodeGen {
     private void codeGenIf(Ast.SIf sIf) {
         // if(condition) { thenBranch } else { elseBranch }
         
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters);
         
         // Step 1: Generate code for condition
         String condReg = exprCodeGen.codeGenExp(sIf.condition());
@@ -129,7 +140,7 @@ public class StatementCodeGen {
     private void codeGenWhile(Ast.SWhile sWhile) {
         // while(condition) { body }
         
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters);
         
         // Step 1: Generate labels
         String condLabel = labelGen.generateLabel("cond");
@@ -155,53 +166,53 @@ public class StatementCodeGen {
     
     // ===== DO-WHILE LOOP =====
     private void codeGenDo(Ast.SDo sDo) {
-    // do times { body }
-    // This should execute the body 'times' number of times
-    
-    ExpressionCodeGen exprCodegen = new ExpressionCodeGen(sb, labelGen, functions);
-    
-    // Step 1: Evaluate the number of iterations
-    String timesReg = exprCodegen.codeGenExp(sDo.times());
-    
-    // Step 2: Create a counter variable
-    String counterVar = labelGen.generateLabel("counter");
-    sb.append("  %").append(counterVar).append(" = alloca i32\n");
-    sb.append("  store i32 0, i32* %").append(counterVar).append("\n");
-    
-    // Step 3: Create labels
-    String condLabel = labelGen.generateLabel("cond");
-    String bodyLabel = labelGen.generateLabel("body");
-    String endLabel = labelGen.generateLabel("end");
-    
-    // Step 4: Jump to condition
-    sb.append("  br label %").append(condLabel).append("\n");
-    
-    // Step 5: Condition check (counter < times)
-    sb.append(condLabel).append(":\n");
-    String counter = nextReg();
-    sb.append("  %").append(counter).append(" = load i32, i32* %").append(counterVar).append("\n");
-    String cond = nextReg();
-    sb.append("  %").append(cond).append(" = icmp slt i32 %").append(counter).append(", ").append(timesReg).append("\n");
-    sb.append("  br i1 %").append(cond).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
-    
-    // Step 6: Body
-    sb.append(bodyLabel).append(":\n");
-    codeGenStmt(sDo.body());
-    
-    // Step 7: Increment counter
-    String incremented = nextReg();
-    sb.append("  %").append(incremented).append(" = add i32 %").append(counter).append(", 1\n");
-    sb.append("  store i32 %").append(incremented).append(", i32* %").append(counterVar).append("\n");
-    
-    // Step 8: Loop back
-    sb.append("  br label %").append(condLabel).append("\n");
-    
-    // Step 9: End
-    sb.append(endLabel).append(":\n");
-}
+        // do times { body }
+        // This should execute the body 'times' number of times
+        
+        ExpressionCodeGen exprCodegen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters);
+        
+        // Step 1: Evaluate the number of iterations
+        String timesReg = exprCodegen.codeGenExp(sDo.times());
+        
+        // Step 2: Create a counter variable
+        String counterVar = labelGen.generateLabel("counter");
+        sb.append("  %").append(counterVar).append(" = alloca i32\n");
+        sb.append("  store i32 0, i32* %").append(counterVar).append("\n");
+        
+        // Step 3: Create labels
+        String condLabel = labelGen.generateLabel("cond");
+        String bodyLabel = labelGen.generateLabel("body");
+        String endLabel = labelGen.generateLabel("end");
+        
+        // Step 4: Jump to condition
+        sb.append("  br label %").append(condLabel).append("\n");
+        
+        // Step 5: Condition check (counter < times)
+        sb.append(condLabel).append(":\n");
+        String counter = nextReg();
+        sb.append("  %").append(counter).append(" = load i32, i32* %").append(counterVar).append("\n");
+        String cond = nextReg();
+        sb.append("  %").append(cond).append(" = icmp slt i32 %").append(counter).append(", ").append(timesReg).append("\n");
+        sb.append("  br i1 %").append(cond).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
+        
+        // Step 6: Body
+        sb.append(bodyLabel).append(":\n");
+        codeGenStmt(sDo.body());
+        
+        // Step 7: Increment counter
+        String incremented = nextReg();
+        sb.append("  %").append(incremented).append(" = add i32 %").append(counter).append(", 1\n");
+        sb.append("  store i32 %").append(incremented).append(", i32* %").append(counterVar).append("\n");
+        
+        // Step 8: Loop back
+        sb.append("  br label %").append(condLabel).append("\n");
+        
+        // Step 9: End
+        sb.append(endLabel).append(":\n");
+    }
 
-private int regCounter = 0;
-private String nextReg() {
-    return String.valueOf(regCounter++);
-}
+    private int regCounter = 0;
+    private String nextReg() {
+        return String.valueOf(regCounter++);
+    }
 }

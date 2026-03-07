@@ -1,5 +1,7 @@
 package com.example.minilang;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class FunctionCodeGen {
     private StringBuilder sb;
@@ -25,7 +27,14 @@ public class FunctionCodeGen {
 
         sb.append("entry:\n");
 
-        StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions);
+        // ← CREATE parameter set
+        Set<String> paramNames = new HashSet<>();
+        for (Ast.Arg arg : func.params()) {
+            paramNames.add(arg.name());
+        }
+
+        // ← PASS parameters to StatementCodeGen
+        StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions, paramNames);
         stmtCodeGen.codeGenStmt(func.body());
         sb.append("}\n");
     }
@@ -40,6 +49,4 @@ public class FunctionCodeGen {
             case TUnknown -> "i32"; 
         };
     }
-
-
 }

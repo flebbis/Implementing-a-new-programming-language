@@ -1,50 +1,60 @@
 package com.example.minilang;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class ExpressionCodeGen {
-
 
     private StringBuilder sb;
     private LabelGenerator labelGen;
     private List<Ast.Func> functions;
+    private Set<String> parameters;  // ← ADD THIS
     private int regCounter = 0;  // Counter for generating unique registers
     
     public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
         this.sb = sb;
         this.labelGen = labelGen;
         this.functions = functions;
+        this.parameters = Set.of();  // Empty set by default
+    }
+
+    // ← ADD THIS CONSTRUCTOR
+    public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions, Set<String> parameters) {
+        this.sb = sb;
+        this.labelGen = labelGen;
+        this.functions = functions;
+        this.parameters = parameters;
     }
     
     /**
      * Generate code for an expression and return the register holding the result
      */
     public String codeGenExp(Ast.Exp exp) {
-    if (exp instanceof Ast.EInt eInt) return codeGenInt(eInt);
-    if (exp instanceof Ast.EDouble eDouble) return codeGenDouble(eDouble);
-    if (exp instanceof Ast.EString eString) return codeGenString(eString);
-    if (exp instanceof Ast.EBool eBool) return codeGenBool(eBool);
-    if (exp instanceof Ast.EId eId) return codeGenId(eId);
-    if (exp instanceof Ast.ENot eNot) return codeGenNot(eNot);
-    if (exp instanceof Ast.EOpp eOpp) return codeGenOpp(eOpp);
-    if (exp instanceof Ast.ECall eCall) return codeGenCall(eCall);
-    if (exp instanceof Ast.EPower ePower) return codeGenPower(ePower);
-    if (exp instanceof Ast.ECmp eLt && eLt.op() == Ast.CmpOp.LT) return codeGenLt(eLt);
-    if (exp instanceof Ast.ECmp eGt && eGt.op() == Ast.CmpOp.GT) return codeGenGt(eGt);
-    if (exp instanceof Ast.ECmp eGe && eGe.op() == Ast.CmpOp.GE) return codeGenGe(eGe);
-    if (exp instanceof Ast.ECmp eLe && eLe.op() == Ast.CmpOp.LE) return codeGenLe(eLe);
-    if (exp instanceof Ast.ECmp eNe && eNe.op() == Ast.CmpOp.NE) return codeGenNe(eNe);
-    if (exp instanceof Ast.ECmp eEq && eEq.op() == Ast.CmpOp.EQ) return codeGenEq(eEq);
-    if (exp instanceof Ast.ELogic eAnd && eAnd.op() == Ast.LogicOp.AND) return codeGenAnd(eAnd);
-    if (exp instanceof Ast.ELogic eOr && eOr.op() == Ast.LogicOp.OR) return codeGenOr(eOr);
-    if (exp instanceof Ast.EAss eAss) return codeGenAss(eAss);
-    if (exp instanceof Ast.EAss ePlusAss && ePlusAss.op() == Ast.AssOp.PLUS_ASSIGN) return codeGenPlusAss(ePlusAss);
-    if (exp instanceof Ast.EAss eMinusAss && eMinusAss.op() == Ast.AssOp.MINUS_ASSIGN) return codeGenMinusAss(eMinusAss);
-    if (exp instanceof Ast.EAss eDivAss && eDivAss.op() == Ast.AssOp.DIV_ASSIGN) return codeGenDivAss(eDivAss);
-    if (exp instanceof Ast.EAss eMultAss && eMultAss.op() == Ast.AssOp.MULT_ASSIGN) return codeGenMultAss(eMultAss);
-    if (exp instanceof Ast.EUnary eInc && eInc.op() == Ast.UnaryOp.INC) return codeGenInc(eInc);
-    if (exp instanceof Ast.EUnary eDec && eDec.op() == Ast.UnaryOp.DEC) return codeGenDec(eDec);
-    return "0";
+        if (exp instanceof Ast.EInt eInt) return codeGenInt(eInt);
+        if (exp instanceof Ast.EDouble eDouble) return codeGenDouble(eDouble);
+        if (exp instanceof Ast.EString eString) return codeGenString(eString);
+        if (exp instanceof Ast.EBool eBool) return codeGenBool(eBool);
+        if (exp instanceof Ast.EId eId) return codeGenId(eId);
+        if (exp instanceof Ast.ENot eNot) return codeGenNot(eNot);
+        if (exp instanceof Ast.EOpp eOpp) return codeGenOpp(eOpp);
+        if (exp instanceof Ast.ECall eCall) return codeGenCall(eCall);
+        if (exp instanceof Ast.EPower ePower) return codeGenPower(ePower);
+        if (exp instanceof Ast.ECmp eLt && eLt.op() == Ast.CmpOp.LT) return codeGenLt(eLt);
+        if (exp instanceof Ast.ECmp eGt && eGt.op() == Ast.CmpOp.GT) return codeGenGt(eGt);
+        if (exp instanceof Ast.ECmp eGe && eGe.op() == Ast.CmpOp.GE) return codeGenGe(eGe);
+        if (exp instanceof Ast.ECmp eLe && eLe.op() == Ast.CmpOp.LE) return codeGenLe(eLe);
+        if (exp instanceof Ast.ECmp eNe && eNe.op() == Ast.CmpOp.NE) return codeGenNe(eNe);
+        if (exp instanceof Ast.ECmp eEq && eEq.op() == Ast.CmpOp.EQ) return codeGenEq(eEq);
+        if (exp instanceof Ast.ELogic eAnd && eAnd.op() == Ast.LogicOp.AND) return codeGenAnd(eAnd);
+        if (exp instanceof Ast.ELogic eOr && eOr.op() == Ast.LogicOp.OR) return codeGenOr(eOr);
+        if (exp instanceof Ast.EAss eAss) return codeGenAss(eAss);
+        if (exp instanceof Ast.EAss ePlusAss && ePlusAss.op() == Ast.AssOp.PLUS_ASSIGN) return codeGenPlusAss(ePlusAss);
+        if (exp instanceof Ast.EAss eMinusAss && eMinusAss.op() == Ast.AssOp.MINUS_ASSIGN) return codeGenMinusAss(eMinusAss);
+        if (exp instanceof Ast.EAss eDivAss && eDivAss.op() == Ast.AssOp.DIV_ASSIGN) return codeGenDivAss(eDivAss);
+        if (exp instanceof Ast.EAss eMultAss && eMultAss.op() == Ast.AssOp.MULT_ASSIGN) return codeGenMultAss(eMultAss);
+        if (exp instanceof Ast.EUnary eInc && eInc.op() == Ast.UnaryOp.INC) return codeGenInc(eInc);
+        if (exp instanceof Ast.EUnary eDec && eDec.op() == Ast.UnaryOp.DEC) return codeGenDec(eDec);
+        return "0";
     }
     
     // ===== LITERALS =====
@@ -67,11 +77,18 @@ public class ExpressionCodeGen {
     
     // ===== VARIABLES =====
     private String codeGenId(Ast.EId eId) {
-        // Load variable from memory
-        String llvmType = toLLVMType(eId.type());
-        String reg = nextReg();
-        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("\n");
-        return reg;
+        // If it's a parameter, return it directly (it's already a value)
+        if (isParameter(eId.name())) {
+            return "%".concat(eId.name());
+        }
+        // If it's a local variable, load it from memory
+        else {
+            String llvmType = toLLVMType(eId.type());
+            String reg = nextReg();
+            
+            sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("\n");
+            return reg;
+        }
     }
     
     // ===== ARITHMETIC OPERATIONS =====
@@ -95,28 +112,28 @@ public class ExpressionCodeGen {
         return result;
     }
     
-private String codeGenPower(Ast.EPower ePower) {
-    String base = codeGenExp(ePower.base());
-    String exponent = codeGenExp(ePower.exponent());
-    String result = nextReg();
-    
-    // Convert to double for pow()
-    String baseDouble = nextReg();
-    String expDouble = nextReg();
-    
-    sb.append("  ").append(baseDouble).append(" = sitofp i32 ").append(base).append(" to double\n");
-    sb.append("  ").append(expDouble).append(" = sitofp i32 ").append(exponent).append(" to double\n");
-    
-    // Call pow()
-    String powResult = nextReg();
-    sb.append("  ").append(powResult).append(" = call double @pow(double ").append(baseDouble).append(", double ").append(expDouble).append(")\n");
-    
-    // Convert back to int if needed
-    String finalResult = nextReg();
-    sb.append("  ").append(finalResult).append(" = fptosi double ").append(powResult).append(" to i32\n");
-    
-    return finalResult;
-}
+    private String codeGenPower(Ast.EPower ePower) {
+        String base = codeGenExp(ePower.base());
+        String exponent = codeGenExp(ePower.exponent());
+        String result = nextReg();
+        
+        // Convert to double for pow()
+        String baseDouble = nextReg();
+        String expDouble = nextReg();
+        
+        sb.append("  ").append(baseDouble).append(" = sitofp i32 ").append(base).append(" to double\n");
+        sb.append("  ").append(expDouble).append(" = sitofp i32 ").append(exponent).append(" to double\n");
+        
+        // Call pow()
+        String powResult = nextReg();
+        sb.append("  ").append(powResult).append(" = call double @pow(double ").append(baseDouble).append(", double ").append(expDouble).append(")\n");
+        
+        // Convert back to int if needed
+        String finalResult = nextReg();
+        sb.append("  ").append(finalResult).append(" = fptosi double ").append(powResult).append(" to i32\n");
+        
+        return finalResult;
+    }
     
     // ===== COMPARISON OPERATIONS =====
     private String codeGenLt(Ast.ECmp eLt) {
@@ -315,4 +332,7 @@ private String codeGenPower(Ast.EPower ePower) {
         };
     }
 
+    private boolean isParameter(String name) {
+        return parameters.contains(name);
+    } 
 }
