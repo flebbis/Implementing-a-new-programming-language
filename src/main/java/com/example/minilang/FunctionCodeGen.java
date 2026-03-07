@@ -7,11 +7,13 @@ public class FunctionCodeGen {
     private StringBuilder sb;
     private LabelGenerator labelGenerator;
     private List<Ast.Func> functions;
+    private RegisterGenerator registerGenerator;
 
     public FunctionCodeGen(StringBuilder sb, LabelGenerator labelGenerator, List<Ast.Func> functions) {
         this.sb = sb;
         this.labelGenerator = labelGenerator;
         this.functions = functions;
+        this.registerGenerator = new RegisterGenerator();
     }
 
     public void codeGenFunDef(Ast.Func func){
@@ -27,14 +29,20 @@ public class FunctionCodeGen {
 
         sb.append("entry:\n");
 
-        // ← CREATE parameter set
+        // ← FOR EACH PARAMETER, ALLOCATE LOCAL STORAGE
         Set<String> paramNames = new HashSet<>();
         for (Ast.Arg arg : func.params()) {
+            String llvmType = toLLVMType(arg.type());
+            // Create a local variable for the parameter
+            sb.append("  %").append(arg.name()).append("_param = alloca ").append(llvmType).append("\n");
+            sb.append("  store ").append(llvmType).append(" %").append(arg.name()).append(", ").append(llvmType).append("* %").append(arg.name()).append("_param\n");
             paramNames.add(arg.name());
         }
 
-        // ← PASS parameters to StatementCodeGen
-        StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions, paramNames);
+        // Reset register generator for each function
+        registerGenerator.reset();
+
+        StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions, paramNames, registerGenerator);
         stmtCodeGen.codeGenStmt(func.body());
         sb.append("}\n");
     }
