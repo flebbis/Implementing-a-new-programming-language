@@ -10,8 +10,6 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 
-// my own jar file,, fix later
-// const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
 
 // a custom API, that makes the document readonly 
 class AsmProvider implements vscode.TextDocumentContentProvider {
@@ -37,13 +35,17 @@ class AsmProvider implements vscode.TextDocumentContentProvider {
   }
 }
 
-let client: LanguageClient;
+let client: LanguageClient | undefined;
 
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
     path.join("server", "out", "server.js")
   );
+
+  // server debugging options
+  // --inspect=6009 uses Node's Inspector mode, allows debugging with the "attach to server" launch
+  let debugOptions = {execArgv: ['--nolazy', '--inspect=6009']}
 
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
@@ -52,14 +54,14 @@ export function activate(context: ExtensionContext) {
     debug: {
       module: serverModule,
       transport: TransportKind.ipc,
+      options: debugOptions
     },
   };
 
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
-    // Register the server for all documents by default
+    // Register the server for all 'mylang' files defined in package.json as having ending .ml
     documentSelector: [{ scheme: "file", language: "mylang" }],
-    // documentSelector: [{ scheme: "file", language: "plaintext" }],
     synchronize: {
       // Notify the server about file changes to '.clientrc files contained in the workspace
       fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
@@ -188,11 +190,14 @@ export function activate(context: ExtensionContext) {
 
 
 }
-
+/* 
 export function deactivate(): Thenable<void> | undefined {
   if (!client) {
     return undefined;
   }
   return client.stop();
+} */
+export async function deactivate() {
+  await client?.dispose();
+  client=undefined;
 }
-
