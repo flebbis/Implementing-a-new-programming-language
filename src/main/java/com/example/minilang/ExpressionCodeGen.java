@@ -28,7 +28,8 @@ public class ExpressionCodeGen {
     }
     
     /**
-     * Generate code for an expression and return the register holding the result
+     * Generate code for an expression and return the register holding the result.
+     * Returns: literal values as-is (e.g., "5", "10"), or register names with % prefix (e.g., "%1", "%2")
      */
     public String codeGenExp(Ast.Exp exp) {
         if (exp instanceof Ast.EInt eInt) return codeGenInt(eInt);
@@ -82,7 +83,7 @@ public class ExpressionCodeGen {
             String llvmType = toLLVMType(eId.type());
             String reg = registerGenerator.nextReg();
             sb.append("  %").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("_param\n");
-            return reg;
+            return "%" + reg;
         }
         // If it's a local variable, load it from memory
         else {
@@ -90,7 +91,7 @@ public class ExpressionCodeGen {
             String reg = registerGenerator.nextReg();
             
             sb.append("  %").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("\n");
-            return reg;
+            return "%" + reg;
         }
     }
     
@@ -100,9 +101,6 @@ public class ExpressionCodeGen {
         String right = codeGenExp(eOpp.right());
         String llvmType = toLLVMType(eOpp.type());
         String result = registerGenerator.nextReg();
-        
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
         
         String op = switch(eOpp.op()) {
             case ADD -> "add";
@@ -114,23 +112,20 @@ public class ExpressionCodeGen {
              default -> throw new RuntimeException("Unknown operator: " + eOpp.op());
         };
         
-        sb.append("  %").append(result).append(" = ").append(op).append(" ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = ").append(op).append(" ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenPower(Ast.EPower ePower) {
         String base = codeGenExp(ePower.base());
         String exponent = codeGenExp(ePower.exponent());
         
-        String baseVal = isLiteral(base) ? base : "%" + base;
-        String exponentVal = isLiteral(exponent) ? exponent : "%" + exponent;
-        
         // Convert to double for pow()
         String baseDouble = registerGenerator.nextReg();
         String expDouble = registerGenerator.nextReg();
         
-        sb.append("  %").append(baseDouble).append(" = sitofp i32 ").append(baseVal).append(" to double\n");
-        sb.append("  %").append(expDouble).append(" = sitofp i32 ").append(exponentVal).append(" to double\n");
+        sb.append("  %").append(baseDouble).append(" = sitofp i32 ").append(base).append(" to double\n");
+        sb.append("  %").append(expDouble).append(" = sitofp i32 ").append(exponent).append(" to double\n");
         
         // Call pow()
         String powResult = registerGenerator.nextReg();
@@ -140,7 +135,7 @@ public class ExpressionCodeGen {
         String finalResult = registerGenerator.nextReg();
         sb.append("  %").append(finalResult).append(" = fptosi double %").append(powResult).append(" to i32\n");
         
-        return finalResult;
+        return "%" + finalResult;
     }
     
     // ===== COMPARISON OPERATIONS =====
@@ -150,11 +145,8 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eLt.left().type());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = icmp slt ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = icmp slt ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenGt(Ast.ECmp eGt) {
@@ -163,11 +155,8 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eGt.left().type());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = icmp sgt ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = icmp sgt ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenGe(Ast.ECmp eGe) {
@@ -176,11 +165,8 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eGe.left().type());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = icmp sge ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = icmp sge ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenLe(Ast.ECmp eLe) {
@@ -189,11 +175,8 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eLe.left().type());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = icmp sle ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = icmp sle ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenNe(Ast.ECmp eNe) {
@@ -202,11 +185,8 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eNe.left().type());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = icmp ne ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = icmp ne ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenEq(Ast.ECmp eEq) {
@@ -215,11 +195,8 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eEq.left().type());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = icmp eq ").append(llvmType).append(" ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = icmp eq ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     // ===== LOGICAL OPERATIONS =====
@@ -228,11 +205,8 @@ public class ExpressionCodeGen {
         String right = codeGenExp(eAnd.right());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = and i1 ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = and i1 ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenOr(Ast.ELogic eOr) {
@@ -240,21 +214,16 @@ public class ExpressionCodeGen {
         String right = codeGenExp(eOr.right());
         String result = registerGenerator.nextReg();
         
-        String leftVal = isLiteral(left) ? left : "%" + left;
-        String rightVal = isLiteral(right) ? right : "%" + right;
-        
-        sb.append("  %").append(result).append(" = or i1 ").append(leftVal).append(", ").append(rightVal).append("\n");
-        return result;
+        sb.append("  %").append(result).append(" = or i1 ").append(left).append(", ").append(right).append("\n");
+        return "%" + result;
     }
     
     private String codeGenNot(Ast.ENot eNot) {
         String exp = codeGenExp(eNot.exp());
         String result = registerGenerator.nextReg();
         
-        String expVal = isLiteral(exp) ? exp : "%" + exp;
-        
-        sb.append("  %").append(result).append(" = xor i1 ").append(expVal).append(", 1\n");
-        return result;
+        sb.append("  %").append(result).append(" = xor i1 ").append(exp).append(", 1\n");
+        return "%" + result;
     }
     
     // ===== ASSIGNMENT OPERATIONS =====
@@ -262,13 +231,11 @@ public class ExpressionCodeGen {
         String valueReg = codeGenExp(eAss.value());
         String llvmType = toLLVMType(eAss.value().type());
         
-        String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-        
         // If it's a parameter, store to _param version
         if (isParameter(eAss.name())) {
-            sb.append("  store ").append(llvmType).append(" ").append(valueVal).append(", ").append(llvmType).append("* %").append(eAss.name()).append("_param\n");
+            sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append("_param\n");
         } else {
-            sb.append("  store ").append(llvmType).append(" ").append(valueVal).append(", ").append(llvmType).append("* %").append(eAss.name()).append("\n");
+            sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append("\n");
         }
         return valueReg;
     }
@@ -279,16 +246,14 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(ePlusAss.type());
         String result = registerGenerator.nextReg();
         
-        String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-        
-        sb.append("  %").append(result).append(" = add ").append(llvmType).append(" %").append(currentVal).append(", ").append(valueVal).append("\n");
+        sb.append("  %").append(result).append(" = add ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         
         if (isParameter(ePlusAss.name())) {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(ePlusAss.name()).append("_param\n");
         } else {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(ePlusAss.name()).append("\n");
         }
-        return result;
+        return "%" + result;
     }
     
     private String codeGenMinusAss(Ast.EAss eMinusAss) {
@@ -297,16 +262,14 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eMinusAss.type());
         String result = registerGenerator.nextReg();
         
-        String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-        
-        sb.append("  %").append(result).append(" = sub ").append(llvmType).append(" %").append(currentVal).append(", ").append(valueVal).append("\n");
+        sb.append("  %").append(result).append(" = sub ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         
         if (isParameter(eMinusAss.name())) {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(eMinusAss.name()).append("_param\n");
         } else {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(eMinusAss.name()).append("\n");
         }
-        return result;
+        return "%" + result;
     }
     
     private String codeGenDivAss(Ast.EAss eDivAss) {
@@ -315,16 +278,14 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eDivAss.type());
         String result = registerGenerator.nextReg();
         
-        String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-        
-        sb.append("  %").append(result).append(" = sdiv ").append(llvmType).append(" %").append(currentVal).append(", ").append(valueVal).append("\n");
+        sb.append("  %").append(result).append(" = sdiv ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         
         if (isParameter(eDivAss.name())) {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(eDivAss.name()).append("_param\n");
         } else {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(eDivAss.name()).append("\n");
         }
-        return result;
+        return "%" + result;
     }
     
     private String codeGenMultAss(Ast.EAss eMultAss) {
@@ -333,16 +294,14 @@ public class ExpressionCodeGen {
         String llvmType = toLLVMType(eMultAss.type());
         String result = registerGenerator.nextReg();
         
-        String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-        
-        sb.append("  %").append(result).append(" = mul ").append(llvmType).append(" %").append(currentVal).append(", ").append(valueVal).append("\n");
+        sb.append("  %").append(result).append(" = mul ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         
         if (isParameter(eMultAss.name())) {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(eMultAss.name()).append("_param\n");
         } else {
             sb.append("  store ").append(llvmType).append(" %").append(result).append(", ").append(llvmType).append("* %").append(eMultAss.name()).append("\n");
         }
-        return result;
+        return "%" + result;
     }
     
     // ===== INCREMENT/DECREMENT =====
@@ -366,16 +325,11 @@ public class ExpressionCodeGen {
         sb.append("  %").append(resultReg).append(" = call i32 @").append(eCall.name()).append("(");
         for (int i = 0; i < argRegisters.size(); i++) {
             String argVal = argRegisters.get(i);
-            // Check if it's a literal or a register
-            if (isLiteral(argVal)) {
-                sb.append("i32 ").append(argVal);
-            } else {
-                sb.append("i32 %").append(argVal);
-            }
+            sb.append("i32 ").append(argVal);
             if (i < argRegisters.size() - 1) sb.append(", ");
         }
         sb.append(")\n");
-        return resultReg;
+        return "%" + resultReg;
     }
     
     // ===== HELPERS =====
@@ -389,18 +343,7 @@ public class ExpressionCodeGen {
         } else {
             sb.append("  %").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(varName).append("\n");
         }
-        return reg;
-    }
-    
-    /**
-     * Check if a string is a literal value (number, boolean, etc.) or a register name
-     */
-    private boolean isLiteral(String value) {
-        if (value == null || value.isEmpty()) {
-            return false;
-        }
-        char first = value.charAt(0);
-        return Character.isDigit(first) || value.equals("true") || value.equals("false") || first == '"';
+        return "%" + reg;
     }
     
     private String toLLVMType(Ast.Type type) {

@@ -10,6 +10,7 @@ public class StatementCodeGen {
     private List<Ast.Func> functions;
     private Set<String> currentFunctionParameters;
     private RegisterGenerator registerGenerator;
+    private Set<String> declaredVariables;  // ← ADD THIS
     
     public StatementCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
         this.sb = sb;
@@ -17,6 +18,7 @@ public class StatementCodeGen {
         this.functions = functions;
         this.currentFunctionParameters = Set.of();
         this.registerGenerator = new RegisterGenerator();
+        this.declaredVariables = new java.util.HashSet<>();  // ← ADD THIS
     }
 
     public StatementCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions, Set<String> parameters, RegisterGenerator registerGenerator) {
@@ -25,6 +27,7 @@ public class StatementCodeGen {
         this.functions = functions;
         this.currentFunctionParameters = parameters;
         this.registerGenerator = registerGenerator;
+        this.declaredVariables = new java.util.HashSet<>();  // ← ADD THIS
     }
     
     /**
@@ -53,8 +56,8 @@ public class StatementCodeGen {
     // ===== VARIABLE DECLARATION (no initialization) =====
     private void codeGenDecl(Ast.SDecl sDecl) {
         // int x;
-        // Don't allocate if it's a parameter
-        if (currentFunctionParameters.contains(sDecl.name())) {
+        // Don't allocate if it's a parameter or already declared
+        if (currentFunctionParameters.contains(sDecl.name()) || declaredVariables.contains(sDecl.name())) {
             return;
         }
         
@@ -62,6 +65,7 @@ public class StatementCodeGen {
         
         // Allocate space for the variable
         sb.append("  %").append(sDecl.name()).append(" = alloca ").append(llvmType).append("\n");
+        declaredVariables.add(sDecl.name());  // ← TRACK IT
     }
     
     // ===== VARIABLE INITIALIZATION =====
@@ -69,9 +73,10 @@ public class StatementCodeGen {
         // int x = 5;
         String llvmType = toLLVMType(sInit.type());
         
-        // Step 1: Allocate space for the variable (only if it's not a parameter)
-        if (!currentFunctionParameters.contains(sInit.name())) {
+        // Step 1: Allocate space for the variable (only if it's not a parameter and not already declared)
+        if (!currentFunctionParameters.contains(sInit.name()) && !declaredVariables.contains(sInit.name())) {
             sb.append("  %").append(sInit.name()).append(" = alloca ").append(llvmType).append("\n");
+            declaredVariables.add(sInit.name());  // ← TRACK IT
         }
         
         // Step 2: Generate code for the initialization expression
@@ -79,14 +84,13 @@ public class StatementCodeGen {
         String valueReg = exprCodeGen.codeGenExp(sInit.value());
         
         // Step 3: Store the value into the variable
-        String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-        
+        // valueReg already has % prefix if it's a register, or is a literal if it's a number
         if (currentFunctionParameters.contains(sInit.name())) {
             // If it's a parameter, store to _param version
-            sb.append("  store ").append(llvmType).append(" ").append(valueVal).append(", ").append(llvmType).append("* %").append(sInit.name()).append("_param\n");
+            sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(sInit.name()).append("_param\n");
         } else {
             // If it's a local variable, store to the allocated space
-            sb.append("  store ").append(llvmType).append(" ").append(valueVal).append(", ").append(llvmType).append("* %").append(sInit.name()).append("\n");
+            sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(sInit.name()).append("\n");
         }
     }
     
@@ -106,8 +110,8 @@ public class StatementCodeGen {
             ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, currentFunctionParameters, registerGenerator);
             String valueReg = exprCodeGen.codeGenExp(sReturn.value());
             String llvmType = toLLVMType(sReturn.value().type());
-            String valueVal = isLiteral(valueReg) ? valueReg : "%" + valueReg;
-            sb.append("  ret ").append(llvmType).append(" ").append(valueVal).append("\n");
+            // valueReg already has % prefix if it's a register, or is a literal if it's a number
+            sb.append("  ret ").append(llvmType).append(" ").append(valueReg).append("\n");
         } else {
             sb.append("  ret void\n");
         }
@@ -129,7 +133,6 @@ public class StatementCodeGen {
         
         // Step 1: Generate code for condition
         String condReg = exprCodeGen.codeGenExp(sIf.condition());
-        String condVal = isLiteral(condReg) ? condReg : "%" + condReg;
         
         // Step 2: Generate labels for branches
         String thenLabel = labelGen.generateLabel("then");
@@ -137,7 +140,7 @@ public class StatementCodeGen {
         String endLabel = labelGen.generateLabel("end");
         
         // Step 3: Branch on condition
-        sb.append("  br i1 ").append(condVal).append(", label %").append(thenLabel).append(", label %").append(elseLabel).append("\n");
+        sb.append("  br i1 ").append(condReg).append(", label %").append(thenLabel).append(", label %").append(elseLabel).append("\n");
         
         // Step 4: Then branch
         sb.append(thenLabel).append(":\n");
@@ -172,8 +175,7 @@ public class StatementCodeGen {
         // Step 3: Condition label
         sb.append(condLabel).append(":\n");
         String condReg = exprCodeGen.codeGenExp(sWhile.condition());
-        String condVal = isLiteral(condReg) ? condReg : "%" + condReg;
-        sb.append("  br i1 ").append(condVal).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
+        sb.append("  br i1 ").append(condReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
         
         // Step 4: Body label
         sb.append(bodyLabel).append(":\n");
@@ -193,7 +195,6 @@ public class StatementCodeGen {
         
         // Step 1: Evaluate the number of iterations
         String timesReg = exprCodegen.codeGenExp(sDo.times());
-        String timesVal = isLiteral(timesReg) ? timesReg : "%" + timesReg;
         
         // Step 2: Create a counter variable
         String counterVar = labelGen.generateLabel("counter");
@@ -213,7 +214,7 @@ public class StatementCodeGen {
         String counter = registerGenerator.nextReg();
         sb.append("  %").append(counter).append(" = load i32, i32* %").append(counterVar).append("\n");
         String cond = registerGenerator.nextReg();
-        sb.append("  %").append(cond).append(" = icmp slt i32 %").append(counter).append(", ").append(timesVal).append("\n");
+        sb.append("  %").append(cond).append(" = icmp slt i32 %").append(counter).append(", ").append(timesReg).append("\n");
         sb.append("  br i1 %").append(cond).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
         
         // Step 6: Body
@@ -230,16 +231,5 @@ public class StatementCodeGen {
         
         // Step 9: End
         sb.append(endLabel).append(":\n");
-    }
-    
-    /**
-     * Check if a string is a literal value (number, boolean, etc.) or a register name
-     */
-    private boolean isLiteral(String value) {
-        if (value == null || value.isEmpty()) {
-            return false;
-        }
-        char first = value.charAt(0);
-        return Character.isDigit(first) || value.equals("true") || value.equals("false") || first == '"';
     }
 }
