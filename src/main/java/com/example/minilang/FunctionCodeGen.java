@@ -29,21 +29,19 @@ public class FunctionCodeGen {
 
         sb.append("entry:\n");
 
-        // ← FOR EACH PARAMETER, ALLOCATE LOCAL STORAGE
         Set<String> paramNames = new HashSet<>();
         for (Ast.Arg arg : func.params()) {
             String llvmType = toLLVMType(arg.type());
-            // Create a local variable for the parameter
             sb.append("  %").append(arg.name()).append("_param = alloca ").append(llvmType).append("\n");
             sb.append("  store ").append(llvmType).append(" %").append(arg.name()).append(", ").append(llvmType).append("* %").append(arg.name()).append("_param\n");
             paramNames.add(arg.name());
         }
 
-        // Reset register generator for each function
         registerGenerator.reset();
 
         StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions, paramNames, registerGenerator);
         stmtCodeGen.codeGenStmt(func.body());
+        
         sb.append("}\n");
     }
 
@@ -56,5 +54,9 @@ public class FunctionCodeGen {
             case TVoid -> "void";
             case TUnknown -> "i32"; 
         };
+    }
+    
+    public StringBuilder getSb() {
+        return sb;
     }
 }

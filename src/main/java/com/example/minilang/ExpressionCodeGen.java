@@ -2,6 +2,8 @@ package com.example.minilang;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ExpressionCodeGen {
 
@@ -10,6 +12,8 @@ public class ExpressionCodeGen {
     private List<Ast.Func> functions;
     private Set<String> parameters;
     private RegisterGenerator registerGenerator;
+    private static Map<String, String> stringGlobals = new HashMap<>();
+    private static int stringCounter = 0;
     
     public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
         this.sb = sb;
@@ -27,10 +31,14 @@ public class ExpressionCodeGen {
         this.registerGenerator = registerGenerator;
     }
     
-    /**
-     * Generate code for an expression and return the register holding the result.
-     * Returns: literal values as-is (e.g., "5", "10"), or register names with % prefix (e.g., "%1", "%2")
-     */
+    public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions, Set<String> parameters, RegisterGenerator registerGenerator, StringBuilder globalDeclarations) {
+        this.sb = sb;
+        this.labelGen = labelGen;
+        this.functions = functions;
+        this.parameters = parameters;
+        this.registerGenerator = registerGenerator;
+    }
+    
     public String codeGenExp(Ast.Exp exp) {
         if (exp instanceof Ast.EInt eInt) return codeGenInt(eInt);
         if (exp instanceof Ast.EDouble eDouble) return codeGenDouble(eDouble);
@@ -49,7 +57,7 @@ public class ExpressionCodeGen {
         if (exp instanceof Ast.ECmp eEq && eEq.op() == Ast.CmpOp.EQ) return codeGenEq(eEq);
         if (exp instanceof Ast.ELogic eAnd && eAnd.op() == Ast.LogicOp.AND) return codeGenAnd(eAnd);
         if (exp instanceof Ast.ELogic eOr && eOr.op() == Ast.LogicOp.OR) return codeGenOr(eOr);
-        if (exp instanceof Ast.EAss eAss) return codeGenAss(eAss);
+        if (exp instanceof Ast.EAss eAss && eAss.op() == Ast.AssOp.ASSIGN) return codeGenAss(eAss);
         if (exp instanceof Ast.EAss ePlusAss && ePlusAss.op() == Ast.AssOp.PLUS_ASSIGN) return codeGenPlusAss(ePlusAss);
         if (exp instanceof Ast.EAss eMinusAss && eMinusAss.op() == Ast.AssOp.MINUS_ASSIGN) return codeGenMinusAss(eMinusAss);
         if (exp instanceof Ast.EAss eDivAss && eDivAss.op() == Ast.AssOp.DIV_ASSIGN) return codeGenDivAss(eDivAss);
@@ -69,7 +77,22 @@ public class ExpressionCodeGen {
     }
     
     private String codeGenString(Ast.EString eString) {
-        return "\"" + eString.value() + "\"";
+        String strValue = eString.value();
+        String globalName = stringGlobals.get(strValue);
+        
+        if (globalName == null) {
+            globalName = "@.str." + (stringCounter++);
+            stringGlobals.put(strValue, globalName);
+        }
+        
+        int strLen = strValue.length() + 1;
+        
+        String ptrReg = registerGenerator.nextReg();
+        sb.append("  %").append(ptrReg).append(" = getelementptr [").append(strLen)
+            .append(" x i8], [").append(strLen).append(" x i8]* ").append(globalName)
+            .append(", i32 0, i32 0\n");
+        
+        return "%" + ptrReg;
     }
     
     private String codeGenBool(Ast.EBool eBool) {
@@ -78,15 +101,12 @@ public class ExpressionCodeGen {
     
     // ===== VARIABLES =====
     private String codeGenId(Ast.EId eId) {
-        // If it's a parameter, load from the parameter's local copy
         if (isParameter(eId.name())) {
             String llvmType = toLLVMType(eId.type());
             String reg = registerGenerator.nextReg();
             sb.append("  %").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("_param\n");
             return "%" + reg;
-        }
-        // If it's a local variable, load it from memory
-        else {
+        } else {
             String llvmType = toLLVMType(eId.type());
             String reg = registerGenerator.nextReg();
             
@@ -120,18 +140,15 @@ public class ExpressionCodeGen {
         String base = codeGenExp(ePower.base());
         String exponent = codeGenExp(ePower.exponent());
         
-        // Convert to double for pow()
         String baseDouble = registerGenerator.nextReg();
         String expDouble = registerGenerator.nextReg();
         
         sb.append("  %").append(baseDouble).append(" = sitofp i32 ").append(base).append(" to double\n");
         sb.append("  %").append(expDouble).append(" = sitofp i32 ").append(exponent).append(" to double\n");
         
-        // Call pow()
         String powResult = registerGenerator.nextReg();
         sb.append("  %").append(powResult).append(" = call double @pow(double %").append(baseDouble).append(", double %").append(expDouble).append(")\n");
         
-        // Convert back to int if needed
         String finalResult = registerGenerator.nextReg();
         sb.append("  %").append(finalResult).append(" = fptosi double %").append(powResult).append(" to i32\n");
         
@@ -231,7 +248,6 @@ public class ExpressionCodeGen {
         String valueReg = codeGenExp(eAss.value());
         String llvmType = toLLVMType(eAss.value().type());
         
-        // If it's a parameter, store to _param version
         if (isParameter(eAss.name())) {
             sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append("_param\n");
         } else {
@@ -315,6 +331,10 @@ public class ExpressionCodeGen {
     
     // ===== FUNCTION CALLS =====
     private String codeGenCall(Ast.ECall eCall) {
+        if (eCall.name().equals("print")) {
+            return codeGenPrint(eCall);
+        }
+
         List<String> argRegisters = new ArrayList<>();
         for (Ast.Exp arg : eCall.args()) {
             String argReg = codeGenExp(arg);
@@ -331,13 +351,74 @@ public class ExpressionCodeGen {
         sb.append(")\n");
         return "%" + resultReg;
     }
-    
+
+    // ===== BUILT-IN PRINT =====
+    private String codeGenPrint(Ast.ECall eCall) {
+        if (eCall.args().isEmpty()) {
+            String fmtPtr = registerGenerator.nextReg();
+            sb.append("  %").append(fmtPtr)
+              .append(" = getelementptr [2 x i8], [2 x i8]* @.fmt.newline, i32 0, i32 0\n");
+            String resultReg = registerGenerator.nextReg();
+            sb.append("  %").append(resultReg)
+              .append(" = call i32 (i8*, ...) @printf(i8* %").append(fmtPtr).append(")\n");
+            return "%" + resultReg;
+        }
+
+        Ast.Exp arg = eCall.args().get(0);
+        String argReg = codeGenExp(arg);
+        Ast.Type argType = arg.type();
+
+        if (argType == Ast.Type.TString) {
+            String resultReg = registerGenerator.nextReg();
+            sb.append("  %").append(resultReg)
+              .append(" = call i32 (i8*, ...) @printf(i8* ").append(argReg).append(")\n");
+            return "%" + resultReg;
+        }
+
+        String fmtGlobal;
+        String fmtSize;
+
+        switch (argType) {
+            case TInt -> {
+                fmtGlobal = "@.fmt.int";
+                fmtSize = "[4 x i8]";
+            }
+            case TDouble -> {
+                fmtGlobal = "@.fmt.double";
+                fmtSize = "[4 x i8]";
+            }
+            case TBool -> {
+                fmtGlobal = "@.fmt.int";
+                fmtSize = "[4 x i8]";
+                String extended = registerGenerator.nextReg();
+                sb.append("  %").append(extended)
+                  .append(" = zext i1 ").append(argReg).append(" to i32\n");
+                argReg = "%" + extended;
+            }
+            default -> {
+                fmtGlobal = "@.fmt.int";
+                fmtSize = "[4 x i8]";
+            }
+        }
+
+        String fmtPtr = registerGenerator.nextReg();
+        sb.append("  %").append(fmtPtr)
+          .append(" = getelementptr ").append(fmtSize).append(", ").append(fmtSize).append("* ")
+          .append(fmtGlobal).append(", i32 0, i32 0\n");
+
+        String llvmArgType = toLLVMType(argType);
+        String resultReg = registerGenerator.nextReg();
+        sb.append("  %").append(resultReg)
+          .append(" = call i32 (i8*, ...) @printf(i8* %").append(fmtPtr)
+          .append(", ").append(llvmArgType).append(" ").append(argReg).append(")\n");
+        return "%" + resultReg;
+    }
+
     // ===== HELPERS =====
     private String codeGenLoad(String varName, Ast.Type type) {
         String llvmType = toLLVMType(type);
         String reg = registerGenerator.nextReg();
         
-        // If it's a parameter, load from _param version
         if (isParameter(varName)) {
             sb.append("  %").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(varName).append("_param\n");
         } else {
@@ -359,5 +440,14 @@ public class ExpressionCodeGen {
 
     private boolean isParameter(String name) {
         return parameters.contains(name);
-    } 
+    }
+    
+    public static void resetGlobals() {
+        stringGlobals.clear();
+        stringCounter = 0;
+    }
+    
+    public static void registerStringGlobal(String str, int index) {
+        stringGlobals.put(str, "@.str." + index);
+    }
 }

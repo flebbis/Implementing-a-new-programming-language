@@ -4,7 +4,13 @@ int func increase(int i, int times) {
 return i
 }
 int z = 7
+print (z)
 x = 2
+print (x)
 int i = increase(x, 10);
-do 3 {i = i-3}
+do z {i = i-3}
+print (i)
+
+
+
 

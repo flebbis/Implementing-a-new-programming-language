@@ -1,17 +1,31 @@
 package com.example.minilang;
 
-import org.antlr.v4.runtime.BailErrorStrategy;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
 public class Compiler {
 
+    public static void main(String[] args) throws Exception {
+        if (args.length < 1) {
+            System.err.println("Usage: java -jar compiler.jar <sourcefile>");
+            System.exit(1);
+        }
+        String optLevel = args.length > 1 ? args[1] : "-O3";
+        parseFile(Path.of(args[0]), optLevel);
+
+    }
+
     public static void parseFile(Path path) throws IOException {
+        parseFile(path, "0");
+    }
+
+     public static void parseFile(Path path, String optLevel) throws IOException {
+
         String input = Files.readString(path);
 
         // 2. Infrastructure
@@ -28,17 +42,14 @@ public class Compiler {
 
 
         // 5. Output
-        System.out.println("Equation: " + input);
-        System.out.println("Tree: " + tree.toStringTree(parser));
+      //  System.out.println("Equation: " + input);
+        //System.out.println("Tree: " + tree.toStringTree(parser));
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
         System.out.println("AST:      " + astRoot);
-
-        
-
-
+    
         String llvmCode = generateLLVM(astRoot);
         
         System.out.println("\n===== LLVM IR Code =====");
@@ -55,6 +66,18 @@ public class Compiler {
         StringBuilder sb = new StringBuilder();
         LabelGenerator labelGen = new LabelGenerator();
 
+        // ===== External Declarations =====
+        sb.append("declare i32 @printf(i8*, ...)\n");
+        sb.append("declare double @pow(double, double)\n");
+        sb.append("\n");
+
+        // ===== Format String Constants for print() =====
+        sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");       // "%d\n\0"
+        sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");    // "%f\n\0"
+        sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");    // "%s\n\0"
+        sb.append("@.fmt.newline = private constant [2 x i8] c\"\\0A\\00\"\n");      // "\n\0"
+        sb.append("\n");
+
         sb.append("define void @main() {\n");
         sb.append("entry:\n");
 
@@ -65,7 +88,8 @@ public class Compiler {
             stmtCodegen.codeGenStmt(stmt);
         }
 
-        sb.append("  ret void\n");
+         sb.append("  ret void\n");
+        //sb.append("  ret i32 0\n");
         sb.append("}\n\n");
 
         // ===== Generate Code for Each Function =====
