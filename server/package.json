@@ -2,7 +2,7 @@
   "name": "mylang-server",
   "description": "language server server for unnamed language",
   "version": "0.0.1",
-  "publisher": "Cole",
+  "publisher": "Grupp17A",
   "license": "MIT",
   "engines": {
     "node": "*"

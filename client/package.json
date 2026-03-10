@@ -1,10 +1,9 @@
 {
   "name": "mylang-client",
   "description": "language server client for unnamed language",
-  "author": "Cole",
   "license": "MIT",
   "version": "0.0.1",
-  "publisher": "Cole",
+  "publisher": "Grupp17A",
   "repository": {
     "type": "git",
     "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
