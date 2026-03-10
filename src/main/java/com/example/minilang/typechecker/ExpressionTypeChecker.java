@@ -1,5 +1,6 @@
 package com.example.minilang.typechecker;
 
+import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class ExpressionTypeChecker {
             case Ast.ECmp cmp -> typeCheck(cmp);
             case Ast.ELogic eLogic -> typeCheck(eLogic);
             case Ast.EAss eAss -> typeCheck(eAss);
+            case Ast.EArray eArray -> typeCheck(eArray);
             case Ast.EArrayIndex eArrayIndex -> typeCheck(eArrayIndex);
             case Ast.EUnary eUnary -> typeCheck(eUnary);
 
@@ -64,11 +66,11 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.ENot enot){
         Ast.Exp exp = typeCheck(enot.exp());
         // Handle TUnknown to allow inference pass to continue
-        if(exp.type() == Ast.Type.TUnknown) {
-            return new Ast.ENot(exp, Ast.Type.TUnknown, enot.pos());
+        if (exp.type() instanceof Ast.TUnknown) {
+            return new Ast.ENot(exp, new Ast.TUnknown(), enot.pos());
         }
-        if(exp.type() == Ast.Type.TBool) {
-            return new Ast.ENot(exp, Ast.Type.TBool, enot.pos());
+        if (exp.type() instanceof Ast.TBool) {
+            return new Ast.ENot(exp, new Ast.TBool(), enot.pos());
         } else {
             throw new TypeException("Logical NOT operator requires boolean operand", enot.pos());
         }
@@ -79,14 +81,14 @@ public class ExpressionTypeChecker {
         Ast.Exp exponent = typeCheck(ePower.exponent());
 
         // Handle TUnknown to allow inference pass to continue
-        if (base.type() == Ast.Type.TUnknown || exponent.type() == Ast.Type.TUnknown) {
-            return new Ast.EPower(base, exponent, Ast.Type.TUnknown, ePower.pos());
+        if (base.type() instanceof Ast.TUnknown || exponent.type() instanceof Ast.TUnknown) {
+            return new Ast.EPower(base, exponent, new Ast.TUnknown(), ePower.pos());
         }
 
-        if (base.type() == Ast.Type.TInt || base.type() == Ast.Type.TDouble) {
-            if (exponent.type() == Ast.Type.TInt || exponent.type() == Ast.Type.TDouble) {
+        if (base.type() instanceof Ast.TInt || base.type() instanceof Ast.TDouble) {
+            if (exponent.type() instanceof Ast.TInt || exponent.type() instanceof Ast.TDouble) {
                 // If either is double, the result is double
-                Ast.Type resultType = (base.type() == Ast.Type.TDouble || exponent.type() == Ast.Type.TDouble) ? Ast.Type.TDouble : Ast.Type.TInt;
+                Ast.Type resultType = (base.type() instanceof Ast.TDouble || exponent.type() instanceof Ast.TDouble) ? new Ast.TDouble() : new Ast.TInt();
                 return new Ast.EPower(base, exponent, resultType, ePower.pos());
             } else {
                 throw new TypeException("Exponent must be of type int or double", ePower.pos());
@@ -100,17 +102,17 @@ public class ExpressionTypeChecker {
         Ast.Exp right = typeCheck(eCmp.right());
 
         // Handle TUnknown to allow inference pass to continue
-        if (left.type() == Ast.Type.TUnknown || right.type() == Ast.Type.TUnknown) {
-            return new Ast.ECmp(left, right, eCmp.op(), Ast.Type.TUnknown, eCmp.pos());
+        if (left.type() instanceof Ast.TUnknown || right.type() instanceof Ast.TUnknown) {
+            return new Ast.ECmp(left, right, eCmp.op(), new Ast.TUnknown(), eCmp.pos());
         }
 
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
 
         // Int and double can be compared
-        if((leftType == Ast.Type.TDouble || leftType == Ast.Type.TInt)
-                && (rightType == Ast.Type.TDouble || rightType == Ast.Type.TInt)) {
-            return new Ast.ECmp(left, right, eCmp.op(), Ast.Type.TBool, eCmp.pos()); // Return the original expression with the same type
+        if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
+                && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
+            return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
         } else {
             throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
         }
@@ -121,12 +123,12 @@ public class ExpressionTypeChecker {
         Ast.Exp right = typeCheck(eLogic.right());
 
         // Handle TUnknown to allow inference pass to continue
-        if (left.type() == Ast.Type.TUnknown || right.type() == Ast.Type.TUnknown) {
-            return new Ast.ELogic(left, right, eLogic.op(), Ast.Type.TUnknown, eLogic.pos());
+        if (left.type() instanceof Ast.TUnknown || right.type() instanceof Ast.TUnknown) {
+            return new Ast.ELogic(left, right, eLogic.op(), new Ast.TUnknown(), eLogic.pos());
         }
 
-        if(left.type() == Ast.Type.TBool && right.type() == Ast.Type.TBool) {
-            return new Ast.ELogic(left, right, eLogic.op(), Ast.Type.TBool, eLogic.pos());
+        if (left.type() instanceof Ast.TBool && right.type() instanceof Ast.TBool) {
+            return new Ast.ELogic(left, right, eLogic.op(), new Ast.TBool(), eLogic.pos());
         } else {
             throw new TypeException("Logical operators require boolean operands", eLogic.pos());
         }
@@ -137,63 +139,61 @@ public class ExpressionTypeChecker {
         Ast.Exp right = typeCheck(eOpp.right());
 
         // Inference Support: If any operand is Unknown, return Unknown to avoid blocking the pass
-        if (left.type() == Ast.Type.TUnknown || right.type() == Ast.Type.TUnknown) {
-            return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TUnknown, eOpp.pos());
+        if (left.type() instanceof Ast.TUnknown || right.type() instanceof Ast.TUnknown) {
+            return new Ast.EOpp(left, right, eOpp.op(), new Ast.TUnknown(), eOpp.pos());
         }
 
         // Modulus operator only works for integers
-        if(eOpp.op() == Ast.Op.MOD) {
-            if(left.type() == Ast.Type.TInt && right.type() == Ast.Type.TInt) {
-                return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TInt, eOpp.pos());
+        if (eOpp.op() == Ast.Op.MOD) {
+            if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TInt) {
+                return new Ast.EOpp(left, right, eOpp.op(), new Ast.TInt(), eOpp.pos());
             } else {
                 throw new TypeException("Modulus operator requires integer operands", eOpp.pos());
             }
         }
 
         // String addition
-        if(eOpp.op() == Ast.Op.ADD) {
-            if(left.type() == Ast.Type.TString && right.type() == Ast.Type.TString) {
-                return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TString, eOpp.pos());
-            }
-            else if(left.type() == Ast.Type.TString || right.type() == Ast.Type.TString) {
+        if (eOpp.op() == Ast.Op.ADD) {
+            if (left.type() instanceof Ast.TString && right.type() instanceof Ast.TString) {
+                return new Ast.EOpp(left, right, eOpp.op(), new Ast.TString(), eOpp.pos());
+            } else if (left.type() instanceof Ast.TString || right.type() instanceof Ast.TString) {
                 // Wrap non-string operand in EStringCast
-                if(left.type() != Ast.Type.TString) {
-                    left = new Ast.EStringCast(left, Ast.Type.TString, left.pos());
+                if (!(left.type() instanceof Ast.TString)) {
+                    left = new Ast.EStringCast(left, new Ast.TString(), left.pos());
                 }
-                if(right.type() != Ast.Type.TString) {
-                    right = new Ast.EStringCast(right, Ast.Type.TString, right.pos());
+                if (!(right.type() instanceof Ast.TString)) {
+                    right = new Ast.EStringCast(right, new Ast.TString(), right.pos());
                 }
-                return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TString, eOpp.pos());
+                return new Ast.EOpp(left, right, eOpp.op(), new Ast.TString(), eOpp.pos());
             }
         }
 
         // For other arithmetic operators, we allow int and double, with implicit conversion from int to double if needed
-        if(left.type() == Ast.Type.TInt && right.type() == Ast.Type.TInt) {
-            return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TInt, eOpp.pos());
-        } else if(left.type() == Ast.Type.TDouble && right.type() == Ast.Type.TDouble) {
-            return new Ast.EOpp(left, right, eOpp.op(), Ast.Type.TDouble, eOpp.pos());
-        } else if(left.type() == Ast.Type.TInt && right.type() == Ast.Type.TDouble) {
-            return new Ast.EOpp(new Ast.EDInt(left, left.type(), left.pos()), right, eOpp.op(), Ast.Type.TDouble, eOpp.pos());
-        } else if(left.type() == Ast.Type.TDouble && right.type() == Ast.Type.TInt) {
-            return new Ast.EOpp(left, new Ast.EDInt(right, right.type(), right.pos()), eOpp.op(), Ast.Type.TDouble, eOpp.pos());
+        if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TInt) {
+            return new Ast.EOpp(left, right, eOpp.op(), new Ast.TInt(), eOpp.pos());
+        } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TDouble) {
+            return new Ast.EOpp(left, right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
+        } else if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TDouble) {
+            return new Ast.EOpp(new Ast.EDInt(left, left.type(), left.pos()), right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
+        } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TInt) {
+            return new Ast.EOpp(left, new Ast.EDInt(right, right.type(), right.pos()), eOpp.op(), new Ast.TDouble(), eOpp.pos());
         } else {
             throw new TypeException("Arithmetic operators require numeric operands", eOpp.pos());
         }
     }
 
-
     public Ast.EUnary typeCheck(Ast.EUnary eUnary) {
         Ast.Exp exp = typeCheck(eUnary.exp());
 
         // Handle TUnknown to allow inference pass to continue
-        if (exp.type() == Ast.Type.TUnknown) {
-            return new Ast.EUnary(exp, eUnary.op(), Ast.Type.TUnknown, eUnary.pos());
+        if (exp.type() instanceof Ast.TUnknown) {
+            return new Ast.EUnary(exp, eUnary.op(), new Ast.TUnknown(), eUnary.pos());
         }
 
-        if(exp.type() == Ast.Type.TInt) {
+        if (exp.type() instanceof Ast.TInt) {
             return new Ast.EUnary(exp, eUnary.op(), exp.type(), eUnary.pos());
         }
-        if(eUnary.op() == Ast.UnaryOp.INC) {
+        if (eUnary.op() == Ast.UnaryOp.INC) {
             throw new TypeException("Increment operator requires integer operand", eUnary.pos());
         } else {
             throw new TypeException("Decrement operator requires integer operand", eUnary.pos());
@@ -208,13 +208,13 @@ public class ExpressionTypeChecker {
         }
 
         // Allow assignment if value is TUnknown (inference phase)
-        if (value.type() == Ast.Type.TUnknown) {
+        if (value.type() instanceof Ast.TUnknown) {
             return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
         }
 
-        if (varType != value.type()) {
+        if (!varType.equals(value.type())) {
             // Allow implicit conversion from int to double
-            if (varType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+            if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
                 throw new TypeException("Cannot assign type " + value.type() + " to variable of type " + varType, eAss.pos());
@@ -226,27 +226,26 @@ public class ExpressionTypeChecker {
     public Ast.ECall typeCheck(Ast.ECall eCall) {
         // Type check the arguments first
         List<Ast.Exp> args = new ArrayList<>();
-        for(Ast.Exp arg : eCall.args()) {
+        for (Ast.Exp arg : eCall.args()) {
             args.add(typeCheck(arg));
         }
 
         // Then look up the function signature
-        if(functionSignatures.containsKey(eCall.name())) {
+        if (functionSignatures.containsKey(eCall.name())) {
             int i = 0;
-            for(Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
+            for (Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
                 // Check mismatch
-                if(args.get(i).type() != paramType) {
+                if (!args.get(i).type().equals(paramType)) {
                     // Inference: If param is TUnknown, infer from arg
-                    if ((paramType == Ast.Type.TUnknown) && (args.get(i).type() != Ast.Type.TUnknown)) {
+                    if ((paramType instanceof Ast.TUnknown) && !(args.get(i).type() instanceof Ast.TUnknown)) {
                         functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
-                        paramType = args.get(i).type(); // Update local variable for subsequent checks
+                        paramType = args.get(i).type();
                     }
 
                     // Allow implicit conversion from int to double
-                    if(paramType == Ast.Type.TDouble && args.get(i).type() == Ast.Type.TInt) {
+                    if (paramType instanceof Ast.TDouble && args.get(i).type() instanceof Ast.TInt) {
                         args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
-                    } else if (paramType != args.get(i).type()) {
-                        // Only throw if types still don't match after inference/conversion
+                    } else if (!paramType.equals(args.get(i).type())) {
                         throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
                     }
                 }
@@ -259,10 +258,45 @@ public class ExpressionTypeChecker {
         return new Ast.ECall(eCall.name(), args, functionSignatures.get(eCall.name()).returnType, eCall.pos());
     }
 
+    public Ast.Exp typeCheck(Ast.EArray eArray) {
+        List<Ast.Exp> checkedElements = new ArrayList<>();
+        for (Ast.Exp element : eArray.elements()) {
+            checkedElements.add(typeCheck(element));
+        }
+
+        Ast.TArray type = (Ast.TArray) eArray.type();
+        if(type.elementType() instanceof Ast.TUnknown) {
+            //TODO: observe this
+            // If the array type is unknown, we can infer it from the first element
+            if (!checkedElements.isEmpty()) {
+                Ast.Type inferredType = checkedElements.getFirst().type();
+                type = new Ast.TArray(inferredType);
+            } else {
+                // If the array is empty and the type is unknown, we can't infer the element type
+                throw new TypeException("Cannot infer type of empty array", eArray.pos());
+            }
+        }
+
+        for (Ast.Exp element : checkedElements) {
+            if (!element.type().equals(type.elementType())) {
+                throw new TypeException("Array elements must be of the same type. Expected " + TypeConverter.typeToString(type.elementType())
+                        + " but got " + TypeConverter.typeToString(element.type()), element.pos());
+            }
+        }
+
+        return new Ast.EArray(checkedElements, type, eArray.pos());
+    }
+
     public Ast.Exp typeCheck(Ast.EArrayIndex eArrayIndex) {
-        // Assuming implementation or stub
         Ast.Exp array = typeCheck(eArrayIndex.array());
         Ast.Exp index = typeCheck(eArrayIndex.index());
-        return new Ast.EArrayIndex(array, index, Ast.Type.TUnknown, eArrayIndex.pos()); // Placeholder return type
+
+        if (!(index.type() instanceof Ast.TInt)) {
+            throw new TypeException("Array index must be of type int", index.pos());
+        }
+
+        // The result type is the element type of the array
+        Ast.Type resultType = (array.type() instanceof Ast.TArray arr) ? arr.elementType() : new Ast.TUnknown();
+        return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
     }
 }

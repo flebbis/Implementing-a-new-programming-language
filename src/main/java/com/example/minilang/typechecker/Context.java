@@ -49,4 +49,15 @@ public class Context {
         }
     }
 
+    /** Update the type of an existing variable in the context stack */
+    public void update(String id, Ast.Type newType) {
+        for(int i = 0; i < contextStack.size(); i++) {
+            if (contextStack.get(i).containsKey(id)) {
+                contextStack.get(i).put(id, newType);
+                return;
+            }
+        }
+        throw new TypeException("Cannot update non-existent variable " + id);
+    }
+
 }

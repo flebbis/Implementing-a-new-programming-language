@@ -59,9 +59,10 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
     public Ast.SDecl visitDecl(GrammarParser.DeclContext ctx) {
         String id = ctx.ID().getText();
 
-        Ast.Type type = Ast.Type.TUnknown; // default to unknown if no type is specified
-        if(ctx.TYPE() != null) {
-            type = TypeConverter.mapType(ctx.TYPE().getText());
+        // Default to unknown if no type annotation is given
+        Ast.Type type = new Ast.TUnknown();
+        if (ctx.typeAnnotation() != null) {
+            type = resolveTypeAnnotation(ctx.typeAnnotation());
         }
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
         return new Ast.SDecl(type, id, pos);
@@ -71,14 +72,29 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
     public Ast.SInit visitInit(GrammarParser.InitContext ctx) {
         String id = ctx.ID().getText();
 
-        Ast.Type type = Ast.Type.TUnknown; // default to unknown if no type is specified
-        if(ctx.TYPE() != null) {
-            type = TypeConverter.mapType(ctx.TYPE().getText());
+        // Default to unknown if no type annotation is given
+        Ast.Type type = new Ast.TUnknown();
+        if (ctx.typeAnnotation() != null) {
+            type = resolveTypeAnnotation(ctx.typeAnnotation());
         }
 
         Ast.Exp exp = astExpressionBuilder.visitExp(ctx.exp());
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
         return new Ast.SInit(type, id, exp, pos);
+    }
+
+    /**
+     * Converts a typeAnnotation parse tree node into an Ast.Type.
+     * Handles both simple types (int, double, ...) and array types ([int], [double], ...).
+     */
+    private Ast.Type resolveTypeAnnotation(GrammarParser.TypeAnnotationContext ctx) {
+        if (ctx instanceof GrammarParser.SimpleTypeContext simple) {
+            return TypeConverter.mapType(simple.TYPE().getText());
+        } else if (ctx instanceof GrammarParser.ArrayTypeContext array) {
+            Ast.Type elementType = TypeConverter.mapType(array.TYPE().getText());
+            return new Ast.TArray(elementType);
+        }
+        return new Ast.TUnknown();
     }
 
     @Override

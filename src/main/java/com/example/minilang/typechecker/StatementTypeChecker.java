@@ -44,12 +44,20 @@ public class StatementTypeChecker {
 
         // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
         // treat it as an Assignment to the existing variable.
-        if (existingType != null && typeToCheck == Ast.Type.TUnknown) {
+        if (existingType != null && typeToCheck instanceof Ast.TUnknown) {
 
-            // Allow TUnknown values to bypass checks during inference pass
-            if (existingType != value.type() && value.type() != Ast.Type.TUnknown) {
-                if (existingType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
-                    // Implicit cast
+            // Inference: If the existing variable was declared without a type (e.g. bare "x;"),
+            // infer its type from the first assigned value and update the context.
+            if (existingType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
+                existingType = value.type();
+                context.update(sInit.name(), existingType);
+                return new Ast.SInit(existingType, sInit.name(), value, sInit.pos());
+            }
+
+            // Allow TUnknown values (e.g. unresolved calls) to bypass checks during inference pass
+            if (!existingType.equals(value.type()) && !(value.type() instanceof Ast.TUnknown)) {
+                if (existingType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
+                    // Implicit cast: widen int to double
                     value = new Ast.EDInt(value, value.type(), value.pos());
                 } else {
                     throw new TypeException("Cannot assign value of type " + value.type() + " to variable " + sInit.name() + " of type " + existingType, sInit.pos());
@@ -64,17 +72,18 @@ public class StatementTypeChecker {
         // If we reach here, it is a new Declaration.
 
         // Infer type if unknown
-        if (typeToCheck == Ast.Type.TUnknown) {
+        if (typeToCheck instanceof Ast.TUnknown) {
             typeToCheck = value.type();
         }
 
         // Verify types match for explicit declarations
         // Allow TUnknown values to bypass checks during inference pass
-        if (typeToCheck != value.type() && value.type() != Ast.Type.TUnknown) {
-            if (typeToCheck == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+        if (!typeToCheck.equals(value.type()) && !(value.type() instanceof Ast.TUnknown)) {
+            if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Incorrect initialisation of type " + value.type() + ", expected " + typeToCheck, value.pos());
+                throw new TypeException("Incorrect initialisation array, expected type " + TypeConverter.typeToString(typeToCheck) +
+                        " but got "+ TypeConverter.typeToString(value.type()), value.pos());
             }
         }
 
@@ -88,19 +97,33 @@ public class StatementTypeChecker {
         return new Ast.SExp(exp, stmt.pos());
     }
 
+    public Ast.Stmt typeCheck(Ast.SDecl sDecl) {
+        // On the first pass the variable isn't in scope yet, so push it.
+        // On subsequent passes the context already contains the entry (possibly updated
+        // to a real type by inference), so we just read it back rather than re-pushing.
+        Ast.Type existingType = context.lookupLatest(sDecl.name());
+        if (existingType == null) {
+            context.pushToCurrentScope(sDecl.name(), sDecl.type());
+            existingType = sDecl.type();
+        }
+        // Return the node with whatever type is now recorded (TUnknown if never inferred,
+        // or the real type if a later SInit already resolved it).
+        return new Ast.SDecl(existingType, sDecl.name(), sDecl.pos());
+    }
+
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {
         context.pushNewScope();
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
-        if(condition.type() != Ast.Type.TBool) {
+        if (!(condition.type() instanceof Ast.TBool)) {
             throw new TypeException("Condition of while loop must be of type bool", condition.pos());
         }
 
         List<Ast.Stmt> bodyStmts = new ArrayList<>();
         // Check body
-        if(!(stmt.body() instanceof Ast.SBlock)) {
+        if (!(stmt.body() instanceof Ast.SBlock)) {
             throw new TypeException("Body of while loop must be a block statement", stmt.body().pos());
         }
-        for(Ast.Stmt s : ((Ast.SBlock) stmt.body()).statements()) {
+        for (Ast.Stmt s : ((Ast.SBlock) stmt.body()).statements()) {
             bodyStmts.add(typeCheck(s));
         }
         context.popScope();
@@ -111,13 +134,13 @@ public class StatementTypeChecker {
 
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
-        if(exp.type() != Ast.Type.TInt) {
+        if (!(exp.type() instanceof Ast.TInt)) {
             throw new TypeException("Expression in do statement must be of type int, type " + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
         }
 
         // Check body
         Ast.Stmt body = typeCheck(stmt.body());
-        if(!(body instanceof Ast.SBlock)) {
+        if (!(body instanceof Ast.SBlock)) {
             throw new TypeException("Body of do statement must be a block statement", stmt.body().pos());
         }
 
@@ -126,19 +149,19 @@ public class StatementTypeChecker {
 
     public Ast.Stmt typeCheck(Ast.SReturn stmt) {
         Ast.Exp value = expressionTypeChecker.typeCheck(stmt.value());
-        if(currentFunction == null) {
+        if (currentFunction == null) {
             throw new TypeException("Return statement not inside a function", stmt.pos());
         }
         Signature signature = functionSignatures.get(currentFunction);
 
         // Inference: If return type is TUnknown, infer it from the return value
-        if (signature.returnType == Ast.Type.TUnknown && value.type() != Ast.Type.TUnknown) {
+        if (signature.returnType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
             signature.setReturnType(value.type());
         }
 
-        if(signature.returnType != value.type()) {
+        if (!signature.returnType.equals(value.type())) {
             // Allow implicit conversion from int to double
-            if(signature.returnType == Ast.Type.TDouble && value.type() == Ast.Type.TInt) {
+            if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
                 throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
@@ -151,7 +174,7 @@ public class StatementTypeChecker {
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
 
-        if(condition.type() != Ast.Type.TBool) {
+        if (!(condition.type() instanceof Ast.TBool)) {
             throw new TypeException("Condition of if statement must be of type bool", stmt.condition().pos());
         }
 
