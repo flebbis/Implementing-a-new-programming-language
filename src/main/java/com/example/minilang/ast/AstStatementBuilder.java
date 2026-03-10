@@ -20,8 +20,10 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
     @Override
     public Ast.SBlock visitBlock(GrammarParser.BlockContext ctx) {
          List<Ast.Stmt> stmts = new ArrayList<>();
-         for(GrammarParser.StmtContext stmt : ctx.stmt()) {
-             stmts.add(visit(stmt));
+         if(ctx.stmt() != null) {
+             for(GrammarParser.StmtContext stmt : ctx.stmt()) {
+                 stmts.add(visit(stmt));
+             }
          }
          Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
          return new Ast.SBlock(stmts, pos);

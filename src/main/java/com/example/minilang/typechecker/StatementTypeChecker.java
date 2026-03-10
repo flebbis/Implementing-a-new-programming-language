@@ -149,28 +149,29 @@ public class StatementTypeChecker {
         if(!(stmt.thenBranch() instanceof Ast.SBlock)) {
             throw new TypeException("Then branch of if statement must be a block statement", stmt.thenBranch().pos());
         }
-        List<Ast.Stmt> thenStmts = new ArrayList<>();
 
-        for(Ast.Stmt s : ((Ast.SBlock) stmt.thenBranch()).statements()) {
-            thenStmts.add(typeCheck(s));
-        }
-        context.popScope();
-        List<Ast.Stmt> elseStmts = new ArrayList<>();
-        Ast.Stmt elseBranch = null;
+        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch()); // Check for any type errors in the then branch before checking the else branch (for better error messages)
+
+        Ast.Stmt elseStmt = null;
         if(stmt.elseBranch() != null) {
-            context.pushNewScope();
-            if(!(stmt.elseBranch() instanceof Ast.SBlock)) {
+            if (!(stmt.elseBranch() instanceof Ast.SBlock)) {
                 throw new TypeException("Else branch of if statement must be a block statement", stmt.elseBranch().pos());
             }
-
-            for(Ast.Stmt s : ((Ast.SBlock) stmt.elseBranch()).statements()) {
-                elseStmts.add(typeCheck(s));
-            }
-            context.popScope();
-            elseBranch = new Ast.SBlock(elseStmts, stmt.elseBranch().pos());
+            elseStmt = typeCheck(stmt.elseBranch());
         }
 
-        return new Ast.SIf(condition, new Ast.SBlock(thenStmts, stmt.thenBranch().pos()), elseBranch, stmt.pos()); // Placeholder
+        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos()); // Placeholder
+    }
+
+    public Ast.SBlock typeCheck(Ast.SBlock stmt) {
+        context.pushNewScope();
+        List<Ast.Stmt> checkedStmts = new ArrayList<>();
+        for(Ast.Stmt s : stmt.statements()) {
+            checkedStmts.add(typeCheck(s));
+        }
+        context.popScope();
+
+        return new Ast.SBlock(checkedStmts, stmt.pos());
     }
 
     public void setCurrentFunction(String currentFunction) {
