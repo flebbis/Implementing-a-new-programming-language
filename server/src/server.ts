@@ -260,11 +260,10 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
 
 
 /* connection.onSignatureHelp((handler)=> {
-  connection.console.log("signature help detected");
+  connection.console.log("signature help request detected");
   
   handler.context
-})
- */
+}) */
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
