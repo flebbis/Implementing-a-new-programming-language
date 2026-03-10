@@ -64,10 +64,9 @@ public class Compiler {
 
     private static String generateLLVM(Ast.Program program) {
         StringBuilder sb = new StringBuilder();
-        LabelGenerator labelGen = new LabelGenerator();
 
         // ===== External Declarations =====
-        sb.append("declare i32 @printf(i8*, ...)\n");
+        /*sb.append("declare i32 @printf(i8*, ...)\n");
         sb.append("declare double @pow(double, double)\n");
         sb.append("\n");
 
@@ -76,30 +75,27 @@ public class Compiler {
         sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");    // "%f\n\0"
         sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");    // "%s\n\0"
         sb.append("@.fmt.newline = private constant [2 x i8] c\"\\0A\\00\"\n");      // "\n\0"
-        sb.append("\n");
+        sb.append("\n");*/
 
         sb.append("define void @main() {\n");
         sb.append("entry:\n");
 
+        CodeGenerator codeGen = new CodeGenerator(sb);
+        codeGen.generate(program);
+
         // ===== Generate Code for Global Statements =====
         // (These are top-level statements, if any)
-        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, labelGen, program.functions());
-        for(Ast.Stmt stmt : program.stmts()) {
-            stmtCodegen.codeGenStmt(stmt);
-        }
+
 
          sb.append("  ret void\n");
         //sb.append("  ret i32 0\n");
         sb.append("}\n\n");
 
         // ===== Generate Code for Each Function =====
-        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, labelGen, program.functions());
-        for(Ast.Func func : program.functions()) {
-            funcCodegen.codeGenFunDef(func);
-        }
 
 
 
         return sb.toString();
     }
+
 }
