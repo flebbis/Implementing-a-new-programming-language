@@ -1,5 +1,6 @@
 package com.example.minilang.typechecker;
 
+import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
@@ -107,10 +108,20 @@ public class StatementTypeChecker {
     }
 
     public Ast.Stmt typeCheck(Ast.SDo stmt) {
-        // Type check the condition and body of the do loop
-        // Ensure the condition is of type bool
-        // Return an annotated SDo statement
-        return stmt; // Placeholder
+
+        // Check times expression, should be int
+        Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
+        if(exp.type() != Ast.Type.TInt) {
+            throw new TypeException("Expression in do statement must be of type int, type " + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
+        }
+
+        // Check body
+        Ast.Stmt body = typeCheck(stmt.body());
+        if(!(body instanceof Ast.SBlock)) {
+            throw new TypeException("Body of do statement must be a block statement", stmt.body().pos());
+        }
+
+        return new Ast.SDo(exp, body, stmt.pos());
     }
 
     public Ast.Stmt typeCheck(Ast.SReturn stmt) {

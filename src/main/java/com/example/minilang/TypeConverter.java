@@ -14,4 +14,14 @@ public class TypeConverter {
             default -> Ast.Type.TUnknown;
         };
     }
+
+    public static String typeToString(Ast.Type type) {
+        return switch (type) {
+            case TInt -> "int";
+            case TDouble -> "double";
+            case TString -> "string";
+            case TBool -> "bool";
+            default -> "unknown";
+        };
+    }
 }
