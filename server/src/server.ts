@@ -9,6 +9,10 @@ import {
   TextDocumentPositionParams,
   TextDocumentSyncKind,
   InitializeResult,
+  HoverParams,
+  Hover,
+  DocumentDiagnosticReportKind,
+  DocumentDiagnosticReport,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -51,9 +55,17 @@ connection.onInitialize((params: InitializeParams) => {
   const result: InitializeResult = {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
+      diagnosticProvider: {
+        // lmiting diagnostics, only consider currently active file "trusts" other files work as expected
+        interFileDependencies: false,
+        workspaceDiagnostics: false
+      },
+      hoverProvider: {
+        // workDoneProgress: ?
+      }
     },
   };
-  
+
   // If client suports workspace folder
 if (hasWorkspaceFolderCapability) {
     result.capabilities.workspace = {
@@ -100,15 +112,18 @@ connection.onDidChangeConfiguration(change => {
   documents.all().forEach(validateTextDocument);
 });
 
+connection.onDidChangeWatchedFiles(_change => {
+  connection.console.log('Recieved file change event')
+})
 
 // Discard settings for closed documents
 documents.onDidClose(e => {
   documentSettings.delete(e.document.uri);
 });
 
-// Valudate document the first time it's opened and each time it is content is changed 
 documents.onDidChangeContent(change => {
-  validateTextDocument(change.document)
+  // Valudate document the first time it's opened and each time it is content is changed 
+  // validateTextDocument(change.document) // not neded with ``connection.languages.diagnostics.on``
   connection.console.log(
     "onDidChangeContent: " + change.document.version
   );
@@ -118,6 +133,7 @@ documents.onDidChangeContent(change => {
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
+// Diagnostics
 
 // global defult settings if client does not support workspace/configuration requests
 interface ServerSettings {
@@ -128,6 +144,22 @@ const defaultSettings: ServerSettings = {maxNumberOfProblems: 1000}
 let globalSettings: ServerSettings = defaultSettings;
 
 let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
+
+// Will send error message on startup if this is not included, but counts all problems twice?
+connection.languages.diagnostics.on(async (params) => {
+    const doc = documents.get(params.textDocument.uri)
+    if(doc != undefined){
+      return {
+        kind: DocumentDiagnosticReportKind.Full,
+        items: await validateTextDocument(doc)
+      } satisfies DocumentDiagnosticReport;
+    } else {
+      return {
+        kind: DocumentDiagnosticReportKind.Full,
+        items: []
+      } satisfies DocumentDiagnosticReport;
+    }
+})
 
 
 function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
@@ -146,24 +178,38 @@ function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
 }
 
 
-async function validateTextDocument(document: TextDocument): Promise<void> {
+async function validateTextDocument(document: TextDocument): Promise<Diagnostic[]> {
   //lookup document settings
   let settings = await getDocumentSettings(document.uri);
 
-  //Validator matching
-  // TODO
-   // testing: match any word of four or more characters that alternate upper and lowercase
-
-  let text = document.getText();
-  let pattern = /\b([a-z][A-Z]){2,}\b/g
-  let m: RegExpExecArray | null;
-
-  let problems = 0;
+  let alternatingCaps = /\b(([a-z][A-Z]){2,}|([A-Z][a-z]){2,})\b/g
+  let notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
+  let doInf = /do *(inf|\(inf\))/g
+  let whileTrue = /\bwhile *(true|\(true\))/g
   let diagnostics: Diagnostic[] = [];
+  
+  diagnostics = diagnosePattern(alternatingCaps, 'alternating upper/lower-case test', DiagnosticSeverity.Warning, settings, document, diagnostics);
+  diagnostics = diagnosePattern(notRecVarName, 'not reccomended variable name', DiagnosticSeverity.Warning, settings, document, diagnostics);
+  diagnostics = diagnosePattern(doInf, 'DON\'T DO THIS', DiagnosticSeverity.Error, settings, document, diagnostics);
+  diagnostics = diagnosePattern(whileTrue, 'This may never terminate', DiagnosticSeverity.Warning, settings, document, diagnostics);
+  
+  // don't send computed diagnostics, that is handeled by the diagnostics handler
+  // connection.sendDiagnostics({uri:document.uri, diagnostics})
+  return diagnostics
+}
+
+
+function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticSeverity, 
+      settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[] ): Diagnostic[] {
+  //Validator matching
+  let text = document.getText();
+  let d = Array.from(diagnostics) // mutate-by-copy
+  let m :RegExpExecArray | null
+  let problems = 0;
   while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
     problems++;
-    let diagnostic : Diagnostic = {
-      severity: DiagnosticSeverity.Warning,
+    let diagnostic: Diagnostic = {
+      severity: severity,
       range: {
         start: document.positionAt(m.index),
         end: document.positionAt(m.index + m[0].length)
@@ -177,20 +223,36 @@ async function validateTextDocument(document: TextDocument): Promise<void> {
           location: {
             uri: document.uri,
             range: Object.assign({}, diagnostic.range)
-        },
-          message: 'alternating upper/lower-case test'
+          },
+          message: message
         }
       ];
     }
-    diagnostics.push(diagnostic);
+    d.push(diagnostic);
   }
-  // send computed diagnostics
-  connection.sendDiagnostics({uri:document.uri, diagnostics})
+  return d
 }
 
-connection.onDidChangeWatchedFiles(_change => {
-  connection.console.log('Recieved file change event')
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Hover
+
+
+connection.onHover((params: HoverParams, token, progrss, result) => {
+  const uri = params.textDocument.uri
+  const posC = params.position.character
+  const posL = params.position.line
+  let res : Hover = {contents:{language:"myLang",value:"Detecting hover \n@"+uri+"\n:"+posC+"."+posL}}
+  return res
 })
+
+
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

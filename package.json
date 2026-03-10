@@ -13,7 +13,7 @@
     "Programming Languages"
   ],
   "engines": {
-    "vscode": "^1.109.0"
+    "vscode": "^1.80.0"
   },
   "activationEvents": [],
   "main": "./client/out/extension",
@@ -58,61 +58,7 @@
       {
         "command": "assembly-preview.show",
         "title": "Show Assembly"
-      },
-      {
-        "command": "opt.buttons",
-        "title": "optimazation"
-      },
-      {
-        "command": "O0",
-        "title": "No optimazation"
-      },
-      {
-        "command": "O1",
-        "title": "Basic optimazation"
-      },
-      {
-        "command": "O2",
-        "title": "More optimazation"
-      },
-      {
-        "command": "O3",
-        "title": "Max optimazation"
-      }
-    ],"submenus":[
-    {
-      "id": "opt",
-      "label": "optimazation",
-      "icon": "$(list-selection)"
-    }
-  ],  
-  "menus": {
-    "editor/title": [
-      {
-        "submenu": "opt",
-        "when": "true",
-        "group": "navigation"
-      }
-    ],
-    "opt": [
-      {
-        "command": "O0",
-        "group": "navigation" 
-      },
-      {
-        "command": "O1",
-        "group": "navigation" 
-      },
-      {
-        "command": "O2",
-        "group": "navigation" 
-      },
-      {
-        "command": "O3",
-        "group": "navigation" 
-      }
-    ]
-  }
+      }]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -122,7 +68,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.5.7",
-    "@types/vscode": "^1.109.0",
+    "@types/vscode": "^1.80.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {

@@ -78,7 +78,7 @@ export async function activate(context: ExtensionContext) {
 
   // Start the client. This will also launch the server
   client.start();
-     
+
   // ------ Show assembly -------- 
   // ------- Kommer behöva ändras för att runna på att llc läser fil istället ----
 
@@ -190,13 +190,7 @@ export async function activate(context: ExtensionContext) {
 
 
 }
-/* 
-export function deactivate(): Thenable<void> | undefined {
-  if (!client) {
-    return undefined;
-  }
-  return client.stop();
-} */
+
 export async function deactivate() {
   await client?.dispose();
   client=undefined;
