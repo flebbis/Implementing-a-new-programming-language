@@ -62,6 +62,9 @@ connection.onInitialize((params: InitializeParams) => {
       },
       hoverProvider: {
         // workDoneProgress: ?
+      },
+      signatureHelpProvider: {
+
       }
     },
   };
@@ -122,10 +125,11 @@ documents.onDidClose(e => {
 });
 
 documents.onDidChangeContent(change => {
-  // Valudate document the first time it's opened and each time it is content is changed 
-  // validateTextDocument(change.document) // not neded with ``connection.languages.diagnostics.on``
   connection.console.log(
     "onDidChangeContent: " + change.document.version
+    // compile? 
+    // if hasAsmProviderCapabilities
+    // connection.client.
   );
 });
 
@@ -145,7 +149,7 @@ let globalSettings: ServerSettings = defaultSettings;
 
 let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
 
-// Will send error message on startup if this is not included, but counts all problems twice?
+// Will send error message on startup if this is not included
 connection.languages.diagnostics.on(async (params) => {
     const doc = documents.get(params.textDocument.uri)
     if(doc != undefined){
@@ -244,11 +248,23 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
   const uri = params.textDocument.uri
   const posC = params.position.character
   const posL = params.position.line
-  let res : Hover = {contents:{language:"myLang",value:"Detecting hover \n@"+uri+"\n:"+posC+"."+posL}}
+  let res : Hover = {contents:{language:"markdown",value:"###Detecting hover \n@"+uri+"\n:"+posC+"."+posL}}
   return res
 })
 
 
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Signatures
+
+
+/* connection.onSignatureHelp((handler)=> {
+  connection.console.log("signature help detected");
+  
+  handler.context
+})
+ */
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
