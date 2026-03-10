@@ -40,7 +40,7 @@ let client: LanguageClient | undefined;
 export async function activate(context: ExtensionContext) {
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
-    path.join("server", "out", "server.js")
+    path.join("..","server", "out", "server.js")
   );
 
   // server debugging options
@@ -136,12 +136,18 @@ export async function activate(context: ExtensionContext) {
       const asmFile = lastPath.replace('.ml', '.s');
       execFileSync('llc', ['-filetype=asm', optLevel, llFile, '-o', asmFile]);
 
+      
+
       // read the assembly file
       const fs = require('fs');
       const asm = fs.readFileSync(asmFile, 'utf8');
+
+      fs.unlinkSync(llFile);
+      fs.unlinkSync(asmFile);
       const filtered = asm.split('\n')
       .filter((line: string) => !line.trim().startsWith('.'))
       .filter((line: string) => !line.trim().startsWith(';'))
+      .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => line.trim() !== '')
       .join('\n');
       asmProvider.setContent(filtered);
