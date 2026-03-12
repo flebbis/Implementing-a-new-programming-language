@@ -45,6 +45,13 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.1.0</version>
       </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>21</source>
+          <target>21</target>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -70,8 +77,8 @@
     </dependency>
   </dependencies>
   <properties>
-    <maven.compiler.target>17</maven.compiler.target>
+    <maven.compiler.target>21</maven.compiler.target>
     <antlr.version>4.13.1</antlr.version>
-    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.source>21</maven.compiler.source>
   </properties>
 </project>

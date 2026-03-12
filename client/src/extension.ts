@@ -2,6 +2,7 @@ import * as path from "path";
 import { workspace, ExtensionContext } from "vscode";
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
+import { instructions } from './instructions';
 
 import {
   LanguageClient,
@@ -140,15 +141,32 @@ export function activate(context: ExtensionContext) {
       const fs = require('fs');
       const asm = fs.readFileSync(asmFile, 'utf8');
 
-      fs.unlinkSync(llFile);
+      //fs.unlinkSync(llFile);
       fs.unlinkSync(asmFile);
       const filtered = asm.split('\n')
       .filter((line: string) => !line.trim().startsWith('.'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => line.trim() !== '')
+      .map((line: string) => line.split(";")[0].trimEnd())
       .join('\n');
-      asmProvider.setContent(filtered);
+
+      // add padding 
+      const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
+      let maxLength: number = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if(lines[i].length > maxLength) {
+          maxLength = lines[i].length;
+        }
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        lines[i] = lines[i].padEnd(maxLength + 10);
+      }
+
+      const padding = lines.join('\n');
+
+      asmProvider.setContent(padding);
       
       // open and show the assembly document to the right of the screen
       const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
@@ -157,6 +175,34 @@ export function activate(context: ExtensionContext) {
         vscode.window.showErrorMessage('Error: ' + e.message);
       }
   }
+
+  // ------------ SHOW TEXT TO ASSEMBLYCODE -------------------------------------
+  // This solution are meant to show for arm64 and arm86 
+
+ context.subscriptions.push(
+    vscode.languages.registerInlayHintsProvider({scheme: 'asm-preview'}, new class implements vscode.InlayHintsProvider {
+      provideInlayHints(document: vscode.TextDocument, range: vscode.Range): vscode.InlayHint[] {
+        console.log('provideInlayHints called, lines:', document.lineCount);
+        const hints: vscode.InlayHint[] = [];
+        
+        for (let i = 0; i < document.lineCount; i++) {
+          const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""));
+          const [op, arg1, arg2, arg3] = tokens;
+          op.replace(/[lq]$/, '')
+          const operand = instructions[op];
+          if (operand) {
+          const text = operand(arg1, arg2, arg3);
+          const pos = new vscode.Position(i, document.offsetAt(range.end));
+          const il = new vscode.InlayHint(pos, text);
+          hints.push(il);
+          }
+          
+        }
+
+        return hints;
+      }
+    })
+  );
  
   // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
@@ -201,4 +247,5 @@ export function deactivate(): Thenable<void> | undefined {
   }
   return client.stop();
 }
+
 
