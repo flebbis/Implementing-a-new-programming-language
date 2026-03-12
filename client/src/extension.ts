@@ -192,7 +192,7 @@ export function activate(context: ExtensionContext) {
           const operand = instructions[clearOp];
           if (operand) {
           const text = operand(arg1, arg2, arg3);
-          const pos = new vscode.Position(i, document.offsetAt(range.end));
+          const pos = new vscode.Position(i, document.lineAt(i).text.length);
           const il = new vscode.InlayHint(pos, text);
           hints.push(il);
           }
