@@ -188,8 +188,8 @@ export function activate(context: ExtensionContext) {
         for (let i = 0; i < document.lineCount; i++) {
           const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""));
           const [op, arg1, arg2, arg3] = tokens;
-          op.replace(/[lq]$/, '')
-          const operand = instructions[op];
+          const clearOp = op.replace(/[lq]$/, '')
+          const operand = instructions[clearOp];
           if (operand) {
           const text = operand(arg1, arg2, arg3);
           const pos = new vscode.Position(i, document.offsetAt(range.end));
