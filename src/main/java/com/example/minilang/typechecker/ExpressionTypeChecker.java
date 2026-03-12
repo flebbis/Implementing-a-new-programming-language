@@ -212,6 +212,12 @@ public class ExpressionTypeChecker {
             return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
         }
 
+        if(varType instanceof Ast.TUnknown) {
+            // If variable type is unknown, we can infer it from the value
+            context.update(eAss.name(), value.type());
+            varType = value.type();
+        }
+
         if (!varType.equals(value.type())) {
             // Allow implicit conversion from int to double
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {

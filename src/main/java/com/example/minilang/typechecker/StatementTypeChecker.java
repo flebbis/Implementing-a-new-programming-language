@@ -13,11 +13,13 @@ public class StatementTypeChecker {
     private ExpressionTypeChecker expressionTypeChecker;
     private String currentFunction;
     private HashMap<String, Signature> functionSignatures;
+    private Context inferenceContext; // For tracking variable types during inference phase
 
-    public StatementTypeChecker(Context context, HashMap<String, Signature>  functionSignatures) {
+    public StatementTypeChecker(Context context, HashMap<String, Signature>  functionSignatures, Context inferenceContext) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
+        this.inferenceContext = inferenceContext;
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -45,28 +47,9 @@ public class StatementTypeChecker {
         // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
         // treat it as an Assignment to the existing variable.
         if (existingType != null && typeToCheck instanceof Ast.TUnknown) {
-
-            // Inference: If the existing variable was declared without a type (e.g. bare "x;"),
-            // infer its type from the first assigned value and update the context.
-            if (existingType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
-                existingType = value.type();
-                context.update(sInit.name(), existingType);
-                return new Ast.SInit(existingType, sInit.name(), value, sInit.pos());
-            }
-
-            // Allow TUnknown values (e.g. unresolved calls) to bypass checks during inference pass
-            if (!existingType.equals(value.type()) && !(value.type() instanceof Ast.TUnknown)) {
-                if (existingType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                    // Implicit cast: widen int to double
-                    value = new Ast.EDInt(value, value.type(), value.pos());
-                } else {
-                    throw new TypeException("Cannot assign value of type " + value.type() + " to variable " + sInit.name() + " of type " + existingType, sInit.pos());
-                }
-            }
-
-            // Transform this node into an Assignment Expression Statement
+            // Transform to an expression
             Ast.EAss assign = new Ast.EAss(sInit.name(), value, Ast.AssOp.ASSIGN, existingType, sInit.pos());
-            return new Ast.SExp(assign, sInit.pos());
+            return new Ast.SExp(expressionTypeChecker.typeCheck(assign), sInit.pos());
         }
 
         // If we reach here, it is a new Declaration.
@@ -98,17 +81,24 @@ public class StatementTypeChecker {
     }
 
     public Ast.Stmt typeCheck(Ast.SDecl sDecl) {
-        // On the first pass the variable isn't in scope yet, so push it.
-        // On subsequent passes the context already contains the entry (possibly updated
-        // to a real type by inference), so we just read it back rather than re-pushing.
-        Ast.Type existingType = context.lookupLatest(sDecl.name());
-        if (existingType == null) {
-            context.pushToCurrentScope(sDecl.name(), sDecl.type());
-            existingType = sDecl.type();
+        Ast.Type type = new Ast.TUnknown();
+
+        if(sDecl.type() instanceof Ast.TUnknown) {
+            // If unknown, try checking the inference context for the type
+            int scopeLvl = context.getScopeLevel();
+
+            if(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null) {
+                System.out.println("found that " + sDecl.name() + " has type " + inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) + " in inference context at scope level " + scopeLvl);
+                type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
+            } else {
+                System.out.println(inferenceContext.contextStack);
+                System.out.println("did not find " + sDecl.name() + " in inference context at scope level " + scopeLvl);
+            }
+        } else {
+            type = sDecl.type();
         }
-        // Return the node with whatever type is now recorded (TUnknown if never inferred,
-        // or the real type if a later SInit already resolved it).
-        return new Ast.SDecl(existingType, sDecl.name(), sDecl.pos());
+        context.pushToCurrentScope(sDecl.name(), type);
+        return new Ast.SDecl(type, sDecl.name(), sDecl.pos());
     }
 
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {
@@ -210,5 +200,9 @@ public class StatementTypeChecker {
 
     public void setCurrentFunction(String currentFunction) {
         this.currentFunction = currentFunction;
+    }
+
+    public void updateInferenceContext(Context context) {
+        inferenceContext = context;
     }
 }
