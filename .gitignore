@@ -51,3 +51,4 @@ target/
 /.idea/
 *.iml
 *.ll
+*.vsix
