@@ -63,7 +63,7 @@ public class StatementTypeChecker {
         // Allow TUnknown values to bypass checks during inference pass
         if (!typeToCheck.equals(value.type()) && !(value.type() instanceof Ast.TUnknown)) {
             if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, value.type(), value.pos());
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
                 throw new TypeException("Incorrect initialisation array, expected type " + TypeConverter.typeToString(typeToCheck) +
                         " but got "+ TypeConverter.typeToString(value.type()), value.pos());

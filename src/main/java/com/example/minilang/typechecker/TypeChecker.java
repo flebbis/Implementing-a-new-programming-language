@@ -36,13 +36,11 @@ public class TypeChecker {
         this.statementTypeChecker = tempChecker;
 
         // Pass 1: Scan statements -> Infers Parameter Types from calls
-        System.out.println("context before type checking statements: " + context.contextStack);
         typeCheckStatements(program.stmts());
 
         // Pass 2: Scan bodies -> Infers Return Types from return statements
         // (Now that params are known from Pass 1, we can successfully type check the body)
         context.popScope();
-        System.out.println("context before type checking function bodies: " + context.contextStack);
 
         checkFunctionBodies(rawFuncs);
 
