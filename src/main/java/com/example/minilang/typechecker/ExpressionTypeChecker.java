@@ -184,9 +184,9 @@ public class ExpressionTypeChecker {
         } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TDouble) {
             return new Ast.EOpp(left, right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
         } else if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TDouble) {
-            return new Ast.EOpp(new Ast.EDInt(left, left.type(), left.pos()), right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
+            return new Ast.EOpp(new Ast.EDInt(left, new Ast.TDouble(), left.pos()), right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
         } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TInt) {
-            return new Ast.EOpp(left, new Ast.EDInt(right, right.type(), right.pos()), eOpp.op(), new Ast.TDouble(), eOpp.pos());
+            return new Ast.EOpp(left, new Ast.EDInt(right, new Ast.TDouble(), right.pos()), eOpp.op(), new Ast.TDouble(), eOpp.pos());
         } else {
             throw new TypeException("Arithmetic operators require numeric operands", eOpp.pos());
         }
