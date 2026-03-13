@@ -8,3 +8,5 @@ int func test() {
     x = 1;
     return x;
 }
+
+x = 2.0;

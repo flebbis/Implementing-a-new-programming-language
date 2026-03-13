@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/good/function-scope.ml";
+             path = testFilePath + "type/good/type-inference-function-1.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {

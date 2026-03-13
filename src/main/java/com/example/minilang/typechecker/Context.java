@@ -49,7 +49,8 @@ public class Context {
             scopeLevel--;
             contextStack.removeFirst();
         } else {
-            throw new TypeException("Cannot pop global scope");
+            contextStack.removeFirst();
+            contextStack.push(new HashMap<>()); // reset global scope to empty
         }
     }
 

@@ -1,8 +1,8 @@
 ﻿x;
 x = 2
 {
-x;
-x = 3;
+string x = "Heloo"
+x = "hello";
 
 {
 x;
