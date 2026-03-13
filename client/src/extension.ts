@@ -148,7 +148,7 @@ export function activate(context: ExtensionContext) {
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => line.trim() !== '')
-      .map((line: string) => line.split(";")[0].trimEnd())
+      .map((line: string) => line.split(";")[0].split('#')[0].trimEnd())
       .join('\n');
 
       // add padding 
@@ -186,7 +186,8 @@ export function activate(context: ExtensionContext) {
         const hints: vscode.InlayHint[] = [];
         
         for (let i = 0; i < document.lineCount; i++) {
-          const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""));
+          const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""))
+          .map((t: string) => t.replace("#", ""));
           const [op, arg1, arg2, arg3] = tokens;
           const clearOp = op.replace(/[lq]$/, '')
           const operand = instructions[clearOp];
@@ -195,10 +196,8 @@ export function activate(context: ExtensionContext) {
           const pos = new vscode.Position(i, document.lineAt(i).text.length);
           const il = new vscode.InlayHint(pos, text);
           hints.push(il);
-          }
-          
+          } 
         }
-
         return hints;
       }
     })
