@@ -149,6 +149,7 @@ export function activate(context: ExtensionContext) {
       .filter((line: string) => !line.trim().startsWith('.') || line.trim().startsWith('.LBB'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
+      .filter((line: string) => !line.trim().startsWith('#'))
       .filter((line: string) => line.trim() !== '')
       .map((line: string) => line.split(";")[0].split('  #')[0].trimEnd())
       .join('\n');
