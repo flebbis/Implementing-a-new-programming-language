@@ -144,11 +144,11 @@ export function activate(context: ExtensionContext) {
       //fs.unlinkSync(llFile);
       fs.unlinkSync(asmFile);
       const filtered = asm.split('\n')
-      .filter((line: string) => !line.trim().startsWith('.'))
+      .filter((line: string) => !line.trim().startsWith('.') || line.trim().endsWith(':'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => line.trim() !== '')
-      .map((line: string) => line.split(";")[0].split('#')[0].trimEnd())
+      .map((line: string) => line.split(";")[0].split('  #')[0].trimEnd())
       .join('\n');
 
       // add padding 
