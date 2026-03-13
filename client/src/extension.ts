@@ -144,6 +144,7 @@ export function activate(context: ExtensionContext) {
       //fs.unlinkSync(llFile);
       fs.unlinkSync(asmFile);
       const filtered = asm.split('\n')
+
       // filter away lines. that start with (. or ends with :) ,l_, ;, !==, 
       // take away the comments from the assembly output
       .filter((line: string) => !line.trim().startsWith('.') || line.trim().startsWith('.LBB'))
@@ -188,7 +189,8 @@ export function activate(context: ExtensionContext) {
       provideInlayHints(document: vscode.TextDocument, range: vscode.Range): vscode.InlayHint[] {
         console.log('provideInlayHints called, lines:', document.lineCount);
         const hints: vscode.InlayHint[] = [];
-        
+        // loop through the lines, reetrieve the arguments and trim away l q to match x86 and x86-64
+        // If there is matching operand Then apply the inylayhints for the given line
         for (let i = 0; i < document.lineCount; i++) {
           const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""))
           .map((t: string) => t.replace("#", ""));

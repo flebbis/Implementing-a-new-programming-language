@@ -1,6 +1,6 @@
 type arguments = (arg1?: string, arg2?: string, arg3?: string, arg4?: string) => string;
 
-// This deals with arm64 and x86, x86-64
+// Describtion for assembly this deals with arm64 and x86, x86-64
 export const instructions: Record<string, arguments> = {
     mov: (arg1, arg2)        => arg1?.endsWith(')') ? `Load ${arg2} from adress ${arg1}` :
                                 arg2?.endsWith(')') ? `Store ${arg1} at adress ${arg2}` :
