@@ -144,14 +144,16 @@ export function activate(context: ExtensionContext) {
       //fs.unlinkSync(llFile);
       fs.unlinkSync(asmFile);
       const filtered = asm.split('\n')
-      .filter((line: string) => !line.trim().startsWith('.') || line.trim().endsWith(':'))
+      // filter away lines. that start with (. or ends with :) ,l_, ;, !==, 
+      // take away the comments from the assembly output
+      .filter((line: string) => !line.trim().startsWith('.') || line.trim().startsWith('.LBB'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => line.trim() !== '')
       .map((line: string) => line.split(";")[0].split('  #')[0].trimEnd())
       .join('\n');
 
-      // add padding 
+      // add padding for inlayHints
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       let maxLength: number = 0;
       for (let i = 0; i < lines.length; i++) {
@@ -178,6 +180,7 @@ export function activate(context: ExtensionContext) {
 
   // ------------ SHOW TEXT TO ASSEMBLYCODE -------------------------------------
   // This solution are meant to show for arm64 and arm86 
+  // Register inlayHints for assembly
 
  context.subscriptions.push(
     vscode.languages.registerInlayHintsProvider({scheme: 'asm-preview'}, new class implements vscode.InlayHintsProvider {
@@ -188,11 +191,11 @@ export function activate(context: ExtensionContext) {
         for (let i = 0; i < document.lineCount; i++) {
           const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""))
           .map((t: string) => t.replace("#", ""));
-          const [op, arg1, arg2, arg3] = tokens;
+          const [op, arg1, arg2, arg3, arg4] = tokens;
           const clearOp = op.replace(/[lq]$/, '')
           const operand = instructions[clearOp];
           if (operand) {
-          const text = operand(arg1, arg2, arg3);
+          const text = operand(arg1, arg2, arg3, arg4);
           const pos = new vscode.Position(i, document.lineAt(i).text.length);
           const il = new vscode.InlayHint(pos, text);
           hints.push(il);

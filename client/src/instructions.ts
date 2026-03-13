@@ -1,4 +1,4 @@
-type arguments = (arg1?: string, arg2?: string, arg3?: string) => string;
+type arguments = (arg1?: string, arg2?: string, arg3?: string, arg4?: string) => string;
 
 // This deals with arm64 and x86, x86-64
 export const instructions: Record<string, arguments> = {
@@ -33,6 +33,7 @@ export const instructions: Record<string, arguments> = {
     ret: ()                  => `Return`,
     push: (arg1)             => `Push ${arg1} onto stack`,
     pop: (arg1)              => `Pop from stack into ${arg1}`,
+    stp: (arg1, arg2, arg3, arg4) => `Save ${arg1} and ${arg2} to stack at (${arg3} + ${arg4})`,
 
     // x86, x86-64
     jmp:   (arg1)            => `Jump to ${arg1}`, 
