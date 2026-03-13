@@ -43,6 +43,7 @@ public class StatementTypeChecker {
         // Logical Check: Is this a redeclaration or an assignment?
         // We look up if the variable exists in the current scope chain.
         Ast.Type existingType = context.lookupLatest(sInit.name());
+        System.out.println("was existing");
 
         // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
         // treat it as an Assignment to the existing variable.
@@ -88,11 +89,7 @@ public class StatementTypeChecker {
             int scopeLvl = context.getScopeLevel();
 
             if(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null) {
-                System.out.println("found that " + sDecl.name() + " has type " + inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) + " in inference context at scope level " + scopeLvl);
                 type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
-            } else {
-                System.out.println(inferenceContext.contextStack);
-                System.out.println("did not find " + sDecl.name() + " in inference context at scope level " + scopeLvl);
             }
         } else {
             type = sDecl.type();
