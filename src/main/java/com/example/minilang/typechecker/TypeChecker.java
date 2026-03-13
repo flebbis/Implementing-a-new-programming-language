@@ -65,6 +65,10 @@ public class TypeChecker {
     private List<Ast.Stmt> typeCheckStatements(List<Ast.Stmt> statements) {
         List<Ast.Stmt> stmts = new ArrayList<>();
         for(Ast.Stmt stmt : statements) {
+            if(stmt == null) {
+                continue; // for some reason this happened
+            }
+            System.out.println("stememnt " + stmt);
             stmts.add(statementTypeChecker.typeCheck(stmt));
         }
         return stmts;

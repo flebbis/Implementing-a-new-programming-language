@@ -35,14 +35,19 @@ public class ExpressionTypeChecker {
             case Ast.EArrayIndex eArrayIndex -> typeCheck(eArrayIndex);
             case Ast.EUnary eUnary -> typeCheck(eUnary);
             case Ast.EDInt edInt -> typeCheck(edInt);
+            case Ast.EStringCast eStringCast -> typeCheck(eStringCast);
 
             // More to be implemented
             default -> throw new TypeException("Unknown expression type: " + exp.getClass().getSimpleName(), exp.pos());
         };
     }
 
+    public Ast.Exp typeCheck(Ast.EStringCast eStringCast) {
+        return new Ast.EStringCast(typeCheck(eStringCast.exp()), new Ast.TString(), eStringCast.pos());
+    }
+
     public Ast.Exp typeCheck(Ast.EDInt edInt) {
-        return new Ast.EDInt(edInt, new Ast.TDouble(), edInt.pos());
+        return new Ast.EDInt(edInt.exp(), new Ast.TDouble(), edInt.pos());
     }
 
     public Ast.Exp typeCheck(Ast.EInt eInt) {return eInt;}
@@ -239,7 +244,7 @@ public class ExpressionTypeChecker {
             if(eCall.args().size() != 1) {
                 throw new TypeException("print function expects exactly one argument", eCall.pos());
             }
-            // Special case for print: allow any number of arguments of any type, and return void
+            // Special case for print: allow one argument of any type
             List<Ast.Exp> args = new ArrayList<>();
             for (Ast.Exp arg : eCall.args()) {
                 args.add(typeCheck(arg));
@@ -314,11 +319,16 @@ public class ExpressionTypeChecker {
         Ast.Exp array = typeCheck(eArrayIndex.array());
         Ast.Exp index = typeCheck(eArrayIndex.index());
 
+        if(!(array.type() instanceof Ast.TArray)) {
+            throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
+        }
+
         if (!(index.type() instanceof Ast.TInt)) {
             throw new TypeException("Array index must be of type int", index.pos());
         }
 
         // The result type is the element type of the array
+
         Ast.Type resultType = (array.type() instanceof Ast.TArray arr) ? arr.elementType() : new Ast.TUnknown();
         return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
     }
