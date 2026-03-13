@@ -22,9 +22,8 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         // rule: TYPE 'func' ID '(' paramSeparator ')' block
 
         Ast.Type returnType = new Ast.TUnknown(); // Default to TUnknown if no return type is specified
-
-        if(ctx.TYPE() != null) {
-            String returnTypeText = ctx.TYPE().getText();
+        if(ctx.typeAnnotation() != null) {
+            String returnTypeText = ctx.typeAnnotation().getText();
             returnType = TypeConverter.mapType(returnTypeText);
         }
 
