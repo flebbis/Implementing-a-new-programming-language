@@ -45,8 +45,8 @@ public class Context {
 
     /** Remove the latest environment, if not the global scope */
     public void popScope() {
+        scopeLevel--;
         if(contextStack.size() > 1) {
-            scopeLevel--;
             contextStack.removeFirst();
         } else {
             contextStack.removeFirst();
