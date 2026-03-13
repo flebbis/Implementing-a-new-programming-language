@@ -240,6 +240,7 @@ public class ExpressionTypeChecker {
     }
 
     public Ast.ECall typeCheck(Ast.ECall eCall) {
+        // PRINT special case
         if(eCall.name().equals("print")) {
             if(eCall.args().size() != 1) {
                 throw new TypeException("print function expects exactly one argument", eCall.pos());
@@ -261,6 +262,9 @@ public class ExpressionTypeChecker {
         // Then look up the function signature
         if (functionSignatures.containsKey(eCall.name())) {
             int i = 0;
+            if(functionSignatures.get(eCall.name()).paramTypes.size() != eCall.args().size()) {
+                throw new TypeException("Function " + eCall.name() + " expects " + functionSignatures.get(eCall.name()).paramTypes.size() + " arguments but got " + eCall.args().size(), eCall.pos());
+            }
             for (Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
                 // Check mismatch
                 if (!args.get(i).type().equals(paramType)) {

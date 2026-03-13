@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/good/arr-indexing-2.ml";
+             path = testFilePath + "type/bad/arg-size.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {
