@@ -65,8 +65,8 @@ public class StatementTypeChecker {
             if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Incorrect initialisation array, expected type " + TypeConverter.typeToString(typeToCheck) +
-                        " but got "+ TypeConverter.typeToString(value.type()), value.pos());
+                throw new TypeException("Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
+                        " but got " + TypeConverter.typeToString(value.type()), value.pos());
             }
         }
 
