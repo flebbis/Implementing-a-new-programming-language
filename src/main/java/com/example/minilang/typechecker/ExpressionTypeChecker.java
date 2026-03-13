@@ -34,10 +34,15 @@ public class ExpressionTypeChecker {
             case Ast.EArray eArray -> typeCheck(eArray);
             case Ast.EArrayIndex eArrayIndex -> typeCheck(eArrayIndex);
             case Ast.EUnary eUnary -> typeCheck(eUnary);
+            case Ast.EDInt edInt -> typeCheck(edInt);
 
             // More to be implemented
             default -> throw new TypeException("Unknown expression type: " + exp.getClass().getSimpleName(), exp.pos());
         };
+    }
+
+    public Ast.Exp typeCheck(Ast.EDInt edInt) {
+        return new Ast.EDInt(edInt, new Ast.TDouble(), edInt.pos());
     }
 
     public Ast.Exp typeCheck(Ast.EInt eInt) {return eInt;}
@@ -223,13 +228,25 @@ public class ExpressionTypeChecker {
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Cannot assign type " + value.type() + " to variable of type " + varType, eAss.pos());
+                throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to variable of type " + TypeConverter.typeToString(varType), eAss.pos());
             }
         }
         return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
     }
 
     public Ast.ECall typeCheck(Ast.ECall eCall) {
+        if(eCall.name().equals("print")) {
+            if(eCall.args().size() != 1) {
+                throw new TypeException("print function expects exactly one argument", eCall.pos());
+            }
+            // Special case for print: allow any number of arguments of any type, and return void
+            List<Ast.Exp> args = new ArrayList<>();
+            for (Ast.Exp arg : eCall.args()) {
+                args.add(typeCheck(arg));
+            }
+            return new Ast.ECall(eCall.name(), args, new Ast.TUnknown(), eCall.pos());
+        }
+
         // Type check the arguments first
         List<Ast.Exp> args = new ArrayList<>();
         for (Ast.Exp arg : eCall.args()) {
