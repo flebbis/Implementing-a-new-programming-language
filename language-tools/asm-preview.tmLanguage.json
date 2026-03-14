@@ -1,0 +1,39 @@
+{
+    "scopeName": "source.asm-preview",
+    "patterns": [
+        {"include": "#Label"},
+        {"include": "#Operation"},
+        {"include": "#Memory"},
+        {"include": "#Register"},
+        {"include": "#Data"},
+        {"include": "#JumpLabel"}
+    ],
+    "repository": {
+        "Label": {
+            "name": "storage.type",
+            "match": "^\\w+"
+        },
+        "Operation": {
+            "name": "variable.other",
+            "match": "^\\s+\\w+\\.?\\w*"
+        },
+        "Memory": {
+            "name": "keyword.control",
+            "match": "\\[sp|\\d*\\(\\%\\w+\\)"
+        },
+        "Register": {
+            "name": "comment.line",
+            "match": "w\\d+|x\\d+|wzr|xzr|sp|lr|fp|\\%\\w+"
+        },
+        "Data": {
+            "name": "keyword.control",
+            "match": "\\#\\d+]?|\\$\\d+]?"
+        },
+        "JumpLabel": {
+            "name": "entity.name.function",
+            "match": "\\.?LBB\\d+_\\d+"
+        }
+        
+        
+    }
+}

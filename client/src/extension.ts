@@ -77,6 +77,16 @@ export function activate(context: ExtensionContext) {
 
   // Start the client. This will also launch the server
   client.start();
+
+  // Makes so you cant edit the assembly file
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument(e => {
+        if (e.document.uri.toString() === AsmProvider.uri.toString()) {
+            vscode.commands.executeCommand('undo');
+            vscode.window.showErrorMessage("Can´t edit")
+        }
+    })
+);
      
   // ------ Show assembly -------- 
   // ------- Kommer behöva ändras för att runna på att llc läser fil istället ----
@@ -170,14 +180,15 @@ export function activate(context: ExtensionContext) {
 
       const padding = lines.join('\n');
 
+      const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
+      await vscode.languages.setTextDocumentLanguage(doc, 'asm-preview');
       asmProvider.setContent(padding);
       
       // open and show the assembly document to the right of the screen
-      const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
-      } catch(e: any) {
-        vscode.window.showErrorMessage('Error: ' + e.message);
-      }
+    } catch(e: any) {
+      vscode.window.showErrorMessage('Error: ' + e.message);
+    }
   }
 
   // ------------ SHOW TEXT TO ASSEMBLYCODE -------------------------------------

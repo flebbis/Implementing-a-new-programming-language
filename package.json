@@ -30,14 +30,23 @@
           "MyLang"
         ],
         "configuration": "./language-tools/language-configuration.json"
-      }
+      },
+      { "id": "asm-preview", 
+      "aliases": ["Assembly Preview"] 
+    }
     ],
     "grammars": [
       {
         "language": "mylang",
         "scopeName": "source.mylang",
         "path": "./language-tools/mylang.tmLanguage.json"
+      },
+      {
+        "language": "asm-preview",
+        "scopeName": "source.asm-preview",
+        "path": "./language-tools/asm-preview.tmLanguage.json"
       }
+      
     ],
     "commands": [
       {
