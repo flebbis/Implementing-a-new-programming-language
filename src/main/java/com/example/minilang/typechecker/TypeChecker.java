@@ -6,17 +6,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.tools.Diagnostic;
+
+import com.example.minilang.InferenceSuggestion;
+
 public class TypeChecker {
 
     private HashMap<String, Signature> functionSignatures = new HashMap<>();
     private StatementTypeChecker statementTypeChecker;
     private Context context;
     private Context inferenceContext;
+    private List<InferenceSuggestion> inferenceSuggestions = new ArrayList<>();
 
     public TypeChecker() {
         this.context = new Context();
         this.inferenceContext = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext);
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, new ArrayList<>());
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -27,7 +32,8 @@ public class TypeChecker {
         // We use a temporary Context and Checker to run the logic just for the side-effects
         // of updating the 'functionSignatures' map. We discard the AST produced here.
         Context tempContext = new Context();
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context());
+        // InferenceSuggestion list is the real list for inference pass, the other pass will use a dummy list 
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), inferenceSuggestions);
 
         // Swap to temp environment
         Context realContext = this.context;
@@ -49,6 +55,7 @@ public class TypeChecker {
         this.context = realContext;
         this.statementTypeChecker = realChecker;
 
+        // Update the real StatementTypeChecker with the inferred types before the final pass
         statementTypeChecker.updateInferenceContext(tempContext);
 
         // Pass 3: Re-scan statements -> Generates final AST with correct ECall types
@@ -91,7 +98,7 @@ public class TypeChecker {
     private List<Ast.Func> checkFunctionBodies(List<Ast.Func> functions) {
         List<Ast.Func> checkedFuncs = new ArrayList<>();
 
-        for(Ast.Func func : functions) {
+        for (Ast.Func func : functions) {
             context.pushNewScope();
             String name = func.name();
             statementTypeChecker.setCurrentFunction(name);
@@ -99,7 +106,7 @@ public class TypeChecker {
 
             // Use types from Signature (which are now updated after inference passes)
             List<Ast.Arg> currentParams = new ArrayList<>();
-            for(int i = 0; i < func.params().size(); i++) {
+            for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type type = sig.paramTypes.get(i);
                 Ast.Arg oldArg = func.params().get(i);
 
@@ -107,18 +114,24 @@ public class TypeChecker {
                 currentParams.add(new Ast.Arg(oldArg.name(), type, oldArg.pos()));
             }
 
-            if(!(func.body() instanceof Ast.SBlock)) {
+            if (!(func.body() instanceof Ast.SBlock)) {
                 throw new TypeException("Function body must be a block statement", func.body().pos());
             }
 
             List<Ast.Stmt> bodyStmts = new ArrayList<>();
-            for(Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
+            for (Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
                 bodyStmts.add(statementTypeChecker.typeCheck(stmt));
             }
 
-            checkedFuncs.add(new Ast.Func(name, currentParams, sig.returnType, new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
+            checkedFuncs.add(new Ast.Func(name, currentParams, sig.returnType,
+                    new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
             context.popScope();
         }
         return checkedFuncs;
     }
+    
+    public List<InferenceSuggestion> getInferenceSuggestions() {
+        return inferenceSuggestions;
+    }
+
 }

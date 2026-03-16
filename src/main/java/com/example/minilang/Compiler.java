@@ -7,11 +7,15 @@ import java.nio.file.Path;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.typechecker.TypeChecker;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+import java.util.List;
 
 public class Compiler {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
@@ -19,44 +23,45 @@ public class Compiler {
             System.exit(1);
         }
         String optLevel = args.length > 1 ? args[1] : "-O3";
-        parseFile(Path.of(args[0]), optLevel);
-
+        try {
+            List<InferenceSuggestion> suggestions = parseFile(args[0], optLevel);
+            // Output as JSON to stdout for the language server to parse
+            System.out.println(objectMapper.writeValueAsString(suggestions));
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
 
-    public static void parseFile(Path path) throws IOException {
-        parseFile(path, "0");
+    public static List<InferenceSuggestion> parseFile(String input) throws IOException {
+        return parseFile(input, "0");
     }
 
-     public static void parseFile(Path path, String optLevel) throws IOException {
+    public static List<InferenceSuggestion> parseFile(String input, String optLevel) throws IOException {
 
-        String input = Files.readString(path);
+ 
+        // For debugging, needs to be error so not interference with JSON output
+        System.err.println("=== COMPILATION START ===");
+        System.err.println("Reading: " + input);
 
         // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         GrammarParser parser = new GrammarParser(tokens);
 
-        //parser.setErrorHandler(new BailErrorStrategy());
-        //lexer.removeErrorListeners();
-        //lexer.addErrorListener();
-
-        // 3. Parse and create Tree
         ParseTree tree = parser.program();
 
-
-        // 5. Output
-      //  System.out.println("Equation: " + input);
-        //System.out.println("Tree: " + tree.toStringTree(parser));
-
-        // 6. Build AST
+        // Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        System.out.println("AST:      " + astRoot);
+        // System.err.println("AST: " + astRoot); // Send debug output to stderr
 
         TypeChecker typeChecker = new TypeChecker();
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
+        List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
 
+        return suggestions;
     }
-
 
 }

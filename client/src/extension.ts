@@ -40,7 +40,7 @@ let client: LanguageClient | undefined;
 export async function activate(context: ExtensionContext) {
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
-    path.join("..","server", "out", "server.js")
+    path.join("server", "out", "server.js")
   );
 
   // server debugging options

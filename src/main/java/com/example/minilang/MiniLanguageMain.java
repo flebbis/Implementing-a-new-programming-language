@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/good/array-return.ml";
+             path = testFilePath + "type/good/inference-suggestion.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {
@@ -23,6 +23,6 @@ public class MiniLanguageMain {
             System.exit(1);
             return;
         }
-        Compiler.parseFile(Path.of(path));
+        Compiler.parseFile(path);
     }
 }

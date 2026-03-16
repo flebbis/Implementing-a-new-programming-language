@@ -6,6 +6,7 @@ import com.example.minilang.ast.Ast;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import com.example.minilang.InferenceSuggestion;
 
 public class StatementTypeChecker {
 
@@ -14,12 +15,15 @@ public class StatementTypeChecker {
     private String currentFunction;
     private HashMap<String, Signature> functionSignatures;
     private Context inferenceContext; // For tracking variable types during inference phase
+    private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
 
-    public StatementTypeChecker(Context context, HashMap<String, Signature>  functionSignatures, Context inferenceContext) {
+    public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
+            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
         this.inferenceContext = inferenceContext;
+        this.inferenceSuggestions = inferenceSuggestions;
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -35,7 +39,6 @@ public class StatementTypeChecker {
         };
     }
 
-
     public Ast.Stmt typeCheck(Ast.SInit sInit) {
         Ast.Exp value = expressionTypeChecker.typeCheck(sInit.value());
         Ast.Type typeToCheck = sInit.type();
@@ -44,7 +47,8 @@ public class StatementTypeChecker {
         // We look up if the variable exists in the current scope chain.
         Ast.Type existingType = context.lookupLatest(sInit.name());
 
-        // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
+        // If the variable exists and this is an implicit statement (e.g. "x = 5" not
+        // "int x = 5"),
         // treat it as an Assignment to the existing variable.
         if (existingType != null && typeToCheck instanceof Ast.TUnknown) {
             // Transform to an expression
@@ -57,6 +61,14 @@ public class StatementTypeChecker {
         // Infer type if unknown
         if (typeToCheck instanceof Ast.TUnknown) {
             typeToCheck = value.type();
+            inferenceSuggestions.add(new InferenceSuggestion(
+                    sInit.name(),
+                    TypeConverter.typeToString(typeToCheck),
+                    sInit.pos().line,
+                    sInit.pos().column,
+                    sInit.pos().line,
+                    sInit.pos().column + sInit.name().length(),
+                    "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name()));
         }
 
         // Verify types match for explicit declarations
@@ -65,15 +77,16 @@ public class StatementTypeChecker {
             if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
-                        " but got " + TypeConverter.typeToString(value.type()), value.pos());
+                throw new TypeException(
+                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
+                                " but got " + TypeConverter.typeToString(value.type()),
+                        value.pos());
             }
         }
 
         context.pushToCurrentScope(sInit.name(), typeToCheck);
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
-
 
     public Ast.SExp typeCheck(Ast.SExp stmt) {
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.exp());
@@ -83,11 +96,11 @@ public class StatementTypeChecker {
     public Ast.Stmt typeCheck(Ast.SDecl sDecl) {
         Ast.Type type = new Ast.TUnknown();
 
-        if(sDecl.type() instanceof Ast.TUnknown) {
+        if (sDecl.type() instanceof Ast.TUnknown) {
             // If unknown, try checking the inference context for the type
             int scopeLvl = context.getScopeLevel();
 
-            if(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null) {
+            if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null) {
                 type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
             }
         } else {
@@ -121,7 +134,8 @@ public class StatementTypeChecker {
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
         if (!(exp.type() instanceof Ast.TInt)) {
-            throw new TypeException("Expression in do statement must be of type int, type " + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
+            throw new TypeException("Expression in do statement must be of type int, type "
+                    + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
         }
 
         // Check body
@@ -150,7 +164,8 @@ public class StatementTypeChecker {
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
+                throw new TypeException("Function returns type " + value.type()
+                        + ", does not match declared function return type " + signature.returnType, stmt.pos());
             }
         }
 
@@ -165,18 +180,20 @@ public class StatementTypeChecker {
         }
 
         // Check then branch
-        if(!(stmt.thenBranch() instanceof Ast.SBlock)) {
+        if (!(stmt.thenBranch() instanceof Ast.SBlock)) {
             throw new TypeException("Then branch of if statement must be a block statement", stmt.thenBranch().pos());
         }
 
         context.pushNewScope();
-        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch()); // Check for any type errors in the then branch before checking the else branch (for better error messages)
+        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch()); // Check for any type errors in the then branch before
+                                                          // checking the else branch (for better error messages)
         context.popScope();
 
         Ast.Stmt elseStmt = null;
-        if(stmt.elseBranch() != null) {
+        if (stmt.elseBranch() != null) {
             if (!(stmt.elseBranch() instanceof Ast.SBlock)) {
-                throw new TypeException("Else branch of if statement must be a block statement", stmt.elseBranch().pos());
+                throw new TypeException("Else branch of if statement must be a block statement",
+                        stmt.elseBranch().pos());
             }
             context.pushNewScope();
             elseStmt = typeCheck(stmt.elseBranch());
@@ -189,7 +206,7 @@ public class StatementTypeChecker {
     public Ast.SBlock typeCheck(Ast.SBlock stmt) {
         context.pushNewScope();
         List<Ast.Stmt> checkedStmts = new ArrayList<>();
-        for(Ast.Stmt s : stmt.statements()) {
+        for (Ast.Stmt s : stmt.statements()) {
             checkedStmts.add(typeCheck(s));
         }
         context.popScope();
