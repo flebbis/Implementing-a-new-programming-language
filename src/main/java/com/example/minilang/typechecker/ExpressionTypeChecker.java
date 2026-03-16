@@ -259,14 +259,6 @@ public class ExpressionTypeChecker {
             args.add(typeCheck(arg));
         }
 
-        if(eCall.name().equals("print")) {
-            if(args.size() != 1) {
-                throw new TypeException("print function expects exactly one argument", eCall.pos());
-            }
-            // print can accept any type, so we return early with the correct return type
-            return new Ast.ECall(eCall.name(), args, Ast.Type.TVoid, eCall.pos());
-        }
-
         // Then look up the function signature
         if (functionSignatures.containsKey(eCall.name())) {
             int i = 0;
