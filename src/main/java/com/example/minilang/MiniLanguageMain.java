@@ -1,6 +1,12 @@
 package com.example.minilang;
 
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class MiniLanguageMain {
@@ -9,8 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/good/print.ml";
-
+             path = testFilePath + "type/good/array-return.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {
@@ -18,6 +23,6 @@ public class MiniLanguageMain {
             System.exit(1);
             return;
         }
-        Compiler.parseFile(Path.of(path), "-O0");
+        Compiler.parseFile(Path.of(path));
     }
 }
