@@ -99,9 +99,19 @@ public class StatementTypeChecker {
         if (sDecl.type() instanceof Ast.TUnknown) {
             // If unknown, try checking the inference context for the type
             int scopeLvl = context.getScopeLevel();
-
-            if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null) {
+            
+            if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null && !(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) instanceof Ast.TUnknown)) {
                 type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
+                // Add to suggestions for language server
+                System.err.println("Found type for " + sDecl.name() + " in inference context: " + TypeConverter.typeToString(type));
+                inferenceSuggestions.add(new InferenceSuggestion(
+                        sDecl.name(),
+                        TypeConverter.typeToString(type),
+                        sDecl.pos().line,
+                        sDecl.pos().column,
+                        sDecl.pos().line,
+                        sDecl.pos().column + sDecl.name().length(),
+                        "Suggestion: " + TypeConverter.typeToString(type) + " " + sDecl.name()));
             }
         } else {
             type = sDecl.type();

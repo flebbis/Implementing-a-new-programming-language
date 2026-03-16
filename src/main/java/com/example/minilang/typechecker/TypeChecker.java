@@ -21,7 +21,7 @@ public class TypeChecker {
     public TypeChecker() {
         this.context = new Context();
         this.inferenceContext = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, new ArrayList<>());
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions);
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -33,7 +33,7 @@ public class TypeChecker {
         // of updating the 'functionSignatures' map. We discard the AST produced here.
         Context tempContext = new Context();
         // InferenceSuggestion list is the real list for inference pass, the other pass will use a dummy list 
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), inferenceSuggestions);
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), new ArrayList<>());
 
         // Swap to temp environment
         Context realContext = this.context;
