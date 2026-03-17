@@ -1,8 +1,8 @@
 package com.example.minilang;
-import com.example.minilang.ast.Ast;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.example.minilang.ast.Ast;
 
 public class ExpressionCodeGen {
 
@@ -10,12 +10,20 @@ public class ExpressionCodeGen {
     private StringBuilder sb;
     private LabelGenerator labelGen;
     private List<Ast.Func> functions;
+    private int srcLine;
     // Register names are generated via labelGen to ensure global uniqueness
 
-    public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
+    public ExpressionCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions, int srcLine) {
         this.sb = sb;
         this.labelGen = labelGen;
         this.functions = functions;
+        this.srcLine = srcLine;
+    }
+
+    private void srcComment() {
+        if (srcLine > 0) {
+            sb.append("; src:").append(srcLine).append("\n");
+        }
     }
     
     /**
@@ -72,6 +80,7 @@ public class ExpressionCodeGen {
         // Load variable from memory
         String llvmType = toLLVMType(eId.type());
         String reg = nextReg();
+        srcComment();
         sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("\n");
         return reg;
     }
@@ -92,6 +101,7 @@ public class ExpressionCodeGen {
              default -> throw new RuntimeException("Unknown operator: " + eOpp.op());
         };
         
+        srcComment();
         sb.append("  ").append(result).append(" = ").append(op).append(" ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -105,15 +115,19 @@ private String codeGenPower(Ast.EPower ePower) {
     String baseDouble = nextReg();
     String expDouble = nextReg();
     
+    srcComment();
     sb.append("  ").append(baseDouble).append(" = sitofp i32 ").append(base).append(" to double\n");
+    srcComment();
     sb.append("  ").append(expDouble).append(" = sitofp i32 ").append(exponent).append(" to double\n");
     
     // Call pow()
     String powResult = nextReg();
+    srcComment();
     sb.append("  ").append(powResult).append(" = call double @pow(double ").append(baseDouble).append(", double ").append(expDouble).append(")\n");
     
     // Convert back to int if needed
     String finalResult = nextReg();
+    srcComment();
     sb.append("  ").append(finalResult).append(" = fptosi double ").append(powResult).append(" to i32\n");
     
     return finalResult;
@@ -125,6 +139,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String right = codeGenExp(eLt.right());
         String llvmType = toLLVMType(eLt.left().type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = icmp slt ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -134,6 +149,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String right = codeGenExp(eGt.right());
         String llvmType = toLLVMType(eGt.left().type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = icmp sgt ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -143,6 +159,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String right = codeGenExp(eGe.right());
         String llvmType = toLLVMType(eGe.left().type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = icmp sge ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -152,6 +169,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String right = codeGenExp(eLe.right());
         String llvmType = toLLVMType(eLe.left().type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = icmp sle ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -161,6 +179,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String right = codeGenExp(eNe.right());
         String llvmType = toLLVMType(eNe.left().type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = icmp ne ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -170,6 +189,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String right = codeGenExp(eEq.right());
         String llvmType = toLLVMType(eEq.left().type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = icmp eq ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -179,6 +199,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String left = codeGenExp(eAnd.left());
         String right = codeGenExp(eAnd.right());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = and i1 ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -187,6 +208,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String left = codeGenExp(eOr.left());
         String right = codeGenExp(eOr.right());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = or i1 ").append(left).append(", ").append(right).append("\n");
         return result;
     }
@@ -194,6 +216,7 @@ private String codeGenPower(Ast.EPower ePower) {
     private String codeGenNot(Ast.ENot eNot) {
         String exp = codeGenExp(eNot.exp());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = xor i1 ").append(exp).append(", 1\n");
         return result;
     }
@@ -203,6 +226,7 @@ private String codeGenPower(Ast.EPower ePower) {
         // x = value
         String valueReg = codeGenExp(eAss.value());
         String llvmType = toLLVMType(eAss.value().type());
+        srcComment();
         sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append("\n");
         return valueReg;  // Return the assigned value
     }
@@ -213,7 +237,9 @@ private String codeGenPower(Ast.EPower ePower) {
         String valueReg = codeGenExp(ePlusAss.value());
         String llvmType = toLLVMType(ePlusAss.type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = add ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        srcComment();
         sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(ePlusAss.name()).append("\n");
         return result;
     }
@@ -224,7 +250,9 @@ private String codeGenPower(Ast.EPower ePower) {
         String valueReg = codeGenExp(eMinusAss.value());
         String llvmType = toLLVMType(eMinusAss.type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = sub ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        srcComment();
         sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMinusAss.name()).append("\n");
         return result;
     }
@@ -235,7 +263,9 @@ private String codeGenPower(Ast.EPower ePower) {
         String valueReg = codeGenExp(eDivAss.value());
         String llvmType = toLLVMType(eDivAss.type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = sdiv ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        srcComment();
         sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eDivAss.name()).append("\n");
         return result;
     }
@@ -246,7 +276,9 @@ private String codeGenPower(Ast.EPower ePower) {
         String valueReg = codeGenExp(eMultAss.value());
         String llvmType = toLLVMType(eMultAss.type());
         String result = nextReg();
+        srcComment();
         sb.append("  ").append(result).append(" = mul ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
+        srcComment();
         sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMultAss.name()).append("\n");
         return result;
     }
@@ -289,6 +321,7 @@ private String codeGenPower(Ast.EPower ePower) {
 
         // Step 2: NOW build the call (no more code generation happens here)
         String resultReg = "%".concat(labelGen.generateLabel("result"));  // ← CREATE result register
+        srcComment();
         sb.append("  ").append(resultReg).append(" = call i32 @").append(eCall.name()).append("(");
         for (int i = 0; i < argRegisters.size(); i++) {
             sb.append("i32 ").append(argRegisters.get(i));
@@ -305,9 +338,11 @@ private String codeGenPower(Ast.EPower ePower) {
         if (eCall.args().isEmpty()) {
             // print() with no args → just print a newline
             String fmtPtr = nextReg();
+            srcComment();
             sb.append("  ").append(fmtPtr)
               .append(" = getelementptr [2 x i8], [2 x i8]* @.fmt.newline, i32 0, i32 0\n");
             String resultReg = nextReg();
+            srcComment();
             sb.append("  ").append(resultReg)
               .append(" = call i32 (i8*, ...) @printf(i8* ").append(fmtPtr).append(")\n");
             return resultReg;
@@ -338,6 +373,7 @@ private String codeGenPower(Ast.EPower ePower) {
                 fmtSize = "[4 x i8]";
                 // Extend i1 to i32 for printf
                 String extended = nextReg();
+                srcComment();
                 sb.append("  ").append(extended)
                   .append(" = zext i1 ").append(argReg).append(" to i32\n");
                 argReg = extended;
@@ -350,6 +386,7 @@ private String codeGenPower(Ast.EPower ePower) {
 
         // Get pointer to format string
         String fmtPtr = nextReg();
+        srcComment();
         sb.append("  ").append(fmtPtr)
           .append(" = getelementptr ").append(fmtSize).append(", ").append(fmtSize).append("* ")
           .append(fmtGlobal).append(", i32 0, i32 0\n");
@@ -357,6 +394,7 @@ private String codeGenPower(Ast.EPower ePower) {
         // Call printf
         String llvmArgType = (argType == Ast.Type.TBool) ? "i32" : toLLVMType(argType);
         String resultReg = nextReg();
+        srcComment();
         sb.append("  ").append(resultReg)
           .append(" = call i32 (i8*, ...) @printf(i8* ").append(fmtPtr)
           .append(", ").append(llvmArgType).append(" ").append(argReg).append(")\n");
@@ -367,6 +405,7 @@ private String codeGenPower(Ast.EPower ePower) {
     private String codeGenLoad(String varName, Ast.Type type) {
         String llvmType = toLLVMType(type);
         String reg = nextReg();
+        srcComment();
         sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(varName).append("\n");
         return reg;
     }

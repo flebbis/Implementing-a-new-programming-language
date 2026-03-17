@@ -9,9 +9,13 @@
         {"include": "#JumpLabel"}
     ],
     "repository": {
+        "JumpLabel": {
+            "name": "entity.name.function",
+            "match": "\\.?LBB\\d+_\\d:?"
+        },
         "Label": {
             "name": "storage.type",
-            "match": "^\\w+"
+            "match": "^(?!.*LBB)\\w+"
         },
         "Operation": {
             "name": "variable.other",
@@ -28,12 +32,6 @@
         "Data": {
             "name": "keyword.control",
             "match": "\\#\\d+]?|\\$\\d+]?"
-        },
-        "JumpLabel": {
-            "name": "entity.name.function",
-            "match": "\\.?LBB\\d+_\\d+"
         }
-        
-        
     }
 }

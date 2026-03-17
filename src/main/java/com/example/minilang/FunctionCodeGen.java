@@ -1,7 +1,7 @@
 package com.example.minilang;
-import com.example.minilang.ast.Ast;
-
 import java.util.List;
+
+import com.example.minilang.ast.Ast;
 
 public class FunctionCodeGen {
     private StringBuilder sb;
@@ -26,6 +26,23 @@ public class FunctionCodeGen {
         sb.append(") {\n");
 
         sb.append("entry:\n");
+        sb.append("; src:").append(func.pos().line).append("\n");
+
+
+        System.out.println("DEBUG func: " + func.name() + " params: " + func.params() + " size: " + (func.params() == null ? "null" : func.params().size()));
+
+        if (func.params() == null || func.params().isEmpty()) {
+        // dummy instruction so prologue assembly has an IR entry to consume
+            sb.append("  br label %entry_body\n");
+            sb.append("entry_body:\n");
+        } else {
+            for (Ast.Arg arg : func.params()) {
+                String llvmType = toLLVMType(arg.type());
+                sb.append("  %").append(arg.name()).append("_addr = alloca ").append(llvmType).append("\n");
+                sb.append("  store ").append(llvmType).append(" %").append(arg.name())
+                .append(", ").append(llvmType).append("* %").append(arg.name()).append("_addr\n");
+    }
+}
 
         StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions);
         stmtCodeGen.codeGenStmt(func.body());

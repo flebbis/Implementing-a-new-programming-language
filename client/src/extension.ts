@@ -3,13 +3,14 @@ import { workspace, ExtensionContext } from "vscode";
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
 import { instructions } from './instructions';
-
+import { buildLineMap } from "./lineMap";
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+import { countReset } from "console";
 
 // my own jar file,, fix later
 // const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
@@ -100,6 +101,13 @@ export function activate(context: ExtensionContext) {
   );
   
   let lastPath: string | undefined;
+  // keeps control for which editor is the active one 
+  let activeEditor: vscode.TextEditor | undefined;
+  // sets decoration to a color
+  const decoration = vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(61, 145, 197, 0.56)'
+      })
+  let lineMap: {asmMapSrc: Map<number, number>, srcMapAsm: Map<number, number[]>} | undefined;
   async function showAssembly(optLevel: string) {
 
 
@@ -145,14 +153,12 @@ export function activate(context: ExtensionContext) {
       const asmFile = lastPath.replace('.ml', '.s');
       execFileSync('llc', ['-filetype=asm', optLevel, llFile, '-o', asmFile]);
 
-      
-
       // read the assembly file
       const fs = require('fs');
       const asm = fs.readFileSync(asmFile, 'utf8');
 
       //fs.unlinkSync(llFile);
-      fs.unlinkSync(asmFile);
+      //fs.unlinkSync(asmFile);
       const filtered = asm.split('\n')
 
       // filter away lines. that start with (. or ends with :) ,l_, ;, !==, 
@@ -167,6 +173,14 @@ export function activate(context: ExtensionContext) {
 
       // add padding for inlayHints
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
+      // Retrieve llfile and asmfile for registerHover
+      const llFileRead = fs.readFileSync(llFile, 'utf8');
+      lineMap = buildLineMap(llFileRead.split('\n'), filtered.split('\n'));
+      if(!lineMap){
+        console.log("buildlinemap not active")
+        vscode.window.showErrorMessage("buildLineMap not active")
+      }
+
       let maxLength: number = 0;
       for (let i = 0; i < lines.length; i++) {
         if(lines[i].length > maxLength) {
@@ -219,6 +233,48 @@ export function activate(context: ExtensionContext) {
       }
     })
   );
+
+    // ------------ Hover for assembly to source and soruce to assembly -------------------------------------
+
+    context.subscriptions.push(
+      vscode.languages.registerHoverProvider('mylang', {
+        provideHover(document: vscode.TextDocument, position: vscode.Position) {
+          const hoveredLine = position.line + 1;
+          const srcMapAsm = lineMap?.srcMapAsm;
+          // 
+          if(!srcMapAsm) return null;
+          const asmLines = srcMapAsm.get(hoveredLine);
+          // retrieve asm editor if it exits
+          const asmEditor = vscode.window.visibleTextEditors.
+          find(doc => doc.document.uri.scheme === 'asm-preview');
+          // make each line to a range so you can call decorations
+          const asmRanges = asmLines.map(line => asmEditor.document.lineAt(line).range)
+          // set decorations for the given asm lines // asmranges 
+          asmEditor.setDecorations(decoration, asmRanges)
+          activeEditor = asmEditor;
+          return null;
+        }
+      })
+    )
+
+
+    context.subscriptions.push(
+      vscode.languages.registerHoverProvider('asm-preview', {
+        provideHover(document: vscode.TextDocument, position: vscode.Position) {
+          return null;
+        }
+      })
+    )
+
+    // When someone is moving the cursor, sets decoration to empty array // reset editor
+    context.subscriptions.push(
+      vscode.window.onDidChangeTextEditorSelection(e => {
+        if(activeEditor) {
+          activeEditor.setDecorations(decoration, []);
+          activeEditor = undefined;
+        }
+      })
+    )
  
   // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
