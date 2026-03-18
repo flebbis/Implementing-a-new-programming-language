@@ -1,4 +1,6 @@
-package com.example.minilang;
+package com.example.minilang.ast;
+
+import com.example.minilang.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +21,9 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         System.out.println(ctx.getText());
         // rule: TYPE 'func' ID '(' paramSeparator ')' block
 
-        Ast.Type returnType = Ast.Type.TUnknown;
-
-        if(ctx.TYPE() != null) {
-            String returnTypeText = ctx.TYPE().getText();
+        Ast.Type returnType = new Ast.TUnknown(); // Default to TUnknown if no return type is specified
+        if(ctx.typeAnnotation() != null) {
+            String returnTypeText = ctx.typeAnnotation().getText();
             returnType = TypeConverter.mapType(returnTypeText);
         }
 
@@ -35,11 +36,19 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         if (parameterContext != null && parameterContext.param() != null) {
             // Loop through each parameter and build the corresponding AST nodes
             for (GrammarParser.ParamContext p : parameterContext.param()) {
-                String pTypeText = p.TYPE().getText(); // Parameter type for param p
-                Ast.Type pType = TypeConverter.mapType(pTypeText); // Map the parameter type string to our Ast.Type enum
-                String id = p.ID().getText();
                 Pos pos = new Pos(p.getStart().getLine(), p.getStart().getCharPositionInLine());
-                params.add(new Ast.Arg(id, pType, pos));
+                //TODO: idk om denna if checken e helt rätt men något måste checkas iaf
+                if (p.TYPE() != null) {
+                    String pTypeText = p.TYPE().getText(); // Parameter type for param p
+                    Ast.Type pType = TypeConverter.mapType(pTypeText); // Map the parameter type string to our Ast.Type enum
+                    String id = p.ID().getText();
+                    params.add(new Ast.Arg(id, pType, pos));
+                }
+                else{
+                    params.add(new Ast.Arg(p.ID().getText(), new Ast.TUnknown(), pos));
+
+                }
+
             }
         }
 

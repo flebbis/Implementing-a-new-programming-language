@@ -1,16 +1,14 @@
-package com.example.minilang; // Builder Visitor
+package com.example.minilang.ast; // Builder Visitor
 
+import com.example.minilang.GrammarBaseVisitor;
 import com.example.minilang.GrammarParser.*;
 
 /**
  * Transforms the raw Parse Tree (CST) into our nice, clean AST.
  */
 
-import com.example.minilang.Ast.*;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class AstBuilderVisitor extends GrammarBaseVisitor<Ast.Program> {
 
