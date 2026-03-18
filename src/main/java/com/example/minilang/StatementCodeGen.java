@@ -96,7 +96,7 @@ public class StatementCodeGen {
     // ===== RETURN =====
     private void codeGenReturn(Ast.SReturn sReturn) {
         if (sReturn.value() != null) {
-            ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions);
+            ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sReturn.pos().line);
             String valueReg = exprCodeGen.codeGenExp(sReturn.value());
             String llvmType = toLLVMType(sReturn.value().type());
             srcComment(sReturn);
