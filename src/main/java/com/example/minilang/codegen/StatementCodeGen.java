@@ -13,7 +13,6 @@ public class StatementCodeGen extends Helper {
     public StatementCodeGen(StringBuilder sb, HashSet<String> declaredVariables) {
         this.sb = sb;
         this.declaredVariables = declaredVariables;
-        // Initialize any necessary state here (e.g., symbol tables, label generators, etc.)
     }
 
     public void generateStatement(Stmt stmt) {

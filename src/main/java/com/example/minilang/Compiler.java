@@ -43,6 +43,12 @@ public class Compiler {
         TypeChecker typeChecker = new TypeChecker();
         Ast.Program typeAnnotatedProgram = typeChecker.typeCheck(astRoot);
         System.out.println("Type Annotated AST: " + typeAnnotatedProgram);
+
+        String outputFileName = path.getFileName().toString().replace(".ml", ".ll");
+        Path outputPath = path.getParent().resolve(outputFileName);
+        String llvmCode = generateLLVM(typeAnnotatedProgram);
+        Files.writeString(outputPath, llvmCode);
+        System.out.println("\nOutput written to: " + outputPath);
     }
         // 7. Code Generation
         private static String generateLLVM(Ast.Program program) {

@@ -34,15 +34,15 @@ public class ExpressionCodeGen extends Helper {
         return String.valueOf(doubleExp.value());
     }
     private String generateString(EString stringExp) {
-        return "temp";
+        return "temp_string";
     }
     private String generateBool(EBool boolExp) {
         return String.valueOf(boolExp.value());
     }
     private String generateId(EId idExp) {
         String register = generateRegister();
-        sb.append("%").append(idExp.name()).append("_value").append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* %").append(idExp.name()).append("\n");
-        return "%" + idExp.name() + "_value" + register;
+        sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* %").append(idExp.name()).append("\n");
+        return register;
 
     }
     private String generateCall(ECall callExp) {
@@ -87,13 +87,38 @@ public class ExpressionCodeGen extends Helper {
 
     }
     private String generateLogic(ELogic logicExp) {
-        return "temp";
+        String left = generateExpression(logicExp.left());
+        String right = generateExpression(logicExp.right());
+        String register = generateRegister();
+        switch (logicExp.op()) {
+            case AND -> {sb.append(register).append(" = and ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
+            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}    
+        }
+        return register;
 
     }
     private String generateAss(EAss assExp) {
-        return "temp";
-
-    }
+        String value = generateExpression(assExp.value());
+        if (assExp.op() == AssOp.ASSIGN) {
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* %").append(assExp.name()).append("\n");
+        return value; }
+            
+        String operation = switch (assExp.op()) {
+            case PLUS_ASSIGN -> "add";
+            case MINUS_ASSIGN -> "sub";
+            case MULT_ASSIGN -> "mul";
+            case DIV_ASSIGN -> "sdiv";
+            default -> "default assignment value";
+        };
+        String register = generateRegister();
+        sb.append(register).append(" = load ").append(convertType(assExp.value().type())).append(", ").append(convertType(assExp.value().type())).append("* %").append(assExp.name()).append("\n");
+        String returnRegister = generateRegister();
+        sb.append(returnRegister).append(" = ").append(operation).append(" ").append(convertType(assExp.value().type())).append(" ").append(register).append(", ").append(value).append("\n");
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(returnRegister).append(", ").append(convertType(assExp.value().type())).append("* %").append(assExp.name()).append("\n");
+        return returnRegister;    
+    }   
+        
+    
     private String generateArrayIndex(EArrayIndex arrayIndexExp) {
         return "temp";
 
