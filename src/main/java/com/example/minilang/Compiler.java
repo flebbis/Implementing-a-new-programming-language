@@ -60,6 +60,10 @@ public class Compiler {
         Path outputPath = path.getParent().resolve(outputFileName);
         Files.writeString(outputPath, llvmCode);
         System.out.println("\nOutput written to: " + outputPath);
+
+        System.out.println("Functions in AST: " + astRoot.functions().size());
+        System.out.println("Statements in AST: " + astRoot.stmts().size());
+        System.out.println("Root: " + astRoot);
     }
 
     private static String generateLLVM(Ast.Program program) {
@@ -77,19 +81,16 @@ public class Compiler {
         sb.append("@.fmt.newline = private constant [2 x i8] c\"\\0A\\00\"\n");      // "\n\0"
         sb.append("\n");*/
 
-        sb.append("define void @main() {\n");
-        sb.append("entry:\n");
-
-        CodeGenerator codeGen = new CodeGenerator(sb);
-        codeGen.generate(program);
+    
 
         // ===== Generate Code for Global Statements =====
         // (These are top-level statements, if any)
 
 
-         sb.append("  ret void\n");
-        //sb.append("  ret i32 0\n");
-        sb.append("}\n\n");
+
+
+        CodeGenerator codeGen = new CodeGenerator(sb);
+        codeGen.generate(program);
 
         // ===== Generate Code for Each Function =====
 
