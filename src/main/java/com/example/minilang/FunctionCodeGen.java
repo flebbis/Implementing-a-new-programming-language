@@ -14,11 +14,11 @@ public class FunctionCodeGen {
         this.functions = functions;
     }
 
-    public void codeGenFunDef(Ast.Func func){
+    public void codeGenFunDef(Ast.Func func) {
         sb.append("define ").append(toLLVMType(func.returnType())).append(" @").append(func.name()).append("(");
-        for(int i = 0; i < func.params().size(); i++) {
+        for (int i = 0; i < func.params().size(); i++) {
             Ast.Arg arg = func.params().get(i);
-            if(i > 0) {
+            if (i > 0) {
                 sb.append(", ");
             }
             sb.append(toLLVMType(arg.type())).append(" %").append(arg.name());
@@ -43,6 +43,12 @@ public class FunctionCodeGen {
                 .append(", ").append(llvmType).append("* %").append(arg.name()).append("_addr\n");
     }
 }
+
+        // Allocate space for parameters as backing stores (use .addr suffix)
+        for (Ast.Arg arg : func.params()) {
+            sb.append("  %").append(arg.name()).append(".addr = alloca ").append(toLLVMType(arg.type())).append("\n");
+            sb.append("  store ").append(toLLVMType(arg.type())).append(" %").append(arg.name()).append(", ").append(toLLVMType(arg.type())).append("* %").append(arg.name()).append(".addr\n");
+        }
 
         StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions);
         stmtCodeGen.codeGenStmt(func.body());

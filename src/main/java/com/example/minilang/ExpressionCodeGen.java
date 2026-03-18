@@ -77,11 +77,11 @@ public class ExpressionCodeGen {
     
     // ===== VARIABLES =====
     private String codeGenId(Ast.EId eId) {
-        // Load variable from memory
+        // Load variable from its backing store: %name.addr
         String llvmType = toLLVMType(eId.type());
         String reg = nextReg();
         srcComment();
-        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append("\n");
+        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(eId.name()).append(".addr\n");
         return reg;
     }
     
@@ -91,16 +91,16 @@ public class ExpressionCodeGen {
         String right = codeGenExp(eOpp.right());
         String llvmType = toLLVMType(eOpp.type());
         String result = nextReg();
-        
-        String op = switch(eOpp.op()) {
+
+        String op = switch (eOpp.op()) {
             case ADD -> "add";
             case SUB -> "sub";
             case MUL -> "mul";
             case DIV -> "sdiv";  // signed division
-            case MOD -> "srem";  // signed remainder, BUT DONT HAVE SUPPORT FOR MODULO IN MINILANG YET
-             default -> throw new RuntimeException("Unknown operator: " + eOpp.op());
+            case MOD -> "srem";  // signed remainder
+            default -> throw new RuntimeException("Unknown operator: " + eOpp.op());
         };
-        
+
         srcComment();
         sb.append("  ").append(result).append(" = ").append(op).append(" ").append(llvmType).append(" ").append(left).append(", ").append(right).append("\n");
         return result;
@@ -223,11 +223,11 @@ private String codeGenPower(Ast.EPower ePower) {
     
     // ===== ASSIGNMENT OPERATIONS =====
     private String codeGenAss(Ast.EAss eAss) {
-        // x = value
+        // x = value -> store into x.addr
         String valueReg = codeGenExp(eAss.value());
         String llvmType = toLLVMType(eAss.value().type());
         srcComment();
-        sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(eAss.name()).append(".addr\n");
         return valueReg;  // Return the assigned value
     }
     
@@ -240,7 +240,7 @@ private String codeGenPower(Ast.EPower ePower) {
         srcComment();
         sb.append("  ").append(result).append(" = add ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         srcComment();
-        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(ePlusAss.name()).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(ePlusAss.name()).append(".addr\n");
         return result;
     }
     
@@ -253,7 +253,7 @@ private String codeGenPower(Ast.EPower ePower) {
         srcComment();
         sb.append("  ").append(result).append(" = sub ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         srcComment();
-        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMinusAss.name()).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMinusAss.name()).append(".addr\n");
         return result;
     }
     
@@ -266,7 +266,7 @@ private String codeGenPower(Ast.EPower ePower) {
         srcComment();
         sb.append("  ").append(result).append(" = sdiv ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         srcComment();
-        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eDivAss.name()).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eDivAss.name()).append(".addr\n");
         return result;
     }
     
@@ -279,7 +279,7 @@ private String codeGenPower(Ast.EPower ePower) {
         srcComment();
         sb.append("  ").append(result).append(" = mul ").append(llvmType).append(" ").append(currentVal).append(", ").append(valueReg).append("\n");
         srcComment();
-        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMultAss.name()).append("\n");
+        sb.append("  store ").append(llvmType).append(" ").append(result).append(", ").append(llvmType).append("* %").append(eMultAss.name()).append(".addr\n");
         return result;
     }
     
@@ -314,21 +314,46 @@ private String codeGenPower(Ast.EPower ePower) {
         }
 
         List<String> argRegisters = new ArrayList<>();
+        List<String> argTypes = new ArrayList<>();
         for (Ast.Exp arg : eCall.args()) {
             String argReg = codeGenExp(arg);  // This appends load instructions to sb
             argRegisters.add(argReg);         // Store the resulting registers
+            argTypes.add(toLLVMType(arg.type()));
         }
 
+        // Try to find the function definition to know its return type
+        Ast.Func targetFunc = null;
+        if (functions != null) {
+            for (Ast.Func f : functions) {
+                if (f.name().equals(eCall.name())) {
+                    targetFunc = f;
+                    break;
+                }
+            }
+        }
+
+        String retType = (targetFunc != null) ? toLLVMType(targetFunc.returnType()) : "i32";
+
+        // Build parameter list with proper types
+        StringBuilder params = new StringBuilder();
         // Step 2: NOW build the call (no more code generation happens here)
         String resultReg = "%".concat(labelGen.generateLabel("result"));  // ← CREATE result register
         srcComment();
         sb.append("  ").append(resultReg).append(" = call i32 @").append(eCall.name()).append("(");
         for (int i = 0; i < argRegisters.size(); i++) {
-            sb.append("i32 ").append(argRegisters.get(i));
-            if (i < argRegisters.size() - 1) sb.append(", ");
+            if (i > 0) params.append(", ");
+            params.append(argTypes.get(i)).append(" ").append(argRegisters.get(i));
         }
-        sb.append(")\n");
-        return resultReg;
+
+        // Emit call: if void, no assignment; otherwise assign to a typed register
+        if ("void".equals(retType)) {
+            sb.append("  call void @").append(eCall.name()).append("(").append(params).append(")\n");
+            return ""; // void returns no value
+        } else {
+            String resultReg = nextReg();
+            sb.append("  ").append(resultReg).append(" = call ").append(retType).append(" @").append(eCall.name()).append("(").append(params).append(")\n");
+            return resultReg;
+        }
     }
 
     // ===== BUILT-IN PRINT =====
@@ -406,7 +431,7 @@ private String codeGenPower(Ast.EPower ePower) {
         String llvmType = toLLVMType(type);
         String reg = nextReg();
         srcComment();
-        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(varName).append("\n");
+        sb.append("  ").append(reg).append(" = load ").append(llvmType).append(", ").append(llvmType).append("* %").append(varName).append(".addr\n");
         return reg;
     }
     
@@ -426,3 +451,4 @@ private String codeGenPower(Ast.EPower ePower) {
     }
 
 }
+
