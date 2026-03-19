@@ -1,6 +1,6 @@
-﻿func test() {
+﻿func test(x, int y) {
     return 1
 }
-x = 2
+
 
 

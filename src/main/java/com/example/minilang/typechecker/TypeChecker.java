@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.tools.Diagnostic;
-
 import com.example.minilang.InferenceSuggestion;
 
 public class TypeChecker {
@@ -51,7 +49,7 @@ public class TypeChecker {
         // (Now that params are known from Pass 1, we can successfully type check the body)
         context.popScope();
 
-        checkFunctionBodies(rawFuncs);
+        List<Ast.Func> checkedFuncsPass1 = checkFunctionBodies(rawFuncs);
 
         // --- GENERATION PHASE ---
         // Restore real environment
@@ -69,7 +67,7 @@ public class TypeChecker {
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
 
         // Pass 4: Re-scan bodies -> Generates final AST for functions
-        List<Ast.Func> checkedFuncs = checkFunctionBodies(rawFuncs);
+        List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
 
         return new Ast.Program(stmts, checkedFuncs);
     }
@@ -118,6 +116,19 @@ public class TypeChecker {
             List<Ast.Arg> currentParams = new ArrayList<>();
             for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type type = sig.paramTypes.get(i);
+
+                if(!(func.params().get(i).type().equals(type))) {
+                    Ast.Arg arg = func.params().get(i);
+                    inferenceSuggestions.add(new InferenceSuggestion(
+                            name,
+                            TypeConverter.typeToString(type),
+                            arg.pos().line,
+                            arg.pos().column,
+                            arg.pos().line,
+                            arg.pos().column + name.length(),
+                            "Suggestion: " + TypeConverter.typeToString(type) + " " + name.length()));
+                }
+
                 Ast.Arg oldArg = func.params().get(i);
 
                 context.pushToCurrentScope(oldArg.name(), type);
@@ -142,16 +153,19 @@ public class TypeChecker {
 
     private void inferReturnType(Ast.Func func, Signature sig, String name) {
         // Is inference, add type
+
         if(sig.isInference) {
+            System.err.println("Inferred return type of function '" + name + "' as " + TypeConverter.typeToString(sig.returnType));
             inferenceSuggestions.add(new InferenceSuggestion(
                     name,
-                TypeConverter.typeToString(sig.returnType),
-                func.pos().line,
-                func.pos().column,
-                func.pos().line,
-                func.pos().column + name.length(),
-                "Suggestion: " + TypeConverter.typeToString(sig.returnType) + " " + name.length()));
+                    TypeConverter.typeToString(sig.returnType),
+                    func.pos().line,
+                    func.pos().column,
+                    func.pos().line,
+                    func.pos().column + name.length(),
+                    "Suggestion: " + TypeConverter.typeToString(sig.returnType) + " " + name.length()));
         }
+
     }
 
     public List<InferenceSuggestion> getInferenceSuggestions() {
