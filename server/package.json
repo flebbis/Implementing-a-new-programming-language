@@ -12,6 +12,7 @@
     "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
   },
   "dependencies": {
+    "antlr4ts": "^0.5.0-alpha.4",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.8"
   },
