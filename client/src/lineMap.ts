@@ -9,18 +9,34 @@ export function buildLineMap(asmLines: string[]) {
         // Then check if the line starts with .loc, retrieve the sourceline 
         // If the line is a instruction set the value for the assemblyline to the sourceline
         // and sourceline to the assemblyline
-        const isLabel = line.endsWith(":");
-        const isEntry = line.startsWith("_") || line.startsWith(";");
-        const isNotLoc = line.trim().startsWith(".") && !line.trim().startsWith(".loc");
         const trimmed = line.trim();
-        const isBlankSpace = trimmed === '';
-        const isInstuction = !isLabel && !isEntry && !isNotLoc && !isBlankSpace;
         if(trimmed.startsWith(".loc")) {
+            console.log('found loc line:', trimmed);
             const words = trimmed.split(/\s+/);
-            currentSrcLine = Number(words[2]);
-
+            const parsed = Number(words[2]);
+            if(parsed > 0) {
+                currentSrcLine = parsed;
+            }
+            return;
         }
-        if(isInstuction && currentSrcLine > 0) {
+        
+        const isDirective = trimmed.startsWith('.') && !trimmed.startsWith('.LBB');
+        const isComment   = trimmed.startsWith(';');
+        const isLSymbol   = trimmed.startsWith('l_');
+        const isHash      = trimmed.startsWith('#');
+        const isBlankSpace = trimmed === '';
+        const isNonLBBLabel = (trimmed.startsWith('L') || trimmed.endsWith(':'))
+                            && !trimmed.startsWith('LBB');
+        
+        const filtered = isDirective || isComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
+
+        if(filtered) {
+            return;
+        }
+
+        if(currentSrcLine > 0) {
+            asmMapSrc.set(currentAsmLine, currentSrcLine);
+
             let asmsForSrcLine = srcMapAsm.get(currentSrcLine);
             if(!asmsForSrcLine){
                 asmsForSrcLine = [];
@@ -29,9 +45,8 @@ export function buildLineMap(asmLines: string[]) {
                 asmsForSrcLine.push(currentAsmLine);
             }
             srcMapAsm.set(currentSrcLine, asmsForSrcLine);
-            asmMapSrc.set(currentAsmLine, currentSrcLine);
-            currentAsmLine++;
         }
+        currentAsmLine++;
     });
 
     return {asmMapSrc, srcMapAsm};

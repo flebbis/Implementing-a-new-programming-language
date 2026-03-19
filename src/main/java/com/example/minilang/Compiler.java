@@ -72,6 +72,7 @@ public class Compiler {
 
     private static String generateLLVM(Ast.Program program, String filename) {
         StringBuilder sb = new StringBuilder();
+        System.out.println("DEBUG format strings: " + sb.toString());
         LabelGenerator labelGen = new LabelGenerator();
         DebugMetaData debugMetaData = new DebugMetaData(filename);
 
@@ -82,12 +83,14 @@ public class Compiler {
 
         // ===== Format String Constants for print() =====
         sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");       // "%d\n\0"
+        System.out.println("DEBUG after fmt.int: " + sb.toString());
         sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");    // "%f\n\0"
         sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");    // "%s\n\0"
         sb.append("@.fmt.newline = private constant [2 x i8] c\"\\0A\\00\"\n");      // "\n\0"
         sb.append("\n");
 
-        sb.append("define void @main() {\n");
+        int mainId = debugMetaData.createSubProgram("main", 1);
+        sb.append("define void @main() !dbg !").append(mainId).append(" {\n");
         sb.append("entry:\n");
 
         // ===== Generate Code for Global Statements =====

@@ -60,6 +60,10 @@ public class DebugMetaData {
     // then return id else return id for that line
     public int getLineId(int line){
         Map<Integer, Integer> innerMap = locationIds.get(currentFunction);
+        if(innerMap == null) {
+            System.err.println("WARNING: getLineId called with no currentFunction");
+            return createSubProgram("unknown", line);
+        }
         Integer id = innerMap.get(line);
         
         if(id == null) {

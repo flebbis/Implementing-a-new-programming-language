@@ -156,26 +156,35 @@ export function activate(context: ExtensionContext) {
       // read the assembly file
       const fs = require('fs');
       const asm = fs.readFileSync(asmFile, 'utf8');
+      console.log('raw asm first 500 chars:', asm.substring(0, 500));
+
+      const llContent = fs.readFileSync(llFile, 'utf8');
+      console.log('=== GENERATED IR ===');
+      console.log(llContent);
+      console.log('=== END IR ===');
 
       //fs.unlinkSync(llFile);
       //fs.unlinkSync(asmFile);
-      const filtered = asm.split('\n')
 
       // filter away lines. that start with (. or ends with :) ,l_, ;, !==, 
       // take away the comments from the assembly output
+      const filtered = asm.split('\n')
       .filter((line: string) => !line.trim().startsWith('.') || line.trim().startsWith('.LBB'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => !line.trim().startsWith('#'))
       .filter((line: string) => line.trim() !== '')
+      .filter((line: string) => (!line.trim().startsWith("L") && !line.endsWith(":")) || line.startsWith("LBB"))
       .map((line: string) => line.split(";")[0].split('  #')[0].trimEnd())
       .join('\n');
 
       // add padding for inlayHints
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
-      // Retrieve llfile and asmfile for registerHover
-      const llFileRead = fs.readFileSync(llFile, 'utf8');
-      lineMap = buildLineMap(llFileRead.split('\n'), filtered.split('\n'));
+      // Retrieve asmfile for 
+      lineMap = buildLineMap(asm.split("\n"));
+      console.log('filtered lines:', filtered.split('\n'));
+      console.log('srcMapAsm:', Object.fromEntries(lineMap.srcMapAsm));
+      console.log('asmMapSrc:', Object.fromEntries(lineMap.asmMapSrc));
       if(!lineMap){
         console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")
@@ -244,9 +253,11 @@ export function activate(context: ExtensionContext) {
           // 
           if(!srcMapAsm) return null;
           const asmLines = srcMapAsm.get(hoveredLine);
+          if (!asmLines || asmLines.length === 0) return null;
           // retrieve asm editor if it exits
           const asmEditor = vscode.window.visibleTextEditors.
           find(doc => doc.document.uri.scheme === 'asm-preview');
+          if (!asmEditor) return null;
           // make each line to a range so you can call decorations
           const asmRanges = asmLines.map(line => asmEditor.document.lineAt(line).range)
           // set decorations for the given asm lines // asmranges 
