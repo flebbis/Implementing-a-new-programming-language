@@ -142,17 +142,19 @@ documents.onDidClose(e => {
   documentSettings.delete(e.document.uri);
 });
 
+// Map to store which version was changed latest
 const latestDocumentVersions: Map<string, number> = new Map();
 
 documents.onDidChangeContent(change => {
   
-  // Type check
+
   const uri = change.document.uri;
   const text = change.document.getText();
   const version = change.document.version;
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
   console.error("TEXXXT " + change.document.getText())
 
+  // Type check & inference phase
   inferenceAnalysis(uri, text, version);
 });
 
