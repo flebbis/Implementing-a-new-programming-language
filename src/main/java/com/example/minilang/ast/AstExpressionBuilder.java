@@ -248,14 +248,16 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
         // Collect all element expressions from the comma-separated list
         List<Ast.Exp> elements = new ArrayList<>();
+        int arraySize = 0;
         if (ctx.expSeparator() != null) {
             for (GrammarParser.ExpContext expCtx : ctx.expSeparator().exp()) {
                 elements.add(visit(expCtx));
+                arraySize++;
             }
         }
 
         // Element type is unknown until the typechecker resolves it
-        return new Ast.EArray(elements, new Ast.TArray(new Ast.TUnknown()), pos);
+        return new Ast.EArray(elements, new Ast.TArray(new Ast.TUnknown(), arraySize), pos);
     }
 
 
