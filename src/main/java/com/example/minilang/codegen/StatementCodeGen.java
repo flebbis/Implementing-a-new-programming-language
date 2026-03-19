@@ -9,10 +9,12 @@ public class StatementCodeGen extends Helper {
     // It will likely have methods like `generateFunction`, `generateStatement`, and `generateExpression`.
     private StringBuilder sb;
     private HashSet<String> declaredVariables;
+    private StringBuilder globals;
 
-    public StatementCodeGen(StringBuilder sb, HashSet<String> declaredVariables) {
+    public StatementCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals) {
         this.sb = sb;
         this.declaredVariables = declaredVariables;
+        this.globals = globals;
     }
 
     public void generateStatement(Stmt stmt) {
@@ -37,7 +39,7 @@ public class StatementCodeGen extends Helper {
     }
     private void generateBlock(SBlock blockStmt) {
             for (Stmt statement : blockStmt.statements()) {
-            StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables);
+            StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals);
             stmtGen.generateStatement(statement);
         }
     }
@@ -52,7 +54,7 @@ public class StatementCodeGen extends Helper {
                 declaredVariables.add(initStmt.name());
         }
 
-        ExpressionCodeGen expGen = new ExpressionCodeGen(sb);
+        ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals);
         String value = expGen.generateExpression(initStmt.value());
         sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
@@ -60,7 +62,7 @@ public class StatementCodeGen extends Helper {
     }
     private void generateReturn(SReturn returnStmt) {
         if (returnStmt.value() != null) {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb);
+            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals);
             String value = expGen.generateExpression(returnStmt.value());
             sb.append("  ret ").append(convertType(returnStmt.value().type())).append(" ").append(value).append("\n");
         } else {
@@ -68,7 +70,7 @@ public class StatementCodeGen extends Helper {
         }
     }
     private void generateExp(SExp expStmt) {
-        ExpressionCodeGen expGen = new ExpressionCodeGen(sb);
+        ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals);
         expGen.generateExpression(expStmt.exp());
     }
 

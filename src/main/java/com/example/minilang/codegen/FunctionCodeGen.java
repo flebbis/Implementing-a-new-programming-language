@@ -9,12 +9,13 @@ public class FunctionCodeGen {
     // It will likely have methods like `generateFunction`, `generateStatement`, and `generateExpression`.
     private StringBuilder sb;
     private HashSet<String> declaredVariables;
+    private StringBuilder globals;
 
-    public FunctionCodeGen(StringBuilder sb, HashSet<String> declaredVariables) {
+    public FunctionCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals) {
 
         this.sb = sb;
         this.declaredVariables = declaredVariables;
-        // Initialize any necessary state here (e.g., symbol tables, label generators, etc.)
+        this.globals = globals;
     }
 
     public void generateFunction(Ast.Func function) {
@@ -33,7 +34,7 @@ public class FunctionCodeGen {
 
         }
 
-        StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables);
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals);
         stmtGen.generateStatement(function.body());
         sb.append("\n}\n");
     }

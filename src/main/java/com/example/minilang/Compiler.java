@@ -53,6 +53,7 @@ public class Compiler {
         // 7. Code Generation
         private static String generateLLVM(Ast.Program program) {
         StringBuilder sb = new StringBuilder();
+        StringBuilder globals = new StringBuilder();
 
         // ===== External Declarations =====
         /*sb.append("declare i32 @printf(i8*, ...)\n");
@@ -74,13 +75,13 @@ public class Compiler {
 
 
 
-        CodeGenerator codeGen = new CodeGenerator(sb);
+        CodeGenerator codeGen = new CodeGenerator(sb, globals);
         codeGen.generate(program);
 
         // ===== Generate Code for Each Function =====
 
 
 
-        return sb.toString();
+        return globals.append(sb).toString();
     }
 }

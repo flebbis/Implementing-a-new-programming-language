@@ -9,5 +9,9 @@ int s = z + 4
 z += 3
 y = (2==3) and (2!=5)
 
+z++;
+double n = 2.0
+n = n**5.0
 
+string m = "Hello world"
 

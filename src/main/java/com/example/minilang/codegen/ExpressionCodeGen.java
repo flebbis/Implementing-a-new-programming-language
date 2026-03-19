@@ -5,8 +5,11 @@ import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 public class ExpressionCodeGen extends Helper {
 
     private StringBuilder sb;
-    public ExpressionCodeGen(StringBuilder sb) {
+    private StringBuilder globals;
+    private int stringCounter = 0;
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals) {
         this.sb = sb;
+        this.globals = globals;
     }
 
     public String generateExpression(Exp exp) {
@@ -34,7 +37,14 @@ public class ExpressionCodeGen extends Helper {
         return String.valueOf(doubleExp.value());
     }
     private String generateString(EString stringExp) {
-        return "temp_string";
+        String value = stringExp.value();
+        value = value.substring(1, value.length() - 1);
+        int length = value.length() + 1; // +1 for null terminator
+        String globalName = "@.str." + stringCounter++;
+        String register = generateRegister();
+        globals.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
+        sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
+        return register;
     }
     private String generateBool(EBool boolExp) {
         return String.valueOf(boolExp.value());
@@ -50,11 +60,18 @@ public class ExpressionCodeGen extends Helper {
 
     }
     private String generateNot(ENot notExp) {
-        return "temp";
+        String value = generateExpression(notExp.exp());
+        String register = generateRegister();
+        sb.append(register).append(" = xor i1 ").append(value).append(", 1\n");
+        return register;
 
     }
     private String generatePower(EPower powerExp) {
-        return "temp";
+        String base = generateExpression(powerExp.base());
+        String exponent = generateExpression(powerExp.exponent());
+        String register = generateRegister();
+        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent).append(")\n");
+        return register;
 
     }
     private String generateOpp(EOpp oppExp) {
@@ -124,7 +141,16 @@ public class ExpressionCodeGen extends Helper {
 
     }
     private String generateUnary(EUnary unaryExp) {
-        return "temp";
+        String value = generateExpression(unaryExp.exp());
+        String register = generateRegister();
+        switch (unaryExp.op()) {
+            case INC -> {sb.append(register).append(" = add ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1\n");}
+            case DEC -> {sb.append(register).append(" = sub ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1\n");}
+        }
+         sb.append("store ").append(convertType(unaryExp.type())).append(" ").append(register).append(", ").append(convertType(unaryExp.type())).append("* %").append(((EId) unaryExp.exp()).name()).append("\n");
+ 
+        
+        return register;
 
     }
 
