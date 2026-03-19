@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-            String path = testFilePath + "type/good/inference-suggestion.ml";
+            String path = testFilePath + "type/good/inference-1.ml";
             text = Files.readString(Path.of(path));
         } else if (args.length == 1){
              text = args[0];

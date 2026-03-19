@@ -32,8 +32,10 @@ public class TypeChecker {
         // We use a temporary Context and Checker to run the logic just for the side-effects
         // of updating the 'functionSignatures' map. We discard the AST produced here.
         Context tempContext = new Context();
-        // InferenceSuggestion list is the real list for inference pass, the other pass will use a dummy list 
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), new ArrayList<>());
+        // InferenceSuggestion list is the real list for inference pass, the other pass will use a temp list
+
+        List<InferenceSuggestion> tempInferenceSuggestions = new ArrayList<>();
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions);
 
         // Swap to temp environment
         Context realContext = this.context;
@@ -52,6 +54,10 @@ public class TypeChecker {
 
         // --- GENERATION PHASE ---
         // Restore real environment
+        if(!tempInferenceSuggestions.isEmpty()) {
+            inferenceSuggestions.addAll(tempInferenceSuggestions);
+        }
+
         this.context = realContext;
         this.statementTypeChecker = realChecker;
 

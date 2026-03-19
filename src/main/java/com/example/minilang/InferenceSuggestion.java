@@ -7,4 +7,7 @@ public record InferenceSuggestion(
         int column,
         int endLine,
         int endColumn,
-        String replacement) {}
+        String replacement)
+
+{}
+

@@ -61,14 +61,18 @@ public class StatementTypeChecker {
         // Infer type if unknown
         if (typeToCheck instanceof Ast.TUnknown) {
             typeToCheck = value.type();
-            inferenceSuggestions.add(new InferenceSuggestion(
+            InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
                     sInit.name(),
                     TypeConverter.typeToString(typeToCheck),
                     sInit.pos().line,
                     sInit.pos().column,
                     sInit.pos().line,
                     sInit.pos().column + sInit.name().length(),
-                    "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name()));
+                    "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
+
+            if(!inferenceSuggestions.contains(inferenceSuggestion)) {
+                inferenceSuggestions.add(inferenceSuggestion);
+            }
         }
 
         // Verify types match for explicit declarations
@@ -166,6 +170,7 @@ public class StatementTypeChecker {
 
         // Inference: If return type is TUnknown, infer it from the return value
         if (signature.returnType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
+            System.err.println("Inferring return type of function " + currentFunction + " to be " + TypeConverter.typeToString(value.type()));
             signature.setReturnType(value.type());
             inferenceSuggestions.add(new InferenceSuggestion(
                     currentFunction,
