@@ -172,14 +172,8 @@ public class StatementTypeChecker {
         if (signature.returnType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
             System.err.println("Inferring return type of function " + currentFunction + " to be " + TypeConverter.typeToString(value.type()));
             signature.setReturnType(value.type());
-            inferenceSuggestions.add(new InferenceSuggestion(
-                    currentFunction,
-                    TypeConverter.typeToString(value.type()),
-                    stmt.pos().line,
-                    stmt.pos().column,
-                    stmt.pos().line,
-                    stmt.pos().column + currentFunction.length(),
-                    "Suggestion: " + TypeConverter.typeToString(value.type()) + " " + currentFunction.length()));
+            signature.isInference = true;
+
         }
 
         if (!signature.returnType.equals(value.type())) {

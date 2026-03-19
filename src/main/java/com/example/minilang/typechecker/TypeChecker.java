@@ -1,5 +1,6 @@
 package com.example.minilang.typechecker;
 
+import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
@@ -104,11 +105,14 @@ public class TypeChecker {
     private List<Ast.Func> checkFunctionBodies(List<Ast.Func> functions) {
         List<Ast.Func> checkedFuncs = new ArrayList<>();
 
+
         for (Ast.Func func : functions) {
             context.pushNewScope();
             String name = func.name();
             statementTypeChecker.setCurrentFunction(name);
             Signature sig = functionSignatures.get(name);
+
+            inferReturnType(func, sig, name);
 
             // Use types from Signature (which are now updated after inference passes)
             List<Ast.Arg> currentParams = new ArrayList<>();
@@ -135,7 +139,21 @@ public class TypeChecker {
         }
         return checkedFuncs;
     }
-    
+
+    private void inferReturnType(Ast.Func func, Signature sig, String name) {
+        // Is inference, add type
+        if(sig.isInference) {
+            inferenceSuggestions.add(new InferenceSuggestion(
+                    name,
+                TypeConverter.typeToString(sig.returnType),
+                func.pos().line,
+                func.pos().column,
+                func.pos().line,
+                func.pos().column + name.length(),
+                "Suggestion: " + TypeConverter.typeToString(sig.returnType) + " " + name.length()));
+        }
+    }
+
     public List<InferenceSuggestion> getInferenceSuggestions() {
         return inferenceSuggestions;
     }
