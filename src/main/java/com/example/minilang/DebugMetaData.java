@@ -2,6 +2,26 @@ package com.example.minilang;
 
 import java.util.HashMap;
 import java.util.Map;
+/*
+Overview on how it conncets, ish
+
+ First when you run a file. The compiler runs and calls on codeGen to generate IR.
+codeGen calls createSubProgram. It takes in the function Name and the 
+line it starts it and output the IDCOUNTER it was on.  
+Then it remembers the functionName-> ID and functionName->line.  
+Creates a new innerMap to locationIDs for the function.  
+Then when you go through each line with stateMent and expressionCodeGen. 
+getLineId gets called with the current line. 
+It checks if that id to the line is NULL. 
+if its null it save idCOUNTEr to a id varaible and increment IdCounter. 
+Then it saves it in the innerMap for locationsID for the current function and 
+return the id. If is not null just return the id. When everything is done.  
+It emits. for each function IDS it prints out the information and 
+then for each line in each function it prints out the infromation. 
+Then loc uses this dbg !N to. with that it sees on the emit information and 
+creats .loc with given soruceline for the function*/
+
+
 
 public class DebugMetaData {
     String fileName;
@@ -51,12 +71,14 @@ public class DebugMetaData {
             return id;
     }
 
+    // It runs end of code generation. It takes what the maps have 
+    // collected and turns into metaData text so LLVM understands
     public String emit() {
         StringBuilder sb = new StringBuilder();
         sb.append("!llvm.dbg.cu = !{!0}\n");
         sb.append("!llvm.module.flags = !{!10}\n");
         sb.append("!10 = !{i32 2, !\"Debug Info Version\", i32 3}\n");
-        // This is the first 2 lines, sourceFIle and and file
+        // This is the first 2 lines, file and sourceFile
         sb.append("!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)\n");
         sb.append("!1 = !DIFile(filename: \"")
         .append(fileName)
