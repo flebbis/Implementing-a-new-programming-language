@@ -2,18 +2,19 @@ package com.example.minilang;
 
 import java.util.List;
 
-import static com.example.minilang.FunctionCodeGen.toLLVMType;
 import com.example.minilang.ast.Ast;
 
 public class StatementCodeGen {
     private StringBuilder sb;
     private LabelGenerator labelGen;
     private List<Ast.Func> functions;
+    private DebugMetaData debugMetaData;
 
-    public StatementCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions) {
+    public StatementCodeGen(StringBuilder sb, LabelGenerator labelGen, List<Ast.Func> functions, DebugMetaData debugMetaData) {
         this.sb = sb;
         this.labelGen = labelGen;
         this.functions = functions;
+        this.debugMetaData = debugMetaData;
     }
 
     /**
@@ -39,21 +40,14 @@ public class StatementCodeGen {
         }
     }
 
-    private void srcComment(Ast.Stmt stmt) {
-        int line = stmt.pos().line;
-        if (line > 0) {
-            sb.append("; src:").append(line).append("\n");
-        }
-    }
-    
     // ===== VARIABLE DECLARATION (no initialization) =====
     private void codeGenDecl(Ast.SDecl sDecl) {
         // int x;
         String llvmType = toLLVMType(sDecl.type());
 
         // Allocate space for the variable as backing store %name.addr
-        srcComment(sDecl);
-        sb.append("  %").append(sDecl.name()).append(".addr = alloca ").append(llvmType).append("\n");
+        sb.append("  %").append(sDecl.name()).append(".addr = alloca ").append(llvmType)
+        .append(", !dbg !").append(debugMetaData.getLineId(sDecl.pos().line)).append("\n");
     }
 
     public static String toLLVMType(Ast.Type type) {
@@ -73,37 +67,36 @@ public class StatementCodeGen {
         String llvmType = toLLVMType(sInit.type());
 
         // Step 1: Allocate space for the variable (backing store)
-        srcComment(sInit);
-        sb.append("  %").append(sInit.name()).append(".addr = alloca ").append(llvmType).append("\n");
+
+        sb.append("  %").append(sInit.name()).append(".addr = alloca ").append(llvmType)
+        .append(", !dbg !").append(debugMetaData.getLineId(sInit.pos().line)).append("\n");
 
         // Step 2: Generate code for the initialization expression
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sInit.pos().line);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sInit.pos().line, debugMetaData);
         String valueReg = exprCodeGen.codeGenExp(sInit.value());
 
         // Step 3: Store the value into the variable backing store
-        srcComment(sInit);
-        sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(sInit.name()).append(".addr\n");
+        sb.append("  store ").append(llvmType).append(" ").append(valueReg).append(", ").append(llvmType).append("* %").append(sInit.name()).append(".addr")
+        .append(", !dbg !").append(debugMetaData.getLineId(sInit.pos().line)).append("\n");
     }
 
     // ===== EXPRESSION STATEMENT =====
     private void codeGenExp(Ast.SExp sExp) {
-        srcComment(sExp);
         // x++; or foo(5); or just an expression on its own
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions,sExp.pos().line);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions,sExp.pos().line,debugMetaData);
         exprCodeGen.codeGenExp(sExp.exp());  // Generate code but ignore result
     }
 
     // ===== RETURN =====
     private void codeGenReturn(Ast.SReturn sReturn) {
         if (sReturn.value() != null) {
-            ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sReturn.pos().line);
+            ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sReturn.pos().line, debugMetaData);
             String valueReg = exprCodeGen.codeGenExp(sReturn.value());
             String llvmType = toLLVMType(sReturn.value().type());
-            srcComment(sReturn);
-            sb.append("  ret ").append(llvmType).append(" ").append(valueReg).append("\n");
+            sb.append("  ret ").append(llvmType).append(" ").append(valueReg)
+            .append(", !dbg !").append(debugMetaData.getLineId(sReturn.pos().line)).append("\n");
         } else {
-            srcComment(sReturn);
-            sb.append("  ret void\n");
+            sb.append("  ret void").append(", !dbg !").append(debugMetaData.getLineId(sReturn.pos().line)).append("\n");
         }
     }
 
@@ -117,25 +110,25 @@ public class StatementCodeGen {
 
     // ===== IF STATEMENT =====
     private void codeGenIf(Ast.SIf sIf) {
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions,sIf.pos().line);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions,sIf.pos().line,debugMetaData);
         String condReg = exprCodeGen.codeGenExp(sIf.condition());
 
         String thenLabel = labelGen.generateLabel("then");
         String elseLabel = labelGen.generateLabel("else");
         String endLabel  = labelGen.generateLabel("end");
 
-        srcComment(sIf);
         sb.append("  br i1 ").append(condReg)
                 .append(", label %").append(thenLabel)
-                .append(", label %").append(elseLabel).append("\n");
+                .append(", label %").append(elseLabel)
+                .append(", !dbg !").append(debugMetaData.getLineId(sIf.pos().line)).append("\n");
 
         // Then branch
         sb.append(thenLabel).append(":\n");
         codeGenStmt(sIf.thenBranch());
         boolean thenReturned = lastAppendedIsReturn();
         if (!thenReturned) {
-            srcComment(sIf);
-        sb.append("  br label %").append(endLabel).append("\n");
+        sb.append("  br label %").append(endLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(sIf.pos().line)).append("\n");
         }
 
         // Else branch
@@ -145,8 +138,8 @@ public class StatementCodeGen {
         }
         boolean elseReturned = lastAppendedIsReturn();
         if (!elseReturned) {
-            srcComment(sIf);
-        sb.append("  br label %").append(endLabel).append("\n");
+        sb.append("  br label %").append(endLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(sIf.pos().line)).append("\n");
         }
 
         // Only emit end block if at least one branch falls through
@@ -160,7 +153,7 @@ public class StatementCodeGen {
     private void codeGenWhile(Ast.SWhile sWhile) {
         // while(condition) { body }
         
-        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sWhile.pos().line);
+        ExpressionCodeGen exprCodeGen = new ExpressionCodeGen(sb, labelGen, functions, sWhile.pos().line, debugMetaData);
         
         // Step 1: Generate labels
         String condLabel = labelGen.generateLabel("cond");
@@ -168,21 +161,22 @@ public class StatementCodeGen {
         String endLabel = labelGen.generateLabel("end");
 
         // Step 2: Jump to condition check
-        srcComment(sWhile);
-        sb.append("  br label %").append(condLabel).append("\n");
+        sb.append("  br label %").append(condLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(sWhile.pos().line)).append("\n");
+        
 
         // Step 3: Condition label
         sb.append(condLabel).append(":\n");
         String condReg = exprCodeGen.codeGenExp(sWhile.condition());
-        srcComment(sWhile);
-        sb.append("  br i1 ").append(condReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
+        sb.append("  br i1 ").append(condReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(sWhile.pos().line)).append("\n");
 
         // Step 4: Body label
         sb.append(bodyLabel).append(":\n");
         codeGenStmt(sWhile.body());
         if (!lastAppendedIsReturn()) {
-            srcComment(sWhile);
-        sb.append("  br label %").append(condLabel).append("\n");  // Loop back
+        sb.append("  br label %").append(condLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(sWhile.pos().line)).append("\n");  // Loop back
         }
 
         // Step 5: End label
@@ -194,17 +188,17 @@ public class StatementCodeGen {
             // do times { body }
             // This should execute the body 'times' number of times
     
-            ExpressionCodeGen exprCodegen = new ExpressionCodeGen(sb, labelGen, functions, sDo.pos().line);
+            ExpressionCodeGen exprCodegen = new ExpressionCodeGen(sb, labelGen, functions, sDo.pos().line, debugMetaData);
     
             // Step 1: Evaluate the number of iterations
             String timesReg = exprCodegen.codeGenExp(sDo.times());
     
             // Step 2: Create a counter variable
             String counterVar = labelGen.generateLabel("counter");
-        srcComment(sDo);
-            sb.append("  %").append(counterVar).append(" = alloca i32\n");
-        srcComment(sDo);
-            sb.append("  store i32 0, i32* %").append(counterVar).append("\n");
+            sb.append("  %").append(counterVar).append(" = alloca i32")
+            .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
+            sb.append("  store i32 0, i32* %").append(counterVar)
+            .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
     
             // Step 3: Create labels
             String condLabel = labelGen.generateLabel("cond");
@@ -212,19 +206,19 @@ public class StatementCodeGen {
             String endLabel = labelGen.generateLabel("end");
     
             // Step 4: Jump to condition
-        srcComment(sDo);
-            sb.append("  br label %").append(condLabel).append("\n");
+            sb.append("  br label %").append(condLabel)
+            .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
     
             // Step 5: Condition check (counter < times)
             sb.append(condLabel).append(":\n");
             String counter = nextReg();
-        srcComment(sDo);
-            sb.append("  %").append(counter).append(" = load i32, i32* %").append(counterVar).append("\n");
+            sb.append("  %").append(counter).append(" = load i32, i32* %").append(counterVar)
+            .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
             String cond = nextReg();
-        srcComment(sDo);
-            sb.append("  %").append(cond).append(" = icmp slt i32 %").append(counter).append(", ").append(timesReg).append("\n");
-        srcComment(sDo);
-            sb.append("  br i1 %").append(cond).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
+            sb.append("  %").append(cond).append(" = icmp slt i32 %").append(counter).append(", ").append(timesReg)
+            .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
+            sb.append("  br i1 %").append(cond).append(", label %").append(bodyLabel).append(", label %").append(endLabel)
+            .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
     
             // Step 6: Body
             sb.append(bodyLabel).append(":\n");
@@ -234,14 +228,14 @@ public class StatementCodeGen {
         if (!lastAppendedIsReturn()) {
             // Step 7: Increment counter
                 String incremented = nextReg();
-        srcComment(sDo);
-                sb.append("  %").append(incremented).append(" = add i32 %").append(counter).append(", 1\n");
-        srcComment(sDo);
-                sb.append("  store i32 %").append(incremented).append(", i32* %").append(counterVar).append("\n");
+                sb.append("  %").append(incremented).append(" = add i32 %").append(counter).append(", 1")
+                .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
+                sb.append("  store i32 %").append(incremented).append(", i32* %").append(counterVar)
+                .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
     
                 // Step 8: Loop back
-        srcComment(sDo);
-                sb.append("  br label %").append(condLabel).append("\n");
+                sb.append("  br label %").append(condLabel)
+                .append(", !dbg !").append(debugMetaData.getLineId(sDo.pos().line)).append("\n");
             }
 
             // Step 9: End

@@ -7,14 +7,17 @@ public class FunctionCodeGen {
     private StringBuilder sb;
     private LabelGenerator labelGenerator;
     private List<Ast.Func> functions;
+    private DebugMetaData debugMetaData;
 
-    public FunctionCodeGen(StringBuilder sb, LabelGenerator labelGenerator, List<Ast.Func> functions) {
+    public FunctionCodeGen(StringBuilder sb, LabelGenerator labelGenerator, List<Ast.Func> functions, DebugMetaData debugMetaData) {
         this.sb = sb;
         this.labelGenerator = labelGenerator;
         this.functions = functions;
+        this.debugMetaData = debugMetaData;
     }
 
     public void codeGenFunDef(Ast.Func func) {
+        Integer id = debugMetaData.createSubProgram(func.name(), func.pos().line);
         sb.append("define ").append(toLLVMType(func.returnType())).append(" @").append(func.name()).append("(");
         for (int i = 0; i < func.params().size(); i++) {
             Ast.Arg arg = func.params().get(i);
@@ -23,7 +26,7 @@ public class FunctionCodeGen {
             }
             sb.append(toLLVMType(arg.type())).append(" %").append(arg.name());
         }
-        sb.append(") {\n");
+        sb.append(") !dbg !").append(id).append(" {\n");
 
         sb.append("entry:\n");
         sb.append("; src:").append(func.pos().line).append("\n");
@@ -50,7 +53,7 @@ public class FunctionCodeGen {
             sb.append("  store ").append(toLLVMType(arg.type())).append(" %").append(arg.name()).append(", ").append(toLLVMType(arg.type())).append("* %").append(arg.name()).append(".addr\n");
         }
 
-        StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions);
+        StatementCodeGen stmtCodeGen = new StatementCodeGen(sb, labelGenerator, functions, debugMetaData);
         stmtCodeGen.codeGenStmt(func.body());
         sb.append("}\n");
     }

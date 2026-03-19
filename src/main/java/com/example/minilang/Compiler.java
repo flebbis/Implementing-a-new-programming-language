@@ -4,12 +4,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import com.example.minilang.ast.Ast;
-import com.example.minilang.ast.AstBuilderVisitor;
-import com.example.minilang.typechecker.TypeChecker;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+
+import com.example.minilang.ast.Ast;
+import com.example.minilang.ast.AstBuilderVisitor;
+import com.example.minilang.typechecker.TypeChecker;
 
 public class Compiler {
 
@@ -57,7 +58,7 @@ public class Compiler {
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
 
     
-        String llvmCode = generateLLVM(typeCheckedAst);
+        String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
         
         System.out.println("\n===== LLVM IR Code =====");
         System.out.println(llvmCode);
@@ -69,9 +70,10 @@ public class Compiler {
         System.out.println("\nOutput written to: " + outputPath);
     }
 
-    private static String generateLLVM(Ast.Program program) {
+    private static String generateLLVM(Ast.Program program, String filename) {
         StringBuilder sb = new StringBuilder();
         LabelGenerator labelGen = new LabelGenerator();
+        DebugMetaData debugMetaData = new DebugMetaData(filename);
 
         // ===== External Declarations =====
         sb.append("declare i32 @printf(i8*, ...)\n");
@@ -90,7 +92,7 @@ public class Compiler {
 
         // ===== Generate Code for Global Statements =====
         // (These are top-level statements, if any)
-        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, labelGen, program.functions());
+        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, labelGen, program.functions(), debugMetaData);
         for(Ast.Stmt stmt : program.stmts()) {
             stmtCodegen.codeGenStmt(stmt);
         }
@@ -100,12 +102,12 @@ public class Compiler {
         sb.append("}\n\n");
 
         // ===== Generate Code for Each Function =====
-        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, labelGen, program.functions());
+        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, labelGen, program.functions(), debugMetaData);
         for(Ast.Func func : program.functions()) {
             funcCodegen.codeGenFunDef(func);
         }
 
-
+        sb.append(debugMetaData.emit());
 
         return sb.toString();
     }

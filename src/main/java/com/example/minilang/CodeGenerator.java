@@ -19,11 +19,14 @@ public class CodeGenerator {
         // Generate code for each function
         LabelGenerator blockGenerator = new LabelGenerator();
         List<Ast.Func> functions = program.functions();
-        FunctionCodeGen functionCodeGen = new FunctionCodeGen(sb, blockGenerator, functions);
+        DebugMetaData debugMetaData = new DebugMetaData(name);
+        FunctionCodeGen functionCodeGen = new FunctionCodeGen(sb, blockGenerator, functions, debugMetaData);
 
         for (Ast.Func func : functions) {
             functionCodeGen.codeGenFunDef(func);
-        }
+        }  
+
+        sb.append(debugMetaData.emit());
 
         return sb.toString();
     }

@@ -54,8 +54,10 @@ public class DebugMetaData {
     public String emit() {
         StringBuilder sb = new StringBuilder();
         sb.append("!llvm.dbg.cu = !{!0}\n");
+        sb.append("!llvm.module.flags = !{!10}\n");
+        sb.append("!10 = !{i32 2, !\"Debug Info Version\", i32 3}\n");
         // This is the first 2 lines, sourceFIle and and file
-        sb.append("!0 = !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)\n");
+        sb.append("!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)\n");
         sb.append("!1 = !DIFile(filename: \"")
         .append(fileName)
         .append("\", directory: \".\")\n");
@@ -78,7 +80,7 @@ public class DebugMetaData {
                 Integer funcId = entry.getValue();
                 sb.append("!").append(innerEntry.getValue())
                 .append(" = !DILocation(line: ")
-                .append(innerEntry.getKey()).append(", scope: ")
+                .append(innerEntry.getKey()).append(", scope: !")
                 .append(funcId).append(")\n");
             }
         }
