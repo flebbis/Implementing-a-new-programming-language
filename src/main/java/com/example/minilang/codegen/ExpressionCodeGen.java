@@ -153,17 +153,24 @@ public class ExpressionCodeGen extends Helper {
         String value = generateExpression(elementExp);
         String register = generateRegister();
         String elementType = convertType(elementExp.type());
-        sb.append(register).append(" = getelementptr inbound ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * %").append(arrayName).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
-        sb.append("store ").append(convertType(arrayType)).append(" ").append(value).append(", ").append(convertType(arrayType)).append("* ").append(register).append("\n");
+        sb.append(register).append(" = getelementptr inbounds ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * %").append(arrayName).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
+        sb.append("store ").append(elementType).append(" ").append(value).append(", ").append(elementType).append("* ").append(register).append("\n");
         }
 
-        return "temp_array";
+        return "%" + arrayName;
     }
 
 
     private String generateArrayIndex(EArrayIndex arrayIndexExp) {
-        String name = generateExpression(arrayIndexExp.array());
-        return "temp";
+        String arrayName = arrayIndexExp.array() instanceof EId id ? id.name() : "unknown";
+        String register = generateRegister();
+        String index = generateExpression(arrayIndexExp.index());
+        String arrayType = convertType(arrayIndexExp.array().type());
+        String elementType = convertType(((TArray) arrayIndexExp.array().type()).elementType());
+        sb.append(register).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append(" * %").append(arrayName).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(index).append("\n");
+        String returnRegister = generateRegister();
+        sb.append(returnRegister).append(" = load ").append(elementType).append(", ").append(elementType).append("* ").append(register).append("\n");
+        return returnRegister;
     }
     private String generateUnary(EUnary unaryExp) {
         String value = generateExpression(unaryExp.exp());

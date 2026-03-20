@@ -57,7 +57,7 @@ public class StatementCodeGen extends Helper {
         if (initStmt.type() instanceof TArray) {
             ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, initStmt.name());
             String value = expGen.generateExpression(initStmt.value());
-            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
+            //sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
         } else {ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals);
                 String value = expGen.generateExpression(initStmt.value());
