@@ -253,6 +253,7 @@ export function activate(context: ExtensionContext) {
           // 
           if(!srcMapAsm) return null;
           const asmLines = srcMapAsm.get(hoveredLine);
+          console.log('hoveredLine:', hoveredLine, 'asmLines:', asmLines);
           if (!asmLines || asmLines.length === 0) return null;
           // retrieve asm editor if it exits
           const asmEditor = vscode.window.visibleTextEditors.

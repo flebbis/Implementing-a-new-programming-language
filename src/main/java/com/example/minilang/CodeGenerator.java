@@ -1,8 +1,7 @@
 package com.example.minilang;
-import com.example.minilang.ast.Ast;
-
-import java.util.ArrayList;
 import java.util.List;
+
+import com.example.minilang.ast.Ast;
 
 public class CodeGenerator {
     StringBuilder sb = new StringBuilder();

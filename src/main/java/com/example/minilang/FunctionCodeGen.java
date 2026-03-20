@@ -36,7 +36,7 @@ public class FunctionCodeGen {
 
         if (func.params() == null || func.params().isEmpty()) {
         // dummy instruction so prologue assembly has an IR entry to consume
-            sb.append("  br label %entry_body\n");
+            sb.append("  br label %entry_body, !dbg !").append(debugMetaData.getLineId(func.pos().line)).append("\n");
             sb.append("entry_body:\n");
         } else {
             for (Ast.Arg arg : func.params()) {
