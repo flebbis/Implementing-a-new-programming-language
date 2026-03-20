@@ -1,5 +1,6 @@
 package com.example.minilang.typechecker;
 
+import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 
@@ -44,29 +45,24 @@ public class TypeChecker {
 
         // Pass 1: Scan statements -> Infers Parameter Types from calls
         typeCheckStatements(program.stmts());
-
-        // Pass 2: Scan bodies -> Infers Return Types from return statements
-        // (Now that params are known from Pass 1, we can successfully type check the body)
-        context.popScope();
-
         List<Ast.Func> checkedFuncsPass1 = checkFunctionBodies(rawFuncs);
 
+
+
         // --- GENERATION PHASE ---
-        // Restore real environment
+        context.popScope();
         if(!tempInferenceSuggestions.isEmpty()) {
             inferenceSuggestions.addAll(tempInferenceSuggestions);
         }
 
+        // Restore real environment
         this.context = realContext;
         this.statementTypeChecker = realChecker;
 
         // Update the real StatementTypeChecker with the inferred types before the final pass
         statementTypeChecker.updateInferenceContext(tempContext);
 
-        // Pass 3: Re-scan statements -> Generates final AST with correct ECall types
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
-
-        // Pass 4: Re-scan bodies -> Generates final AST for functions
         List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
 
         return new Ast.Program(stmts, checkedFuncs);
@@ -114,19 +110,18 @@ public class TypeChecker {
 
             // Use types from Signature (which are now updated after inference passes)
             List<Ast.Arg> currentParams = new ArrayList<>();
+
+
+            int offSet = 0;
+
             for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type type = sig.paramTypes.get(i);
 
                 if(!(func.params().get(i).type().equals(type))) {
                     Ast.Arg arg = func.params().get(i);
-                    inferenceSuggestions.add(new InferenceSuggestion(
-                            name,
-                            TypeConverter.typeToString(type),
-                            arg.pos().line,
-                            arg.pos().column,
-                            arg.pos().line,
-                            arg.pos().column + name.length(),
-                            "Suggestion: " + TypeConverter.typeToString(type) + " " + name.length()));
+                    Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
+                    addInferenceSuggestion(name, type, pos);
+                    offSet += TypeConverter.typeToString(type).length() + 1;
                 }
 
                 Ast.Arg oldArg = func.params().get(i);
@@ -151,19 +146,23 @@ public class TypeChecker {
         return checkedFuncs;
     }
 
+    private void addInferenceSuggestion(String name, Ast.Type type, Pos arg) {
+        inferenceSuggestions.add(new InferenceSuggestion(
+                name,
+                TypeConverter.typeToString(type),
+                arg.line,
+                arg.column,
+                arg.line,
+                arg.column + name.length(),
+                "Suggestion: " + TypeConverter.typeToString(type) + " " + name.length()));
+    }
+
     private void inferReturnType(Ast.Func func, Signature sig, String name) {
         // Is inference, add type
 
         if(sig.isInference) {
             System.err.println("Inferred return type of function '" + name + "' as " + TypeConverter.typeToString(sig.returnType));
-            inferenceSuggestions.add(new InferenceSuggestion(
-                    name,
-                    TypeConverter.typeToString(sig.returnType),
-                    func.pos().line,
-                    func.pos().column,
-                    func.pos().line,
-                    func.pos().column + name.length(),
-                    "Suggestion: " + TypeConverter.typeToString(sig.returnType) + " " + name.length()));
+            addInferenceSuggestion(name, sig.returnType, func.pos());
         }
 
     }
