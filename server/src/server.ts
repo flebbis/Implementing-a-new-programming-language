@@ -186,20 +186,9 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
     console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
     const suggestions: InferenceSuggestion[] = result ?? [];
 
-    inferenceSuggestionMap.set(uri, suggestions); // tror inte detta behövs längre men sparar för nu
-    await connection.languages.inlayHint.refresh();
-    // Before applying edits, check if the document version has changed
-    // Prevent old analysis results from being applied to a newer document version
-    /*
-    const latestVersion = latestDocumentVersions.get(uri);
-    if (latestVersion !== version) {
-      connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
-      return; // Discard outdated result
-    }
-    */
+    inferenceSuggestionMap.set(uri, suggestions);
+    await connection.languages.inlayHint.refresh(); // Refresh inlay hints
 
-    // Clear suggestions after analysis
-    //inferenceSuggestionMap.delete(uri);
   }
   catch (error) {
     connection.console.error("Error running Java analysis: " + error);
