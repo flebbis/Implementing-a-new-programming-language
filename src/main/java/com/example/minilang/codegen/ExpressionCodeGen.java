@@ -6,10 +6,17 @@ public class ExpressionCodeGen extends Helper {
 
     private StringBuilder sb;
     private StringBuilder globals;
+    private String arrayName; // For array initialization, we need to keep track of the array name to generate the correct GEP instructions.
     private int stringCounter = 0;
     public ExpressionCodeGen(StringBuilder sb, StringBuilder globals) {
         this.sb = sb;
         this.globals = globals;
+    }
+
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, String arrayName){
+        this.sb = sb;
+        this.globals = globals;
+        this.arrayName = arrayName;
     }
 
     public String generateExpression(Exp exp) {
@@ -25,6 +32,7 @@ public class ExpressionCodeGen extends Helper {
             if (exp instanceof ECmp cmpExp) return generateCmp(cmpExp);
             if (exp instanceof ELogic logicExp) return generateLogic(logicExp);
             if (exp instanceof EAss assExp) return generateAss(assExp);
+            if (exp instanceof EArray arrayExp) return generateArray(arrayExp);
             if (exp instanceof EArrayIndex arrayIndexExp) return generateArrayIndex(arrayIndexExp);
             if (exp instanceof EUnary unaryExp) return generateUnary(unaryExp);
             return "0";
@@ -136,9 +144,26 @@ public class ExpressionCodeGen extends Helper {
     }   
         
     
-    private String generateArrayIndex(EArrayIndex arrayIndexExp) {
-        return "temp";
+    private String generateArray(EArray arrayExp) {
+        int numElements = arrayExp.elements().size();
+        Type arrayType = arrayExp.type();
 
+        for (int i = 0; i < numElements; i++) {
+        Exp elementExp = arrayExp.elements().get(i);
+        String value = generateExpression(elementExp);
+        String register = generateRegister();
+        String elementType = convertType(elementExp.type());
+        sb.append(register).append(" = getelementptr inbound ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * %").append(arrayName).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
+        sb.append("store ").append(convertType(arrayType)).append(" ").append(value).append(", ").append(convertType(arrayType)).append("* ").append(register).append("\n");
+        }
+
+        return "temp_array";
+    }
+
+
+    private String generateArrayIndex(EArrayIndex arrayIndexExp) {
+        String name = generateExpression(arrayIndexExp.array());
+        return "temp";
     }
     private String generateUnary(EUnary unaryExp) {
         String value = generateExpression(unaryExp.exp());
