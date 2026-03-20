@@ -18,7 +18,7 @@ import {
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import {spawn } from 'child_process';
+import { spawn } from 'child_process';
 import * as path from 'path';
 import { URI } from "vscode-uri";
 
@@ -29,9 +29,9 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
-let hasConfigurationCabability : boolean = false;
-let hasWorkspaceFolderCapability : boolean = false;
-let hasDiagnosticRelatedInformationCapability  : boolean = false;
+let hasConfigurationCabability: boolean = false;
+let hasWorkspaceFolderCapability: boolean = false;
+let hasDiagnosticRelatedInformationCapability: boolean = false;
 let hasHoverCapability: boolean = false;
 
 type InferenceSuggestion = {
@@ -46,26 +46,26 @@ type InferenceSuggestion = {
 
 const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 
-console.error("SERVER STARTED")
+console.error("SERVER STAAAAAAAAARTED")
 /* Setup server */
 connection.onInitialize((params: InitializeParams) => {
-	const capabilities = params.capabilities;
+  const capabilities = params.capabilities;
 
   // probe client capabilites
   hasConfigurationCabability = !!(
-    capabilities.workspace && 
+    capabilities.workspace &&
     !!capabilities.workspace.configuration
   ),
-  hasWorkspaceFolderCapability = !!(
-    capabilities.workspace && !!capabilities.workspace.workspaceFolders
-  );
+    hasWorkspaceFolderCapability = !!(
+      capabilities.workspace && !!capabilities.workspace.workspaceFolders
+    );
   hasDiagnosticRelatedInformationCapability = !!(
-    capabilities.textDocument && 
-    capabilities.textDocument.publishDiagnostics && 
+    capabilities.textDocument &&
+    capabilities.textDocument.publishDiagnostics &&
     capabilities.textDocument.publishDiagnostics.relatedInformation
   );
   hasHoverCapability = !!(
-    capabilities.textDocument && 
+    capabilities.textDocument &&
     !!capabilities.textDocument.hover
   );
 
@@ -88,7 +88,7 @@ connection.onInitialize((params: InitializeParams) => {
   };
 
   // If client suports workspace folder
-if (hasWorkspaceFolderCapability) {
+  if (hasWorkspaceFolderCapability) {
     result.capabilities.workspace = {
       workspaceFolders: {
         supported: true
@@ -109,10 +109,10 @@ connection.onInitialized(() => {
     connection.client.register(DidChangeConfigurationNotification.type, undefined);
   }
   if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log('Workspace folder change event received.');
-		});
-	}
+    connection.workspace.onDidChangeWorkspaceFolders(_event => {
+      connection.console.log('Workspace folder change event received.');
+    });
+  }
   connection.window.showInformationMessage(
     "onInitialized: *mylang* Language server extension initialized successfully!"
   );
@@ -125,7 +125,7 @@ connection.onDidChangeConfiguration(change => {
     // Reset all cached document settings
     documentSettings.clear();
   } else {
-    globalSettings = <ServerSettings> (
+    globalSettings = <ServerSettings>(
       (change.settings.languageServer || defaultSettings)
     );
   }
@@ -137,17 +137,8 @@ connection.onDidChangeWatchedFiles(_change => {
   connection.console.log('Recieved file change event')
 })
 
-// Discard settings for closed documents
-documents.onDidClose(e => {
-  documentSettings.delete(e.document.uri);
-});
-
-// Map to store which version was changed latest
-const latestDocumentVersions: Map<string, number> = new Map();
-
-documents.onDidChangeContent(change => {
-  
-
+// Handle document save events
+documents.onDidSave(change => {
   const uri = change.document.uri;
   const text = change.document.getText();
   const version = change.document.version;
@@ -159,49 +150,59 @@ documents.onDidChangeContent(change => {
 });
 
 
+// Map to store which version was changed latest
+const latestDocumentVersions: Map<string, number> = new Map();
 
-async function inferenceAnalysis(uri : string, text : string, version: number) {
-    try {
-      const result = await runJavaAnalysis(text);
-      
-      // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
-      console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
-      const suggestions: InferenceSuggestion[] = result ?? [];
 
-      inferenceSuggestionMap.set(uri, suggestions); // tror inte detta behövs längre men sparar för nu
+documents.onDidChangeContent(change => {
 
-      // Before applying edits, check if the document version has changed
-      // Prevent old analysis results from being applied to a newer document version
-      const latestVersion = latestDocumentVersions.get(uri);
-      if (latestVersion !== version) {
-        connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
-        return; // Discard outdated result
-      }
 
-      // Apply edit in document for each inference suggestion
-      for (const s of suggestions) {
-        await connection.workspace.applyEdit({
-          changes: {
-            [uri]: [
-              TextEdit.insert(
-                {
-                  // For some reason detta va rätt place
-                  line: s.line - 1,
-                  character: s.column, 
-                },
-                `${s.inferredType} `
-              )
-            ]
-          }
-        });
-      } 
-      inferenceSuggestionMap.delete(uri); // Clear suggestions after applying edits
+});
+
+
+
+async function inferenceAnalysis(uri: string, text: string, version: number) {
+  try {
+    const result = await runJavaAnalysis(text);
+
+    // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
+    console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
+    const suggestions: InferenceSuggestion[] = result ?? [];
+
+    inferenceSuggestionMap.set(uri, suggestions); // tror inte detta behövs längre men sparar för nu
+
+    // Before applying edits, check if the document version has changed
+    // Prevent old analysis results from being applied to a newer document version
+    const latestVersion = latestDocumentVersions.get(uri);
+    if (latestVersion !== version) {
+      connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
+      return; // Discard outdated result
+    }
+
+    // Apply edit in document for each inference suggestion
+    for (const s of suggestions) {
+      await connection.workspace.applyEdit({
+        changes: {
+          [uri]: [
+            TextEdit.insert(
+              {
+                // For some reason detta va rätt place
+                line: s.line - 1,
+                character: s.column,
+              },
+              `${s.inferredType} `
+            )
+          ]
+        }
+      });
+    }
+    inferenceSuggestionMap.delete(uri); // Clear suggestions after applying edits
   }
-    catch (error) {
-      connection.console.error("Error running Java analysis: " + error);
+  catch (error) {
+    connection.console.error("Error running Java analysis: " + error);
   }
-  
-  
+
+
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
@@ -210,7 +211,7 @@ function runJavaAnalysis(text: string): Promise<any> {
     // Path to the compiled JAR file
     // Build with: mvn package (creates target/LLVMINI-1.0-SNAPSHOT.jar)
     const jarPath = path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT.jar');
-    
+
     const java = spawn("java", ["-jar", jarPath, text]);
 
     // Capture stdout and stderr from the Java process
@@ -257,32 +258,32 @@ interface ServerSettings {
   maxNumberOfProblems: number;
 }
 
-const defaultSettings: ServerSettings = {maxNumberOfProblems: 1000}
+const defaultSettings: ServerSettings = { maxNumberOfProblems: 1000 }
 let globalSettings: ServerSettings = defaultSettings;
 
-let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
+let documentSettings: Map<string, Thenable<ServerSettings>> = new Map();
 
 // Will send error message on startup if this is not included
 connection.languages.diagnostics.on(async (params) => {
-    const doc = documents.get(params.textDocument.uri)
-    if(doc != undefined){
-      return {
-        kind: DocumentDiagnosticReportKind.Full,
-        items: await validateTextDocument(doc)
-      } satisfies DocumentDiagnosticReport;
-    } else {
-      return {
-        kind: DocumentDiagnosticReportKind.Full,
-        items: []
-      } satisfies DocumentDiagnosticReport;
-    }
+  const doc = documents.get(params.textDocument.uri)
+  if (doc != undefined) {
+    return {
+      kind: DocumentDiagnosticReportKind.Full,
+      items: await validateTextDocument(doc)
+    } satisfies DocumentDiagnosticReport;
+  } else {
+    return {
+      kind: DocumentDiagnosticReportKind.Full,
+      items: []
+    } satisfies DocumentDiagnosticReport;
+  }
 })
 
 
-function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
+function getDocumentSettings(recource: string): Thenable<ServerSettings> {
   if (!hasConfigurationCabability) {
     return Promise.resolve(globalSettings);
-  } 
+  }
   let result = documentSettings.get(recource);
   if (!result) {
     result = connection.workspace.getConfiguration({
@@ -304,24 +305,24 @@ async function validateTextDocument(document: TextDocument): Promise<Diagnostic[
   let doInf = /do *(inf|\(inf\))/g
   let whileTrue = /\bwhile *(true|\(true\))/g
   let diagnostics: Diagnostic[] = [];
-  
+
   diagnostics = diagnosePattern(alternatingCaps, 'alternating upper/lower-case test', DiagnosticSeverity.Warning, settings, document, diagnostics);
   diagnostics = diagnosePattern(notRecVarName, 'not reccomended variable name', DiagnosticSeverity.Warning, settings, document, diagnostics);
   diagnostics = diagnosePattern(doInf, 'DON\'T DO THIS', DiagnosticSeverity.Error, settings, document, diagnostics);
   diagnostics = diagnosePattern(whileTrue, 'This may never terminate', DiagnosticSeverity.Warning, settings, document, diagnostics);
-  
+
   // don't send computed diagnostics, that is handeled by the diagnostics handler
   // connection.sendDiagnostics({uri:document.uri, diagnostics})
   return diagnostics
 }
 
 
-function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticSeverity, 
-      settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[] ): Diagnostic[] {
+function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticSeverity,
+  settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[]): Diagnostic[] {
   //Validator matching
   let text = document.getText();
   let d = Array.from(diagnostics) // mutate-by-copy
-  let m :RegExpExecArray | null
+  let m: RegExpExecArray | null
   let problems = 0;
   while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
     problems++;
@@ -361,7 +362,7 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
   const uri = params.textDocument.uri
   const posC = params.position.character
   const posL = params.position.line
-  let res : Hover = {contents:{language:"markdown",value:"###Detecting hover \n@"+uri+"\n:"+posC+"."+posL}}
+  let res: Hover = { contents: { language: "markdown", value: "###Detecting hover \n@" + uri + "\n:" + posC + "." + posL } }
   return res
 })
 
