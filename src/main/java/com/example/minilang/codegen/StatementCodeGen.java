@@ -44,6 +44,7 @@ public class StatementCodeGen extends Helper {
         }
     }
     private void generateDecl(SDecl declStmt) {
+        
         sb.append(" %").append(declStmt.name()).append(" = alloca ").append(convertType(declStmt.type())).append("\n");
         declaredVariables.add(declStmt.name());
 
@@ -53,10 +54,16 @@ public class StatementCodeGen extends Helper {
                 sb.append(" %").append(initStmt.name()).append(" = alloca ").append(convertType(initStmt.type())).append("\n");
                 declaredVariables.add(initStmt.name());
         }
+        if (initStmt.type() instanceof TArray) {
+            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, initStmt.name());
+            String value = expGen.generateExpression(initStmt.value());
+            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
-        ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals);
-        String value = expGen.generateExpression(initStmt.value());
-        sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
+        } else {ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals);
+                String value = expGen.generateExpression(initStmt.value());
+                sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
+
+        }
 
 
     }
