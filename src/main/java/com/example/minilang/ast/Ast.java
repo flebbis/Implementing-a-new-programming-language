@@ -69,7 +69,7 @@ public class Ast {
     public record TString() implements Type {}
     public record TBool() implements Type {}
     public record TUnknown() implements Type {}
-    public record TArray(Type elementType) implements Type {}
+    public record TArray(Type elementType, int arraySize) implements Type {}
 
     public interface HasPos { Pos pos(); }
     public interface HasType { Type type(); }
