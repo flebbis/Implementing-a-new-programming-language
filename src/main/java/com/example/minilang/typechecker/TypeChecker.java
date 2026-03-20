@@ -117,6 +117,7 @@ public class TypeChecker {
             for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type type = sig.paramTypes.get(i);
 
+                // Inference suggestion
                 if(!(func.params().get(i).type().equals(type))) {
                     Ast.Arg arg = func.params().get(i);
                     Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
