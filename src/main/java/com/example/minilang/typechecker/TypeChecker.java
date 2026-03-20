@@ -1,14 +1,13 @@
 package com.example.minilang.typechecker;
 
-import com.example.minilang.Pos;
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import com.example.minilang.InferenceSuggestion;
+import com.example.minilang.Pos;
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
 
 public class TypeChecker {
 
@@ -112,17 +111,13 @@ public class TypeChecker {
             List<Ast.Arg> currentParams = new ArrayList<>();
 
 
-            int offSet = 0;
-
             for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type type = sig.paramTypes.get(i);
 
                 // Inference suggestion
                 if(!(func.params().get(i).type().equals(type))) {
                     Ast.Arg arg = func.params().get(i);
-                    Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
-                    addInferenceSuggestion(name, type, pos);
-                    offSet += TypeConverter.typeToString(type).length() + 1;
+                    addInferenceSuggestion(name, type, arg.pos());
                 }
 
                 Ast.Arg oldArg = func.params().get(i);

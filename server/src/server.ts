@@ -83,7 +83,8 @@ connection.onInitialize((params: InitializeParams) => {
       },
       signatureHelpProvider: {
 
-      }
+      },
+      inlayHintProvider: true
     },
   };
 
@@ -137,16 +138,25 @@ connection.onDidChangeWatchedFiles(_change => {
   connection.console.log('Recieved file change event')
 })
 
+// Handle inlay hint requests
+connection.languages.inlayHint.on((params) => {
+  const uri = params.textDocument.uri;
+  const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+
+  return suggestions.map((s) => ({
+    position: {
+      line: s.line - 1,
+      character: s.column,
+    },
+    label: `${s.inferredType} `,
+    kind: 1,
+    paddingRight: true,
+  }));
+});
+
 // Handle document save events
 documents.onDidSave(change => {
-  const uri = change.document.uri;
-  const text = change.document.getText();
-  const version = change.document.version;
-  latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
-  console.error("TEXXXT " + change.document.getText())
 
-  // Type check & inference phase
-  inferenceAnalysis(uri, text, version);
 });
 
 
@@ -155,7 +165,14 @@ const latestDocumentVersions: Map<string, number> = new Map();
 
 
 documents.onDidChangeContent(change => {
+  const uri = change.document.uri;
+  const text = change.document.getText();
+  const version = change.document.version;
+  latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
+  console.error("TEXXXT " + change.document.getText())
 
+  // Type check & inference phase
+  inferenceAnalysis(uri, text, version);
 
 });
 
@@ -170,33 +187,19 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
     const suggestions: InferenceSuggestion[] = result ?? [];
 
     inferenceSuggestionMap.set(uri, suggestions); // tror inte detta behövs längre men sparar för nu
-
+    await connection.languages.inlayHint.refresh();
     // Before applying edits, check if the document version has changed
     // Prevent old analysis results from being applied to a newer document version
+    /*
     const latestVersion = latestDocumentVersions.get(uri);
     if (latestVersion !== version) {
       connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
       return; // Discard outdated result
     }
+    */
 
-    // Apply edit in document for each inference suggestion
-    for (const s of suggestions) {
-      await connection.workspace.applyEdit({
-        changes: {
-          [uri]: [
-            TextEdit.insert(
-              {
-                // For some reason detta va rätt place
-                line: s.line - 1,
-                character: s.column,
-              },
-              `${s.inferredType} `
-            )
-          ]
-        }
-      });
-    }
-    inferenceSuggestionMap.delete(uri); // Clear suggestions after applying edits
+    // Clear suggestions after analysis
+    //inferenceSuggestionMap.delete(uri);
   }
   catch (error) {
     connection.console.error("Error running Java analysis: " + error);
