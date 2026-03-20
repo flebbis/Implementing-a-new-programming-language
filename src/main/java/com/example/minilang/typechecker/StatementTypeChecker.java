@@ -60,18 +60,21 @@ public class StatementTypeChecker {
 
         // Infer type if unknown
         if (typeToCheck instanceof Ast.TUnknown) {
-            typeToCheck = value.type();
-            InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
-                    sInit.name(),
-                    TypeConverter.typeToString(typeToCheck),
-                    sInit.pos().line,
-                    sInit.pos().column,
-                    sInit.pos().line,
-                    sInit.pos().column + sInit.name().length(),
-                    "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
+            if(!(value.type() instanceof Ast.TUnknown)) {
+                typeToCheck = value.type();
+                InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
+                        sInit.name(),
+                        TypeConverter.typeToString(typeToCheck),
+                        sInit.pos().line,
+                        sInit.pos().column,
+                        sInit.pos().line,
+                        sInit.pos().column + sInit.name().length(),
+                        "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
 
-            if(!inferenceSuggestions.contains(inferenceSuggestion)) {
-                inferenceSuggestions.add(inferenceSuggestion);
+                // Avoid duplicates for multiple inference passes
+                if(!inferenceSuggestions.contains(inferenceSuggestion)) {
+                    inferenceSuggestions.add(inferenceSuggestion);
+                }
             }
         }
 
