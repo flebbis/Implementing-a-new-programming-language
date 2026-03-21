@@ -10,12 +10,14 @@ public class FunctionCodeGen {
     private StringBuilder sb;
     private HashSet<String> declaredVariables;
     private StringBuilder globals;
+    private HashSet<String> functionVariables;
 
-    public FunctionCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals) {
+    public FunctionCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals, HashSet<String> functionVariables) {
 
         this.sb = sb;
         this.declaredVariables = declaredVariables;
         this.globals = globals;
+        this.functionVariables = functionVariables;
     }
 
     public void generateFunction(Ast.Func function) {
@@ -30,11 +32,12 @@ public class FunctionCodeGen {
             } else {
                 sb.append(helper.convertType(arg.type()) + " %" + arg.name() + ") {\nentry:\n");
             }
+            functionVariables.add(arg.name());
             i++;
 
         }
 
-        StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals);
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals, functionVariables);
         stmtGen.generateStatement(function.body());
         sb.append("\n}\n");
     }

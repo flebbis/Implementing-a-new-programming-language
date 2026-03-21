@@ -5,7 +5,7 @@ public class RegisterGenerator{
 
     public static String generateRegister(){
 
-        return ("%" + reg++);
+        return ("%register" + reg++);
     }
 
 }

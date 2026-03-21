@@ -1,21 +1,26 @@
 package com.example.minilang.codegen;
 
 import com.example.minilang.ast.Ast.*;
+import java.util.HashSet;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
+import static com.example.minilang.codegen.PrintGlobalGenerator.generatePrintGlobal;
 public class ExpressionCodeGen extends Helper {
 
     private StringBuilder sb;
     private StringBuilder globals;
     private String arrayName; // For array initialization, we need to keep track of the array name to generate the correct GEP instructions.
     private int stringCounter = 0;
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals) {
+    private HashSet<String> functionVariables;
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables) {
         this.sb = sb;
         this.globals = globals;
+        this.functionVariables = functionVariables;
     }
 
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, String arrayName){
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, String arrayName){
         this.sb = sb;
         this.globals = globals;
+        this.functionVariables = functionVariables;
         this.arrayName = arrayName;
     }
 
@@ -58,13 +63,77 @@ public class ExpressionCodeGen extends Helper {
         return String.valueOf(boolExp.value());
     }
     private String generateId(EId idExp) {
+        if (!functionVariables.contains(idExp.name())){
+        
         String register = generateRegister();
         sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* %").append(idExp.name()).append("\n");
         return register;
 
+        } else {
+            return "%" + idExp.name();
+        }
+
     }
     private String generateCall(ECall callExp) {
-        return "temp";
+
+        if (callExp.name().equals("print")){
+            if (callExp.args().get(0) instanceof EString){
+                String printGlobal = generatePrintGlobal();
+                globals.append(printGlobal).append(" = private constant [").append(((EString) callExp.args().get(0)).value().length()).append(" x i8] c\"").append(((EString) callExp.args().get(0)).value().substring(1, ((EString) callExp.args().get(0)).value().length() - 1)).append("\\0A\\00\"\n");
+                String register = generateRegister();
+                sb.append(register).append(" = getelementptr inbounds [").append(((EString ) callExp.args().get(0)).value().length()).append(" x i8], [").append(((EString) callExp.args().get(0)).value().length()).append(" x i8]* ").append(printGlobal).append(", i32 0, i32 0\n");
+                sb.append("call i32 @printf(i8* ").append(register).append(")\n");
+                return register;
+            } else if (callExp.args().get(0) instanceof EId){
+                EId eId = (EId) callExp.args().get(0);
+                String type = convertType(eId.type());
+                String value = generateExpression(eId);  // This loads the value
+                    
+                if (type.equals("i32")) {
+                    String register = generateRegister();
+                    sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), i32 ")
+                        .append(value).append(")\n");
+                    return register;
+                } else if (type.equals("double")) {
+                    String register = generateRegister();
+                    sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), double ")
+                        .append(value).append(")\n");
+                    return register;
+                }
+            } else if (callExp.args().get(0) instanceof EInt || callExp.args().get(0) instanceof EBool){
+                String value = generateExpression(callExp.args().get(0));
+                String register = generateRegister();
+                sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), ").append(convertType(callExp.args().get(0).type())).append(" ").append(value).append(")\n");
+                return register;
+            } else if (callExp.args().get(0) instanceof EDouble){
+                String value = generateExpression(callExp.args().get(0));
+                String register = generateRegister();
+                sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), ").append("double ").append(value).append(")\n");
+                return register;
+            } else if (callExp.args().get(0) instanceof EArray){
+                String value = generateExpression(callExp.args().get(0));
+                String register = generateRegister();
+                sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), ").append(convertType(callExp.args().get(0).type())).append(" ").append(value).append(")\n");
+                return register;
+            }
+        } else {
+        String register = generateRegister();
+
+        sb.append(register).append(" = call ").append(convertType(callExp.type())).append(" @").append(callExp.name()).append("(");
+        for (int i = 0; i < callExp.args().size(); i++) {
+            Exp arg = callExp.args().get(i);
+            String argValue = generateExpression(arg);
+            sb.append(convertType(arg.type())).append(" ").append(argValue);
+            if (i < callExp.args().size() - 1) {
+                sb.append(", ");
+            }
+        }
+        sb.append(")\n");
+
+
+        return register;
+    }
+    return "Something went wrong with function call generation";
 
     }
     private String generateNot(ENot notExp) {
