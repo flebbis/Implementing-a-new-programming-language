@@ -12,10 +12,12 @@ public class ExpressionCodeGen extends Helper {
     private String arrayName; // For array initialization, we need to keep track of the array name to generate the correct GEP instructions.
     private int stringCounter = 0;
     private HashSet<String> functionVariables;
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables) {
+    private Environment environment;
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, Environment environment) {
         this.sb = sb;
         this.globals = globals;
         this.functionVariables = functionVariables;
+        this.environment = environment;
     }
 
     public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, String arrayName){
@@ -66,12 +68,24 @@ public class ExpressionCodeGen extends Helper {
 
     private String generateId(EId idExp) {
         if (!functionVariables.contains(idExp.name())){
-        
+            String variableRegister = environment.lookup(idExp.name());
             String register = generateRegister();
-            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* %").append(idExp.name()).append("\n");
+            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
             return register;
 
         } else {
+            // If we are not currently in the base scope,
+            // we need to check if the variable exists in the current scope and load it if it does.
+            if(!environment.isInBaseScope()) {
+                // Check if the variable exists in the current scope
+                if(environment.existsInCurrentScope(idExp.name())) {
+                    // If it does, we need to load it from memory
+                    String variableRegister = environment.lookup(idExp.name());
+                    String register = generateRegister();
+                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
+                    return register;
+                }
+            }
             return "%" + idExp.name();
         }
 
@@ -119,7 +133,6 @@ public class ExpressionCodeGen extends Helper {
                 return register;
             }
         } else {
-            System.out.println("TYPE OF CALL: " + callExp.type());
             if(callExp.type() instanceof Ast.TUnknown) {
                 // Should not return anything, so we can just call the function without storing the result in a register
                 sb.append("call void @").append(callExp.name()).append("(");

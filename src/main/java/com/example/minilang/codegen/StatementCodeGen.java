@@ -9,19 +9,19 @@ public class StatementCodeGen extends Helper {
     // This class will contain the logic to convert our AST into LLVM IR code.
     // It will likely have methods like `generateFunction`, `generateStatement`, and `generateExpression`.
     private StringBuilder sb;
-    private HashSet<String> declaredVariables;
+    private Environment environment;
     private StringBuilder globals;
     private HashSet<String> functionVariables;
     private ExpressionCodeGen expressionCodeGen;
     private final LabelGenerator labelGenerator;
 
-    public StatementCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals, HashSet<String> functionVariables) {
+    public StatementCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, HashSet<String> functionVariables) {
         this.sb = sb;
-        this.declaredVariables = declaredVariables;
+        this.environment = environment;
         this.globals = globals;
         this.functionVariables = functionVariables;
         this.labelGenerator = new LabelGenerator();
-        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, functionVariables);
+        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
     }
 
     public void generateStatement(Stmt stmt) {
@@ -135,21 +135,23 @@ public class StatementCodeGen extends Helper {
 
 
     private void generateBlock(SBlock blockStmt) {
-            for (Stmt statement : blockStmt.statements()) {
+        environment.pushNewScope();
+        for (Stmt statement : blockStmt.statements()) {
             generateStatement(statement);
         }
+        environment.popScope();
     }
     private void generateDecl(SDecl declStmt) {
-        
-        
         sb.append(" %").append(declStmt.name()).append(" = alloca ").append(convertType(declStmt.type())).append("\n");
-        declaredVariables.add(declStmt.name());
-
+        String register = generateRegister();
+        environment.pushToCurrentScope(declStmt.name(), register);
     }
     private void generateInit(SInit initStmt) {
-        if (!declaredVariables.contains(initStmt.name())){
-                sb.append(" %").append(initStmt.name()).append(" = alloca ").append(convertType(initStmt.type())).append("\n");
-                declaredVariables.add(initStmt.name());
+        if (!environment.existsInCurrentScope(initStmt.name())) {
+            // Variable not declared yet, so we need to allocate space for it
+            String register = generateRegister();
+            sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type())).append("\n");
+            environment.pushToCurrentScope(initStmt.name(), register);
         }
         if (initStmt.type() instanceof TArray) {
             ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals,functionVariables , initStmt.name());
@@ -157,9 +159,10 @@ public class StatementCodeGen extends Helper {
             //sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
         } else {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables);
+            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
             String value = expGen.generateExpression(initStmt.value());
-            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
+            String register = environment.lookup(initStmt.name());
+            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* ").append(register).append("\n");
 
         }
 
@@ -167,7 +170,7 @@ public class StatementCodeGen extends Helper {
     }
     private void generateReturn(SReturn returnStmt) {
         if (returnStmt.value() != null) {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables);
+            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
             String value = expGen.generateExpression(returnStmt.value());
             sb.append("  ret ").append(convertType(returnStmt.value().type())).append(" ").append(value).append("\n");
         } else {
@@ -175,7 +178,7 @@ public class StatementCodeGen extends Helper {
         }
     }
     private void generateExp(SExp expStmt) {
-        ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables);
+        ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
         expGen.generateExpression(expStmt.exp());
     }
 

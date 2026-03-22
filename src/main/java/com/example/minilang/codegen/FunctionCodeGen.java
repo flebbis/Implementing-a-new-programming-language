@@ -9,18 +9,20 @@ public class FunctionCodeGen {
     // It will likely have methods like `generateFunction`, `generateStatement`, and `generateExpression`.
     private StringBuilder sb;
     private HashSet<String> declaredVariables;
+    private Environment environment;
     private StringBuilder globals;
     private HashSet<String> functionVariables;
 
-    public FunctionCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals, HashSet<String> functionVariables) {
+    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, HashSet<String> functionVariables) {
 
         this.sb = sb;
-        this.declaredVariables = declaredVariables;
+        this.environment = environment;
         this.globals = globals;
         this.functionVariables = functionVariables;
     }
 
     public void generateFunction(Ast.Func function) {
+
 
         Helper helper = new Helper();
 
@@ -42,7 +44,7 @@ public class FunctionCodeGen {
 
         }
 
-        StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals, functionVariables);
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, functionVariables);
         stmtGen.generateStatement(function.body());
         if(function.returnType() instanceof Ast.TUnknown) {
             sb.append("  ret void\n");
