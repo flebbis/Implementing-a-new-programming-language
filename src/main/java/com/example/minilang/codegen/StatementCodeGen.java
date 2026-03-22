@@ -1,6 +1,7 @@
 package com.example.minilang.codegen;
 
 import java.util.HashSet;
+import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 
 import com.example.minilang.ast.Ast.*;
 
@@ -12,12 +13,14 @@ public class StatementCodeGen extends Helper {
     private StringBuilder globals;
     private HashSet<String> functionVariables;
     private ExpressionCodeGen expressionCodeGen;
+    private final LabelGenerator labelGenerator;
 
     public StatementCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals, HashSet<String> functionVariables) {
         this.sb = sb;
         this.declaredVariables = declaredVariables;
         this.globals = globals;
         this.functionVariables = functionVariables;
+        this.labelGenerator = new LabelGenerator();
         this.expressionCodeGen = new ExpressionCodeGen(sb, globals, functionVariables);
     }
 
@@ -33,7 +36,6 @@ public class StatementCodeGen extends Helper {
     }
 
     private void generateWhile(SWhile whileStmt) {
-        LabelGenerator labelGenerator = new LabelGenerator();
         String condLabel = labelGenerator.generateLabel("while_cond");
         String bodyLabel = labelGenerator.generateLabel("while_body");
         String endLabel = labelGenerator.generateLabel("while_end");
@@ -59,8 +61,51 @@ public class StatementCodeGen extends Helper {
     }
 
     private void generateDo(SDo doStmt) {
+        String condLabel = labelGenerator.generateLabel("do_cond");
+        String bodyLabel = labelGenerator.generateLabel("do_body");
+        String endLabel = labelGenerator.generateLabel("do_end");
+
+        String times = expressionCodeGen.generateExpression(doStmt.times()); // Should be an integer value (i32 in LLVM)
+
+        String counterPtr = generateRegister();
+        String limitPtr = generateRegister();
+
+        // Initialize counter & limit (gets value of times)
+        sb.append(counterPtr).append(" = alloca i32\n");
+        sb.append(limitPtr).append(" = alloca i32\n");
+        sb.append("store i32 0, i32* ").append(counterPtr).append("\n");
+        sb.append("store i32 ").append(times).append(", i32* ").append(limitPtr).append("\n");
+
+        // Condition
+        sb.append("br label %").append(condLabel).append("\n");
+        sb.append(condLabel).append(":\n");
+
+        String currentCounter = generateRegister();
+        String currentLimit = generateRegister();
+        String cmpReg = generateRegister();
+
+        sb.append(" ").append(currentCounter).append(" = load i32, i32* ").append(counterPtr).append("\n"); // Load current counter value
+        sb.append(" ").append(currentLimit).append(" = load i32, i32* ").append(limitPtr).append("\n"); // Load current counter value
+        sb.append(" ").append(cmpReg).append(" = icmp slt i32 ").append(currentCounter).append(", ").append(currentLimit).append("\n"); // Compare counter with limit
+        sb.append(" ").append("br i1 ").append(cmpReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n"); // jump to body if counter < limit
+
+        // Body
+        sb.append(bodyLabel).append(":\n");
+        generateStatement(doStmt.body());
+        // Increment counter
+        String old = generateRegister();
+        String next = generateRegister();
+        sb.append(old).append(" = load i32, i32* ").append(counterPtr).append("\n");
+        sb.append(next).append(" = add i32 ").append(old).append(", 1\n");
+        sb.append("store i32 ").append(next).append(", i32* ").append(counterPtr).append("\n");
+        // After body, jump back to condition
+        sb.append("  br label %").append(condLabel).append("\n");
+
+        // End of loop
+        sb.append(endLabel).append(":\n");
 
     }
+
     private void generateIf(SIf ifStmt) {
 
     }
