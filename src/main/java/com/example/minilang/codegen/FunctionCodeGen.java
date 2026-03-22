@@ -25,6 +25,11 @@ public class FunctionCodeGen {
         Helper helper = new Helper();
 
         sb.append("define " + helper.convertType(function.returnType()) + " @" + function.name() + "(");
+
+        if(function.params().isEmpty()){
+            sb.append(") {\nentry:\n");
+        }
+
         int i = 0;
         for (Ast.Arg arg : function.params()) {
             if (i < function.params().size()-1){
