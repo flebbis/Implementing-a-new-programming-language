@@ -19,8 +19,8 @@ export function buildLineMap(asmLines: string[]) {
                 currentSrcLine = parsed;
             }
             continue;
-        }
-
+        }   
+        // Filter the same as the assembly file filter out
         const isDirective = trimmed.startsWith('.') && !trimmed.startsWith('.LBB');
         const isComment   = trimmed.startsWith(';');
         const isLSymbol   = trimmed.startsWith('l_');
@@ -30,44 +30,62 @@ export function buildLineMap(asmLines: string[]) {
         const isNonLBBLabel = (trimmed.startsWith('L') || trimmed.endsWith(':'))
                             && !trimmed.startsWith('LBB')
                             && !trimmed.startsWith('_');
-       /* const isPrologue = trimmed.startsWith('sub') && trimmed.includes('sp, sp');
-        const isEpilogue = (trimmed.startsWith('add') && trimmed.includes('sp, sp')) 
-                || trimmed === 'ret';
-*/
+ 
         const filtered = isDirective || isComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
         const newFunction = trimmed.startsWith("_") && trimmed.includes(":");
+        let isFunction = false; // check if its a function or not
 
         if(filtered) continue;
-
+        // peek ahead to find the next .loc line number
+        // so prologue instructions map to the function's first source line
         if(newFunction) {
-            // peek ahead to find the next .loc line number
-            // so prologue instructions map to the function's first source line
-            for(let j = i + 1; j < asmLines.length; j++) {
-                const next = asmLines[j].trim();
-                if(next.startsWith('.loc')) {
-                    const parsed = Number(next.split(/\s+/)[2]);
-                    if(parsed > 0) {
-                        currentSrcLine = parsed;
-                        break;
-                    }
+            if(trimmed.includes("main")){
+                isFunction = false;
+            } else {
+                isFunction = true;
+            }
+
+            for (let k = i + 1; k < asmLines.length; k++) {
+                const linePeek = asmLines[k].trim();
+                const lineNumberPeek = linePeek.split(/\s+/);
+                const lineNumber = Number(lineNumberPeek[2]);
+                if(linePeek.startsWith(".loc" ) && lineNumber != 0) {
+                    currentSrcLine = lineNumber;
+                    break;
                 }
             }
             currentAsmLine++;
             continue;
         }
 
+        // if there is a source line, check if its a function and not main. Then recordMaps
+        // if its main, recordMap on lines except assembly given from llvm
         if(currentSrcLine > 0) {
-            asmMapSrc.set(currentAsmLine, currentSrcLine);
+            if(isFunction) {
+                recordMap(asmMapSrc,srcMapAsm,currentAsmLine,currentSrcLine);
+            } else {
+                const isPrologue = trimmed.startsWith('sub') && trimmed.includes('sp, sp');
+                const isEpilogue = (trimmed.startsWith('add') && trimmed.includes('sp, sp')) 
+                || trimmed === 'ret';
 
-            let asmsForSrcLine = srcMapAsm.get(currentSrcLine);
-            if(!asmsForSrcLine){
-                asmsForSrcLine = [];
-                srcMapAsm.set(currentSrcLine, asmsForSrcLine);
+                if(!isPrologue && !isEpilogue) {
+                    recordMap(asmMapSrc,srcMapAsm,currentAsmLine,currentSrcLine);
+                }
             }
-            asmsForSrcLine.push(currentAsmLine);
         }
         currentAsmLine++;
     }
 
     return {asmMapSrc, srcMapAsm};
+}
+
+function recordMap(asmMap: Map<number, number>, srcMap: Map<number, number[]>,
+    asmLine: number, srcLine: number) {
+    asmMap.set(asmLine,srcLine);
+    let asmsForSrcLine = srcMap.get(srcLine);
+    if(!asmsForSrcLine) {
+        asmsForSrcLine = [];
+        srcMap.set(srcLine,asmsForSrcLine);
+    }
+    asmsForSrcLine.push(asmLine)
 }
