@@ -243,51 +243,68 @@ export function activate(context: ExtensionContext) {
     })
   );
 
-    // ------------ Hover for assembly to source and soruce to assembly -------------------------------------
+    // ------------ Click for assembly to source and soruce to assembly -------------------------------------
 
     context.subscriptions.push(
-      vscode.languages.registerHoverProvider('mylang', {
-        provideHover(document: vscode.TextDocument, position: vscode.Position) {
-          const hoveredLine = position.line + 1;
-          const srcMapAsm = lineMap?.srcMapAsm;
-          // 
-          if(!srcMapAsm) return null;
-          const asmLines = srcMapAsm.get(hoveredLine);
-          console.log('hoveredLine:', hoveredLine, 'asmLines:', asmLines);
-          if (!asmLines || asmLines.length === 0) return null;
-          // retrieve asm editor if it exits
-          const asmEditor = vscode.window.visibleTextEditors.
-          find(doc => doc.document.uri.scheme === 'asm-preview');
-          if (!asmEditor) return null;
-          // make each line to a range so you can call decorations
-          const asmRanges = asmLines.map(line => asmEditor.document.lineAt(line).range)
-          // set decorations for the given asm lines // asmranges 
-          asmEditor.setDecorations(decoration, asmRanges)
-          activeEditor = asmEditor;
-          return null;
-        }
-      })
-    )
-
-
-    context.subscriptions.push(
-      vscode.languages.registerHoverProvider('asm-preview', {
-        provideHover(document: vscode.TextDocument, position: vscode.Position) {
-          return null;
-        }
-      })
-    )
-
-    // When someone is moving the cursor, sets decoration to empty array // reset editor
-    context.subscriptions.push(
-      vscode.window.onDidChangeTextEditorSelection(e => {
-        if(activeEditor) {
+    vscode.window.onDidChangeTextEditorSelection(e => {
+      // check that you are in a mylang file
+      if(e.textEditor.document.languageId !== 'mylang') return;
+      // clear old decoration
+      if(activeEditor) {
           activeEditor.setDecorations(decoration, []);
           activeEditor = undefined;
-        }
-      })
-    )
- 
+      }
+      // retrieve the clickedline and srcMapAsm
+      const clickedLine = e.selections[0].active.line + 1;
+      const srcMapAsm = lineMap?.srcMapAsm;
+      if(!srcMapAsm) return;
+
+      const asmLines = srcMapAsm.get(clickedLine);
+      if(!asmLines || asmLines.length === 0) return;
+       // retrieve asm editor if it exists
+      const asmEditor = vscode.window.visibleTextEditors
+        .find(doc => doc.document.uri.scheme === 'asm-preview');
+      if(!asmEditor) return;
+
+      // make the asm linees into a range
+      const asmRanges = asmLines.map(line => asmEditor.document.lineAt(line).range);
+      // set decoration on asm line
+      asmEditor.setDecorations(decoration, asmRanges);
+      activeEditor = asmEditor;
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeTextEditorSelection(e => {
+      // check that you are in a asm file
+      if(e.textEditor.document.uri.scheme === 'asm-preview') {
+        // clear old decoration
+      if(activeEditor) {
+        activeEditor.setDecorations(decoration, []);
+        activeEditor = undefined;
+      }
+        // retrieve the clickedline and asmMapSrc
+      const clickedLine = e.selections[0].active.line;
+      const asmMapSrc = lineMap?.asmMapSrc;
+      if(!asmMapSrc) return;
+
+      const srcLine = asmMapSrc.get(clickedLine);
+      if(srcLine === undefined) return;
+      // retrieve src editor if it exists
+
+      const srcEditor = vscode.window.visibleTextEditors
+      .find(doc => doc.document.languageId === 'mylang');
+      if(!srcEditor) return;
+
+      // make the source line into a range
+      const srcRange = srcEditor.document.lineAt(srcLine - 1).range;
+      // set decoration on source line
+      srcEditor.setDecorations(decoration, [srcRange]);
+      activeEditor = srcEditor;
+      } 
+    })
+  )
+
   // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
   context.subscriptions.push(
