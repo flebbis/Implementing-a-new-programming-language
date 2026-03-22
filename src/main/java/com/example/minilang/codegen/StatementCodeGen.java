@@ -11,12 +11,14 @@ public class StatementCodeGen extends Helper {
     private HashSet<String> declaredVariables;
     private StringBuilder globals;
     private HashSet<String> functionVariables;
+    private ExpressionCodeGen expressionCodeGen;
 
     public StatementCodeGen(StringBuilder sb, HashSet<String> declaredVariables, StringBuilder globals, HashSet<String> functionVariables) {
         this.sb = sb;
         this.declaredVariables = declaredVariables;
         this.globals = globals;
         this.functionVariables = functionVariables;
+        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, functionVariables);
     }
 
     public void generateStatement(Stmt stmt) {
@@ -31,8 +33,31 @@ public class StatementCodeGen extends Helper {
     }
 
     private void generateWhile(SWhile whileStmt) {
+        LabelGenerator labelGenerator = new LabelGenerator();
+        String condLabel = labelGenerator.generateLabel("while_cond");
+        String bodyLabel = labelGenerator.generateLabel("while_body");
+        String endLabel = labelGenerator.generateLabel("while_end");
 
+        // Jump to condition check
+        sb.append("  br label %").append(condLabel).append("\n");
+
+        // Condition check
+        sb.append(condLabel).append(":\n");
+        String condValue = expressionCodeGen.generateExpression(whileStmt.condition()); // Should be a boolean value (i1 in LLVM)
+        // Branch based on condition
+        sb.append("  br i1 ").append(condValue).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
+
+        // Loop body
+        sb.append(bodyLabel).append(":\n");
+        generateStatement(whileStmt.body());
+
+        // After body, jump back to condition
+        sb.append("  br label %").append(condLabel).append("\n");
+
+        // End of loop
+        sb.append(endLabel).append(":\n");
     }
+
     private void generateDo(SDo doStmt) {
 
     }
@@ -41,8 +66,7 @@ public class StatementCodeGen extends Helper {
     }
     private void generateBlock(SBlock blockStmt) {
             for (Stmt statement : blockStmt.statements()) {
-            StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals, functionVariables);
-            stmtGen.generateStatement(statement);
+            generateStatement(statement);
         }
     }
     private void generateDecl(SDecl declStmt) {
