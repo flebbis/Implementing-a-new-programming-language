@@ -156,9 +156,10 @@ public class StatementCodeGen extends Helper {
             String value = expGen.generateExpression(initStmt.value());
             //sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
-        } else {ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables);
-                String value = expGen.generateExpression(initStmt.value());
-                sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
+        } else {
+            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables);
+            String value = expGen.generateExpression(initStmt.value());
+            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
         }
 

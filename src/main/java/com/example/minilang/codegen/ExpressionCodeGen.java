@@ -1,5 +1,6 @@
 package com.example.minilang.codegen;
 
+import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
 import java.util.HashSet;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
@@ -62,12 +63,13 @@ public class ExpressionCodeGen extends Helper {
     private String generateBool(EBool boolExp) {
         return String.valueOf(boolExp.value());
     }
+
     private String generateId(EId idExp) {
         if (!functionVariables.contains(idExp.name())){
         
-        String register = generateRegister();
-        sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* %").append(idExp.name()).append("\n");
-        return register;
+            String register = generateRegister();
+            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* %").append(idExp.name()).append("\n");
+            return register;
 
         } else {
             return "%" + idExp.name();
@@ -117,23 +119,39 @@ public class ExpressionCodeGen extends Helper {
                 return register;
             }
         } else {
-        String register = generateRegister();
-
-        sb.append(register).append(" = call ").append(convertType(callExp.type())).append(" @").append(callExp.name()).append("(");
-        for (int i = 0; i < callExp.args().size(); i++) {
-            Exp arg = callExp.args().get(i);
-            String argValue = generateExpression(arg);
-            sb.append(convertType(arg.type())).append(" ").append(argValue);
-            if (i < callExp.args().size() - 1) {
-                sb.append(", ");
+            System.out.println("TYPE OF CALL: " + callExp.type());
+            if(callExp.type() instanceof Ast.TUnknown) {
+                // Should not return anything, so we can just call the function without storing the result in a register
+                sb.append("call void @").append(callExp.name()).append("(");
+                for (int i = 0; i < callExp.args().size(); i++) {
+                    Exp arg = callExp.args().get(i);
+                    String argValue = generateExpression(arg);
+                    sb.append(convertType(arg.type())).append(" ").append(argValue);
+                    if (i < callExp.args().size() - 1) {
+                        sb.append(", ");
+                    }
+                }
+                sb.append(")\n");
+                return "";
             }
+
+            String register = generateRegister();
+
+            sb.append(register).append(" = call ").append(convertType(callExp.type())).append(" @").append(callExp.name()).append("(");
+            for (int i = 0; i < callExp.args().size(); i++) {
+                Exp arg = callExp.args().get(i);
+                String argValue = generateExpression(arg);
+                sb.append(convertType(arg.type())).append(" ").append(argValue);
+                if (i < callExp.args().size() - 1) {
+                    sb.append(", ");
+                }
+            }
+            sb.append(")\n");
+
+
+            return register;
         }
-        sb.append(")\n");
-
-
-        return register;
-    }
-    return "Something went wrong with function call generation";
+        return "Something went wrong with function call generation";
 
     }
     private String generateNot(ENot notExp) {

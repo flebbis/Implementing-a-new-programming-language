@@ -44,6 +44,9 @@ public class FunctionCodeGen {
 
         StatementCodeGen stmtGen = new StatementCodeGen(sb, declaredVariables, globals, functionVariables);
         stmtGen.generateStatement(function.body());
+        if(function.returnType() instanceof Ast.TUnknown) {
+            sb.append("  ret void\n");
+        }
         sb.append("\n}\n");
     }
 }
