@@ -107,8 +107,33 @@ public class StatementCodeGen extends Helper {
     }
 
     private void generateIf(SIf ifStmt) {
+        String thenLabel = labelGenerator.generateLabel("if_then");
+        String elseLabel = labelGenerator.generateLabel("if_else");
+        String endLabel = labelGenerator.generateLabel("if_end");
+
+        String condValue = expressionCodeGen.generateExpression(ifStmt.condition()); // Should be a boolean value (i1 in LLVM)
+
+        // Jump to then if true, else jump to else
+        sb.append("  br i1 ").append(condValue).append(", label %").append(thenLabel).append(", label %").append(elseLabel).append("\n");
+
+        // Then block
+        sb.append(thenLabel).append(":\n");
+        generateStatement(ifStmt.thenBranch());
+        sb.append("  br label %").append(endLabel).append("\n");
+
+        // Else block
+        sb.append(elseLabel).append(":\n");
+        if (ifStmt.elseBranch() != null) {
+            generateStatement(ifStmt.elseBranch());
+        }
+        sb.append("  br label %").append(endLabel).append("\n");
+
+        // End of if
+        sb.append(endLabel).append(":\n");
 
     }
+
+
     private void generateBlock(SBlock blockStmt) {
             for (Stmt statement : blockStmt.statements()) {
             generateStatement(statement);
