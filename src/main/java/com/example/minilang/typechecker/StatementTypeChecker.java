@@ -35,7 +35,6 @@ public class StatementTypeChecker {
         };
     }
 
-
     public Ast.Stmt typeCheck(Ast.SInit sInit) {
         Ast.Exp value = expressionTypeChecker.typeCheck(sInit.value());
         Ast.Type typeToCheck = sInit.type();
@@ -59,19 +58,36 @@ public class StatementTypeChecker {
             typeToCheck = value.type();
         }
 
+
         // Verify types match for explicit declarations
         // Allow TUnknown values to bypass checks during inference pass
-        if (!typeToCheck.equals(value.type()) && !(value.type() instanceof Ast.TUnknown)) {
+        if (!compareTypes(typeToCheck, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
             if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, value.type(), value.pos());
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
                 throw new TypeException("Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
                         " but got " + TypeConverter.typeToString(value.type()), value.pos());
             }
         }
 
+        typeToCheck = value.type();
         context.pushToCurrentScope(sInit.name(), typeToCheck);
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
+    }
+
+    private boolean compareTypes(Ast.Type declaredType, Ast.Type valueType) {
+        if(declaredType instanceof Ast.TArray) {
+            // Specific case, since arraySize is allowed to differ
+            if(valueType instanceof Ast.TArray) {
+                return compareTypes(((Ast.TArray) declaredType).elementType(), ((Ast.TArray) valueType).elementType()); // Compare element types recursively
+            } else {
+                return false; // Didn't match an array type at all
+            }
+        }
+        if(declaredType.equals(valueType)) {
+            return true; // Exact match
+        }
+        return false;
     }
 
 
@@ -148,7 +164,7 @@ public class StatementTypeChecker {
         if (!signature.returnType.equals(value.type())) {
             // Allow implicit conversion from int to double
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, value.type(), value.pos());
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
                 throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
             }
