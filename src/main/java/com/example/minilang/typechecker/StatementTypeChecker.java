@@ -164,7 +164,7 @@ public class StatementTypeChecker {
         if (!signature.returnType.equals(value.type())) {
             // Allow implicit conversion from int to double
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, value.type(), value.pos());
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
                 throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
             }
