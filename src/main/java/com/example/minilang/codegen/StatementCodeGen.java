@@ -142,8 +142,8 @@ public class StatementCodeGen extends Helper {
         environment.popScope();
     }
     private void generateDecl(SDecl declStmt) {
-        sb.append(" %").append(declStmt.name()).append(" = alloca ").append(convertType(declStmt.type())).append("\n");
         String register = generateRegister();
+        sb.append(register).append(" = alloca ").append(convertType(declStmt.type())).append("\n");
         environment.pushToCurrentScope(declStmt.name(), register);
     }
     private void generateInit(SInit initStmt) {

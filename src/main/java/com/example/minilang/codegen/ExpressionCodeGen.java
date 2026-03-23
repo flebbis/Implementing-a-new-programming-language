@@ -225,7 +225,7 @@ public class ExpressionCodeGen extends Helper {
     private String generateAss(EAss assExp) {
         String value = generateExpression(assExp.value());
         if (assExp.op() == AssOp.ASSIGN) {
-        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* %").append(assExp.name()).append("\n");
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
         return value; }
             
         String operation = switch (assExp.op()) {
@@ -236,10 +236,10 @@ public class ExpressionCodeGen extends Helper {
             default -> "default assignment value";
         };
         String register = generateRegister();
-        sb.append(register).append(" = load ").append(convertType(assExp.value().type())).append(", ").append(convertType(assExp.value().type())).append("* %").append(assExp.name()).append("\n");
+        sb.append(register).append(" = load ").append(convertType(assExp.value().type())).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
         String returnRegister = generateRegister();
         sb.append(returnRegister).append(" = ").append(operation).append(" ").append(convertType(assExp.value().type())).append(" ").append(register).append(", ").append(value).append("\n");
-        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(returnRegister).append(", ").append(convertType(assExp.value().type())).append("* %").append(assExp.name()).append("\n");
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(returnRegister).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
         return returnRegister;    
     }   
         
@@ -267,7 +267,7 @@ public class ExpressionCodeGen extends Helper {
         String index = generateExpression(arrayIndexExp.index());
         String arrayType = convertType(arrayIndexExp.array().type());
         String elementType = convertType(((TArray) arrayIndexExp.array().type()).elementType());
-        sb.append(register).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append(" * %").append(arrayName).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(index).append("\n");
+        sb.append(register).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append(" * ").append(environment.lookup(arrayName)).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(index).append("\n");
         String returnRegister = generateRegister();
         sb.append(returnRegister).append(" = load ").append(elementType).append(", ").append(elementType).append("* ").append(register).append("\n");
         return returnRegister;
@@ -279,7 +279,7 @@ public class ExpressionCodeGen extends Helper {
             case INC -> {sb.append(register).append(" = add ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1\n");}
             case DEC -> {sb.append(register).append(" = sub ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1\n");}
         }
-         sb.append("store ").append(convertType(unaryExp.type())).append(" ").append(register).append(", ").append(convertType(unaryExp.type())).append("* %").append(((EId) unaryExp.exp()).name()).append("\n");
+         sb.append("store ").append(convertType(unaryExp.type())).append(" ").append(register).append(", ").append(convertType(unaryExp.type())).append("* ").append(environment.lookup(((EId) unaryExp.exp()).name())).append("\n");
  
         
         return register;
