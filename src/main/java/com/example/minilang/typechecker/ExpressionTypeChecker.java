@@ -292,8 +292,10 @@ public class ExpressionTypeChecker {
 
     public Ast.Exp typeCheck(Ast.EArray eArray) {
         List<Ast.Exp> checkedElements = new ArrayList<>();
+        int arraySize = 0;
         for (Ast.Exp element : eArray.elements()) {
             checkedElements.add(typeCheck(element));
+            arraySize++;
         }
 
         Ast.TArray type = (Ast.TArray) eArray.type();
@@ -302,7 +304,7 @@ public class ExpressionTypeChecker {
             // If the array type is unknown, we can infer it from the first element
             if (!checkedElements.isEmpty()) {
                 Ast.Type inferredType = checkedElements.getFirst().type();
-                type = new Ast.TArray(inferredType);
+                type = new Ast.TArray(inferredType, arraySize);
             } else {
                 // If the array is empty and the type is unknown, we can't infer the element type
                 throw new TypeException("Cannot infer type of empty array", eArray.pos());

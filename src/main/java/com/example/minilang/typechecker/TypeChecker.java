@@ -66,7 +66,6 @@ public class TypeChecker {
             if(stmt == null) {
                 continue; // for some reason this happened
             }
-            System.out.println("stememnt " + stmt);
             stmts.add(statementTypeChecker.typeCheck(stmt));
         }
         return stmts;

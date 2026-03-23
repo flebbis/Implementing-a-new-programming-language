@@ -10,7 +10,7 @@ def
     | stmt    #DStm
     ;
 
-func: TYPE? 'func' ID '(' paramSeparator ')' block
+func: typeAnnotation? 'func' ID '(' paramSeparator ')' block
     ;
 
 param: TYPE? ID;
