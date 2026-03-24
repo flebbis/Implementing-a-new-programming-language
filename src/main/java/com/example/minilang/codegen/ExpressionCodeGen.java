@@ -20,10 +20,11 @@ public class ExpressionCodeGen extends Helper {
         this.environment = environment;
     }
 
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, String arrayName){
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, Environment environment, String arrayName){
         this.sb = sb;
         this.globals = globals;
         this.functionVariables = functionVariables;
+        this.environment = environment;
         this.arrayName = arrayName;
     }
 
@@ -115,6 +116,29 @@ public class ExpressionCodeGen extends Helper {
                     sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), double ")
                         .append(value).append(")\n");
                     return register;
+                } else if (eId.type() instanceof TArray) {
+                    TArray arrayType = (TArray) eId.type();
+                    String arrayRegister = environment.lookup(eId.name());
+
+                    int arraySize = arrayType.arraySize();   
+                    
+                    for (int i = 0; i < arraySize; i++) {
+                        String elemPtr = generateRegister();
+                        String arrayTypeStr = convertType(arrayType);
+                        sb.append(elemPtr).append(" = getelementptr inbounds ").append(arrayTypeStr).append(", ").append(arrayTypeStr).append("* ").append(arrayRegister).append(", i32 0, i32 ").append(i).append("\n");
+                        
+                        String elemVal = generateRegister();
+                        String elemType = convertType(arrayType.elementType());
+                        sb.append(elemVal).append(" = load ").append(elemType).append(", ").append(elemType).append("* ").append(elemPtr).append("\n");
+                        
+                        sb.append(generateRegister()).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), ").append(elemType).append(" ").append(elemVal).append(")\n");
+                    }
+                    return "0";
+                } else {
+                                    // Default case if the type is not recognized
+                    String register = generateRegister();
+                    sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
+                    return register;
                 }
             } else if (callExp.args().get(0) instanceof EInt || callExp.args().get(0) instanceof EBool){
                 String value = generateExpression(callExp.args().get(0));
@@ -125,11 +149,6 @@ public class ExpressionCodeGen extends Helper {
                 String value = generateExpression(callExp.args().get(0));
                 String register = generateRegister();
                 sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), ").append("double ").append(value).append(")\n");
-                return register;
-            } else if (callExp.args().get(0) instanceof EArray){
-                String value = generateExpression(callExp.args().get(0));
-                String register = generateRegister();
-                sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), ").append(convertType(callExp.args().get(0).type())).append(" ").append(value).append(")\n");
                 return register;
             }
         } else {
@@ -253,7 +272,7 @@ public class ExpressionCodeGen extends Helper {
         String value = generateExpression(elementExp);
         String register = generateRegister();
         String elementType = convertType(elementExp.type());
-        sb.append(register).append(" = getelementptr inbounds ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * %").append(arrayName).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
+        sb.append(register).append(" = getelementptr inbounds ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * ").append(environment.lookup(arrayName)).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
         sb.append("store ").append(elementType).append(" ").append(value).append(", ").append(elementType).append("* ").append(register).append("\n");
         }
 

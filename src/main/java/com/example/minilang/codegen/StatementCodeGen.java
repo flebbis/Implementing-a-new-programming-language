@@ -154,15 +154,15 @@ public class StatementCodeGen extends Helper {
             environment.pushToCurrentScope(initStmt.name(), register);
         }
         if (initStmt.type() instanceof TArray) {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals,functionVariables , initStmt.name());
+            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals,functionVariables , environment, initStmt.name());
             String value = expGen.generateExpression(initStmt.value());
             //sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
         } else {
             ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
             String value = expGen.generateExpression(initStmt.value());
-            String register = environment.lookup(initStmt.name());
-            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* ").append(register).append("\n");
+            String newRegister = environment.lookup(initStmt.name());
+            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* ").append(newRegister).append("\n");
 
         }
 
