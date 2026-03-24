@@ -173,9 +173,17 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
         return new Ast.ENot(exp, exp.type() , pos);
     }
 
+
     @Override
     public Ast.Exp visitPostfixExpr(GrammarParser.PostfixExprContext ctx) {
         Ast.Exp expr = visit(ctx.primary());
+        if(ctx.postFixOp() != null && ctx.postFixOp().size() > 0) {
+            if(ctx.postFixOp().getFirst() != null) {
+                System.out.println(" HEEEERE " + ctx.postFixOp().getFirst().getText().charAt(0));
+
+            }
+        }
+        ctx.postFixOp().getFirst().
 
         for(GrammarParser.PostFixOpContext op : ctx.postFixOp()) {
             if(op.INC() != null) {
@@ -185,7 +193,8 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
             } else if(op.exp() != null) {
                 Ast.Exp index = visit(op.exp());
                 expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else {
+            }
+            else {
                 // function call
                 List<Ast.Exp> args = new ArrayList<>();
                 for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
