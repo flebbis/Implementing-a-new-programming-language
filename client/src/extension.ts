@@ -156,13 +156,8 @@ export function activate(context: ExtensionContext) {
       // read the assembly file
       const fs = require('fs');
       const asm = fs.readFileSync(asmFile, 'utf8');
-      console.log('raw asm first 500 chars:', asm.substring(0, 500));
 
       const llContent = fs.readFileSync(llFile, 'utf8');
-      console.log('=== GENERATED IR ===');
-      console.log(llContent);
-      console.log('=== END IR ===');
-
       //fs.unlinkSync(llFile);
       //fs.unlinkSync(asmFile);
 
@@ -182,9 +177,6 @@ export function activate(context: ExtensionContext) {
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
       lineMap = buildLineMap(asm.split("\n"));
-      console.log('filtered lines:', filtered.split('\n'));
-      console.log('srcMapAsm:', Object.fromEntries(lineMap.srcMapAsm));
-      console.log('asmMapSrc:', Object.fromEntries(lineMap.asmMapSrc));
       if(!lineMap){
         console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")

@@ -14,7 +14,7 @@
             "match": "\\.?LBB\\d+_\\d:?"
         },
         "Label": {
-            "name": "storage.type",
+            "name": "entity.name.label",
             "match": "^(?!.*LBB)\\w+"
         },
         "Operation": {
@@ -22,16 +22,21 @@
             "match": "^\\s+\\w+\\.?\\w*"
         },
         "Memory": {
-            "name": "keyword.control",
-            "match": "\\[sp|\\d*\\(\\%\\w+\\)"
+            "name": "variable.parameter",
+            "begin": "\\[",
+            "end": "\\]",
+            "patterns": [
+                { "include": "#Register" },
+                { "include": "#Data" }
+            ]
+        }, 
+        "Data": {
+            "name": "storage.type",
+            "match": "\\#-?\\d+\\w*|\\$-?\\d+?\\w*"
         },
         "Register": {
             "name": "comment.line",
             "match": "w\\d+|x\\d+|wzr|xzr|sp|lr|fp|\\%\\w+"
-        },
-        "Data": {
-            "name": "keyword.control",
-            "match": "\\#\\d+]?|\\$\\d+]?"
         }
     }
 }
