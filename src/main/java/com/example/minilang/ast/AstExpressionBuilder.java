@@ -177,24 +177,16 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
     @Override
     public Ast.Exp visitPostfixExpr(GrammarParser.PostfixExprContext ctx) {
         Ast.Exp expr = visit(ctx.primary());
-        if(ctx.postFixOp() != null && ctx.postFixOp().size() > 0) {
-            if(ctx.postFixOp().getFirst() != null) {
-                System.out.println(" HEEEERE " + ctx.postFixOp().getFirst().getText().charAt(0));
-
-            }
-        }
-        ctx.postFixOp().getFirst().
 
         for(GrammarParser.PostFixOpContext op : ctx.postFixOp()) {
             if(op.INC() != null) {
                 expr = new Ast.EUnary(expr, Ast.UnaryOp.INC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             } else if(op.DEC() != null) {
                 expr = new Ast.EUnary(expr, Ast.UnaryOp.DEC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else if(op.exp() != null) {
+            } else if(op.DYNARR_START() != null) {
                 Ast.Exp index = visit(op.exp());
                 expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            }
-            else {
+            } else if (op.PARAM_START() != null && op.PARAM_END() != null) {
                 // function call
                 List<Ast.Exp> args = new ArrayList<>();
                 for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
@@ -206,6 +198,10 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 } else {
                     throw new IllegalArgumentException("Function call target must be an identifier");
                 }
+            } else {
+                // Append array operation
+                Ast.Exp exp = visit(op.exp());
+                return new Ast.EAppend(expr, exp, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             }
         }
         return expr;
