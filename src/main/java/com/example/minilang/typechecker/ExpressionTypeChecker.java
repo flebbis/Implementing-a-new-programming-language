@@ -375,7 +375,15 @@ public class ExpressionTypeChecker {
             } else {
                 return eAppend;
             }
-        } else {
+        }
+        else if (array instanceof Ast.EArrayIndex){
+            if(array.type() instanceof Ast.TArray) {
+                Ast.TArray tArray = (Ast.TArray) array.type();
+                elements = tArray.arraySize() + 1;
+
+            }
+        }
+        else {
             throw new TypeException("Attempting to append to a non-array expression", array.pos());
         }
         Ast.TArray appendType = new Ast.TArray(element.type(), elements);
