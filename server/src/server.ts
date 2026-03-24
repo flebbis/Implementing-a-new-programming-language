@@ -6,7 +6,6 @@ import {
   ProposedFeatures,
   InitializeParams,
   DidChangeConfigurationNotification,
-  TextDocumentPositionParams,
   TextDocumentSyncKind,
   InitializeResult,
   HoverParams,
@@ -19,7 +18,6 @@ import {
 } from "vscode-languageserver/node";
 
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
-import * as vscode from "vscode"
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -256,11 +254,6 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
   let pos = params.position;
   if(doc != undefined){
     // This didn't end up working, 
-
-    // let document = vscode.workspace.textDocuments.find((tdoc)=>{
-    //   if(tdoc.uri.toString() == doc.uri){
-    //     return tdoc
-    //   }
     // })
 
     // const r = document?.getWordRangeAtPosition(new vscode.Position(pos.line,pos.character))
@@ -288,25 +281,10 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
-// Signatures
-
-
-/* connection.onSignatureHelp((handler)=> {
-  connection.console.log("signature help request detected");
-  
-  handler.context
-}) */
-
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
-// -------------------------------------------------------------------------------------------------
 // onSave -- not needed for show-assembly but sendRequest might be usefull for other things
 
 // documents.onDidSave(async (saved) => {
-//   let settings = await getDocumentSettings(saved.document.uri)
-//   if (settings.showAssemblyOnSave) {
-//     connection.sendRequest("showAssembly", "-O0")
-//   }
+//     connection.sendRequest(mehtod, arg)
 // })
 
 

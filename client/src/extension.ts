@@ -121,13 +121,7 @@ export async function activate(context: ExtensionContext) {
           vscode.window.showErrorMessage('No active editor!');
           return;
       }
-/*
-      //execute the file, store the content into a string and run setContent
-      //fires the emitter which tells vsCode that the file has changed
-      const result = execFileSync('java', ['-jar', JAR_PATH, lastPath, optLevel]);
-      const asm = result.toString(); 
-      asmProvider.setContent(asm);
-            */
+
 
       execFileSync('java', ['-jar', JAR_PATH, lastPath]);
 
