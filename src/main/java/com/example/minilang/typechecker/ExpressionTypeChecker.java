@@ -325,7 +325,6 @@ public class ExpressionTypeChecker {
         Ast.Exp index = typeCheck(eArrayIndex.index());
 
         if(!(array.type() instanceof Ast.TArray)) {
-            
             throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
         }
 
@@ -344,40 +343,42 @@ public class ExpressionTypeChecker {
         Ast.Exp element = typeCheck(eAppend.element());
         int elements = 0;
 
-        if (array.type() instanceof Ast.TUnknown) {
-            return new Ast.EAppend(array, element, new Ast.TUnknown(), eAppend.pos());
-        }
+        if(array instanceof Ast.EId) {
+            Ast.EId arrayId = (Ast.EId) array;
+            Ast.Type arrayType = context.lookupLatest(arrayId.name());
+            if(arrayType instanceof Ast.TArray) {
+                Ast.TArray tArray = (Ast.TArray) arrayType;
+                elements = tArray.arraySize() + 1; // New size after append
 
-        if(array.type() instanceof Ast.TArray) {
-            Ast.TArray tArray = (Ast.TArray) array.type();
-            elements = tArray.arraySize() + 1; // New size after append
+                // Handle inference: If array type is TUnknown, we can infer it from the element being appended
+                 if(tArray.elementType() instanceof Ast.TUnknown) {
+                     arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
+                     context.update(arrayId.name(), arrayType);
+                     array = new Ast.EId(arrayId.name(), arrayType, arrayId.pos());
+                 }
 
-            // Handle inference: If array type is TUnknown, we can infer it from the element being appended
-            if(tArray.elementType() instanceof Ast.TUnknown) {
-                Ast.TArray newType = new Ast.TArray(element.type(), elements);
+            } else {
+                throw new TypeException("Attempting to append to a non-array variable: " + arrayId.name() + " of type " + TypeConverter.typeToString(arrayType), arrayId.pos());
+            }
+        } else if(array instanceof Ast.ECall) {
+            // Handle case where array is the result of a function call, we can only allow this if the function return type is TArray
+            Ast.ECall arrayCall = (Ast.ECall) array;
+            if(arrayCall.type() instanceof Ast.TArray) {
+                Ast.TArray tArray = (Ast.TArray) arrayCall.type();
+                elements = tArray.arraySize() + 1; // New size after append
 
-                // If it is a variable, update the context
-                if (array instanceof Ast.EId arrayId) {
-                    context.update(arrayId.name(), newType);
-                    array = new Ast.EId(arrayId.name(), newType, arrayId.pos());
+                // Handle inference: If array type is TUnknown, we can infer it from the element being appended
+                if(tArray.elementType() instanceof Ast.TUnknown) {
+                    array = new Ast.ECall(arrayCall.name(), arrayCall.args(), new Ast.TArray(element.type(), elements), arrayCall.pos());
                 }
-                // If it is not a variable, we generally cannot update the source (e.g. function return),
-                // but valid code will proceed with the inferred type for this expression result.
+
+            } else {
+                return eAppend;
             }
         } else {
-            throw new TypeException("Attempting to append to a non-array expression: " + TypeConverter.typeToString(array.type()), array.pos());
+            throw new TypeException("Attempting to append to a non-array expression", array.pos());
         }
-
-        Ast.TArray tArray = (Ast.TArray) array.type();
-        Ast.Type resultElementType = tArray.elementType();
-        if (resultElementType instanceof Ast.TUnknown) {
-             resultElementType = element.type();
-        } else {
-             // Assuming strict typing, we might want to check if element.type matches resultElementType
-             // For now, preserving existing loose behavior or allowing implicit inference
-        }
-
-        Ast.TArray appendType = new Ast.TArray(resultElementType, elements);
+        Ast.TArray appendType = new Ast.TArray(element.type(), elements);
 
         return new Ast.EAppend(array, element, appendType, eAppend.pos());
 
