@@ -51,7 +51,7 @@
             "description": 
               "Sets the maximum number of problems that can be produced/highlighted by the language server"
           },
-          "languageServer.showAssemblyOnSave": {
+          "assemblyExtension.showAssemblyOnSave": {
             "scope": "resource",
             "type": "boolean",
             "default": "true",

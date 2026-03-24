@@ -94,12 +94,19 @@ export async function activate(context: ExtensionContext) {
   async function showAssembly(optLevel: string) {
 
 
+    /* Don't think this is needed anymore
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
     if (!workspaceFolder) {
     vscode.window.showErrorMessage('No workspace folder open!');
     return;
-    }
-    const JAR_PATH = path.join(workspaceFolder, 'target', 'LLVMINI-1.0-SNAPSHOT.jar');
+    } */
+  //  OBS the jar file must be located in ./client/src/ for this to work, but it should then be able to be included in the exctension
+    const JAR_PATH =  context.asAbsolutePath(
+      path.join('.','client','src','LLVMINI-1.0-SNAPSHOT.jar')
+    );
+    
+
+    vscode.window.showInformationMessage(JAR_PATH);
 
     vscode.window.showInformationMessage('Optimazation level' + optLevel);
     try {
@@ -150,7 +157,11 @@ export async function activate(context: ExtensionContext) {
       const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
       } catch(e: any) {
-        vscode.window.showErrorMessage('Error: ' + e.message);
+        if (e.message == 'spawnSync llc ENOENT') {
+          vscode.window.showErrorMessage('Error: llvm is not installed:' + e.message);
+        } else {
+          vscode.window.showErrorMessage('Error: ' + e.message);
+        }
       }
   }
  
@@ -188,10 +199,20 @@ export async function activate(context: ExtensionContext) {
   )
 
 
+  // If the textdocument is saved and the current document is a supported filetype, run the showAssembply command
   workspace.onDidSaveTextDocument((document: TextDocument) => {
+    const conf:Boolean | undefined = vscode.workspace.getConfiguration('assemblyExtension', document.uri).get('showAssemblyOnSave')
+    console.log("did save text document")
+    console.log('showAssemblyOnSave: ', conf)
+    if (conf) {
+      console.log('document.languageId:', document.languageId, '&& document.uri.scheme: ', document.uri.scheme)
       if (document.languageId === "mylang" && document.uri.scheme === "file") {
+        console.log('try showAssembly...')
           showAssembly('-O0')
       }
+    } else {
+      console.log('whyyyyy')
+    }
   });
 }
 
