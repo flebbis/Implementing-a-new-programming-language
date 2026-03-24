@@ -1,5 +1,5 @@
 import * as path from "path";
-import { workspace, ExtensionContext } from "vscode";
+import { workspace, ExtensionContext, TextDocument } from "vscode";
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
 
@@ -40,7 +40,7 @@ let client: LanguageClient | undefined;
 export async function activate(context: ExtensionContext) {
   // The server is implemented in node
   const serverModule = context.asAbsolutePath(
-    path.join("..","server", "out", "server.js")
+    path.join(".","server", "out", "server.js")
   );
 
   // server debugging options
@@ -194,7 +194,11 @@ export async function activate(context: ExtensionContext) {
   )
 
 
-
+  workspace.onDidSaveTextDocument((document: TextDocument) => {
+      if (document.languageId === "mylang" && document.uri.scheme === "file") {
+          showAssembly('-O0')
+      }
+  });
 }
 
 export async function deactivate() {

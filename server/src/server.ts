@@ -13,9 +13,13 @@ import {
   Hover,
   DocumentDiagnosticReportKind,
   DocumentDiagnosticReport,
+  MarkupContent,
+  Range,
+  MarkupKind,
 } from "vscode-languageserver/node";
 
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Position, TextDocument } from "vscode-languageserver-textdocument";
+import * as vscode from "vscode"
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -62,9 +66,6 @@ connection.onInitialize((params: InitializeParams) => {
       },
       hoverProvider: {
         // workDoneProgress: ?
-      },
-      signatureHelpProvider: {
-
       }
     },
   };
@@ -80,6 +81,21 @@ if (hasWorkspaceFolderCapability) {
 
   return result;
 });
+
+
+// global defult settings if client does not support workspace/configuration requests
+interface ServerSettings {
+  maxNumberOfProblems: number;
+  showAssemblyOnSave: boolean;
+}
+
+const defaultSettings: ServerSettings = {
+  maxNumberOfProblems: 1000,
+  showAssemblyOnSave: false}
+
+let globalSettings: ServerSettings = defaultSettings;
+
+let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -127,9 +143,6 @@ documents.onDidClose(e => {
 documents.onDidChangeContent(change => {
   connection.console.log(
     "onDidChangeContent: " + change.document.version
-    // compile? 
-    // if hasAsmProviderCapabilities
-    // connection.client.
   );
 });
 
@@ -139,15 +152,6 @@ documents.onDidChangeContent(change => {
 // -------------------------------------------------------------------------------------------------
 // Diagnostics
 
-// global defult settings if client does not support workspace/configuration requests
-interface ServerSettings {
-  maxNumberOfProblems: number;
-}
-
-const defaultSettings: ServerSettings = {maxNumberOfProblems: 1000}
-let globalSettings: ServerSettings = defaultSettings;
-
-let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
 
 // Will send error message on startup if this is not included
 connection.languages.diagnostics.on(async (params) => {
@@ -165,7 +169,7 @@ connection.languages.diagnostics.on(async (params) => {
     }
 })
 
-
+// reads the set extension settings
 function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
   if (!hasConfigurationCabability) {
     return Promise.resolve(globalSettings);
@@ -242,14 +246,42 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // Hover
-
+function inc(pos: Position): Position{
+  return {line: pos.line, character: pos.character+1}
+}
 
 connection.onHover((params: HoverParams, token, progrss, result) => {
-  const uri = params.textDocument.uri
-  const posC = params.position.character
-  const posL = params.position.line
-  let res : Hover = {contents:{language:"markdown",value:"###Detecting hover \n@"+uri+"\n:"+posC+"."+posL}}
-  return res
+  const doc = documents.get(params.textDocument.uri)
+  
+  let pos = params.position;
+  if(doc != undefined){
+    // This didn't end up working, 
+
+    // let document = vscode.workspace.textDocuments.find((tdoc)=>{
+    //   if(tdoc.uri.toString() == doc.uri){
+    //     return tdoc
+    //   }
+    // })
+
+    // const r = document?.getWordRangeAtPosition(new vscode.Position(pos.line,pos.character))
+
+    // new idea: send request to client for word/range
+    const r: Range= {start: pos, end: inc(pos)}
+    const word = doc.getText(r);
+    let content: MarkupContent = {kind: MarkupKind.Markdown, 
+      value: [
+        `# ${word}`,
+        'Some text',
+        '```',
+        'hover information should appear here',
+        '```'
+      ].join('\n')}
+    let res : Hover = {contents: content, range: r}
+    return res
+  }
+  else{
+    return null;
+  }
 })
 
 
@@ -264,6 +296,19 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
   
   handler.context
 }) */
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// onSave -- not needed for show-assembly but sendRequest might be usefull for other things
+
+// documents.onDidSave(async (saved) => {
+//   let settings = await getDocumentSettings(saved.document.uri)
+//   if (settings.showAssemblyOnSave) {
+//     connection.sendRequest("showAssembly", "-O0")
+//   }
+// })
+
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------

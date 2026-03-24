@@ -2,7 +2,7 @@
   "name": "mylang-client",
   "description": "language server client for unnamed language",
   "license": "MIT",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "Grupp17A",
   "repository": {
     "type": "git",

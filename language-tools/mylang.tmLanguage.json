@@ -83,7 +83,9 @@
         { "name": "keyword.operator.arithmetic.subtraction",
           "match": "\\-"},
         { "name": "keyword.operator.arithmetic.division",
-          "match": "\/"}]
+          "match": "\/"},
+        { "name": "keyword.operator.arithmetic.remainder",
+          "match": "\\%"}]
     },
     "BooleanOperator": {
       "name": "keyword.operator.boolean",

@@ -50,6 +50,13 @@
             "default": 100,
             "description": 
               "Sets the maximum number of problems that can be produced/highlighted by the language server"
+          },
+          "languageServer.showAssemblyOnSave": {
+            "scope": "resource",
+            "type": "boolean",
+            "default": "true",
+            "description": 
+              "Whether or not the ``Show Assembly`` command should be run every time the document is saved"
           }
         }
       }
