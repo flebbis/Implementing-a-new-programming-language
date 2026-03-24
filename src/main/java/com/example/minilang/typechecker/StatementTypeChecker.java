@@ -61,10 +61,11 @@ public class StatementTypeChecker {
         if(typeToCheck instanceof Ast.TArray) {
             Ast.TArray array = (Ast.TArray) typeToCheck;
             if(array.elementType() instanceof Ast.TUnknown) {
-                if(inferenceContext.lookupFromScopeLevel(sInit.name(), context.getScopeLevel()) != null) {
-                    //TODO: inferenceSUggesiton
-                    typeToCheck = inferenceContext.lookupFromScopeLevel(sInit.name(), context.getScopeLevel());
-
+                if(inferenceContext != null) {
+                    Ast.Type inferred = inferenceContext.lookupFromScopeLevel(sInit.name(), context.getScopeLevel());
+                    if(inferred != null) {
+                        typeToCheck = inferred;
+                    }
                 }
             }
         } else
@@ -79,7 +80,6 @@ public class StatementTypeChecker {
             }
         }
 
-        typeToCheck = value.type();
         context.pushToCurrentScope(sInit.name(), typeToCheck);
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
