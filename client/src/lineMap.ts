@@ -1,4 +1,5 @@
-export function buildLineMap(asmLines: string[]) {
+import { architecture } from "./architecture"
+export function buildLineMap(asmLines: string[], profile: architecture) {
     let asmMapSrc: Map<number, number> = new Map();
     let srcMapAsm: Map<number, number[]> = new Map();
     let currentSrcLine: number = 0;
@@ -64,11 +65,11 @@ export function buildLineMap(asmLines: string[]) {
             if(isFunction) {
                 recordMap(asmMapSrc,srcMapAsm,currentAsmLine,currentSrcLine);
             } else {
-                const isPrologue = trimmed.startsWith('sub') && trimmed.includes('sp, sp');
-                const isEpilogue = (trimmed.startsWith('add') && trimmed.includes('sp, sp')) 
-                || trimmed === 'ret';
-
-                if(!isPrologue && !isEpilogue) {
+                //const isPrologue = trimmed.startsWith('sub') && trimmed.includes('sp, sp');
+                //const isEpilogue = (trimmed.startsWith('add') && trimmed.includes('sp, sp')) 
+                //|| trimmed === 'ret';
+                console.log('checking line:', trimmed, 'matched:', profile.patterns.some(p => p.test(trimmed)));
+                if(!profile.patterns.some(pattern => pattern.test(trimmed))) {
                     recordMap(asmMapSrc,srcMapAsm,currentAsmLine,currentSrcLine);
                 }
             }

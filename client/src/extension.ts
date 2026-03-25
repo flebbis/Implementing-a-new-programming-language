@@ -11,6 +11,7 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 import { countReset } from "console";
+import { PROFILES } from "./architecture";
 
 // my own jar file,, fix later
 // const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
@@ -108,8 +109,10 @@ export function activate(context: ExtensionContext) {
         backgroundColor: 'rgba(61, 145, 197, 0.56)'
       })
   let lineMap: {asmMapSrc: Map<number, number>, srcMapAsm: Map<number, number[]>} | undefined;
-  async function showAssembly(optLevel: string) {
+  let optLevel: string
+  let assembly: string
 
+  async function showAssembly() {
 
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
     if (!workspaceFolder) {
@@ -118,7 +121,13 @@ export function activate(context: ExtensionContext) {
     }
     const JAR_PATH = path.join(workspaceFolder, 'target', 'LLVMINI-1.0-SNAPSHOT.jar');
 
-    vscode.window.showInformationMessage('Optimazation level' + optLevel);
+    vscode.window.showInformationMessage(`Architecture: ${assembly}  and Optimazation level: ${optLevel}`);
+    
+    if (optLevel !== '-O0') {
+      vscode.window.showWarningMessage(
+        `Mapping may be inaccurate at ${optLevel} (accurate at no optimazation)`
+      );
+    }
     try {
       // get the editor and the filepath then save the file
       const editor = vscode.window.activeTextEditor;
@@ -151,7 +160,7 @@ export function activate(context: ExtensionContext) {
       // run llc on the .ll file to produce assembly
       const llFile = lastPath.replace('.ml', '.ll');
       const asmFile = lastPath.replace('.ml', '.s');
-      execFileSync('llc', ['-filetype=asm', optLevel, llFile, '-o', asmFile]);
+      execFileSync('llc', [`-march=${assembly}`,'-filetype=asm', optLevel, llFile, '-o', asmFile]);
 
       // read the assembly file
       const fs = require('fs');
@@ -176,7 +185,7 @@ export function activate(context: ExtensionContext) {
       // add padding for inlayHints
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
-      lineMap = buildLineMap(asm.split("\n"));
+      lineMap = buildLineMap(asm.split("\n"), PROFILES[assembly]);
       if(!lineMap){
         console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")
@@ -202,7 +211,7 @@ export function activate(context: ExtensionContext) {
       // open and show the assembly document to the right of the screen
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
     } catch(e: any) {
-      vscode.window.showErrorMessage('Error: ' + e.message);
+      vscode.window.showErrorMessage(`Error:   e.message`);
     }
   }
 
@@ -300,33 +309,54 @@ export function activate(context: ExtensionContext) {
   // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
   context.subscriptions.push(
-    vscode.commands.registerCommand('assembly-preview.show', async() => showAssembly('-O0'))
-);
+    vscode.commands.registerCommand('assembly-preview.show', async() => {
+    optLevel = '-O0';
+    assembly ='x86-64'
+    showAssembly()
+}));
   context.subscriptions.push(
     vscode.commands.registerCommand('opt.buttons', async() => {})
   )
 
   context.subscriptions.push(
     vscode.commands.registerCommand('O0', async() => {
-      showAssembly('-O0');
+      optLevel = '-O0';
+      showAssembly();
     })
   )
 
   context.subscriptions.push(
     vscode.commands.registerCommand('O1', async() => {
-      showAssembly('-O1');
+      optLevel = '-O1';
+      showAssembly();
     })
   )
 
   context.subscriptions.push(
     vscode.commands.registerCommand('O2', async() => {
-      showAssembly('-O2');
+      optLevel = '-O2';
+      showAssembly();
     })
   )
 
   context.subscriptions.push(
     vscode.commands.registerCommand('O3', async() => {
-      showAssembly('-O3');
+      optLevel = '-O3';
+      showAssembly();
+    })
+  )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('mylang.x86-64', async() => {
+      assembly = 'x86-64';
+      showAssembly();
+    })
+  )
+
+   context.subscriptions.push(
+    vscode.commands.registerCommand('mylang.arm64', async() => {
+      assembly = 'aarch64';
+      showAssembly();
     })
   )
 

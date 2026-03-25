@@ -6,7 +6,8 @@
         {"include": "#Memory"},
         {"include": "#Register"},
         {"include": "#Data"},
-        {"include": "#JumpLabel"}
+        {"include": "#JumpLabel"},
+        {"include": "#MemoryX86"}
     ],
     "repository": {
         "JumpLabel": {
@@ -37,6 +38,11 @@
         "Register": {
             "name": "comment.line",
             "match": "w\\d+|x\\d+|wzr|xzr|sp|lr|fp|\\%\\w+"
+        },
+        "MemoryX86": {
+            "name": "string",
+            "match": "\\-\\d+"
         }
+
     }
 }
