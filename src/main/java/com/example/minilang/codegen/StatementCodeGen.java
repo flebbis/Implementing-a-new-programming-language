@@ -154,13 +154,11 @@ public class StatementCodeGen extends Helper {
             environment.pushToCurrentScope(initStmt.name(), register);
         }
         if (initStmt.type() instanceof TArray) {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals,functionVariables , environment, initStmt.name());
-            String value = expGen.generateExpression(initStmt.value());
+            String value = expressionCodeGen.generateExpression(initStmt.value());
             //sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
 
         } else {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
-            String value = expGen.generateExpression(initStmt.value());
+            String value = expressionCodeGen.generateExpression(initStmt.value());
             String newRegister = environment.lookup(initStmt.name());
             sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* ").append(newRegister).append("\n");
 
@@ -170,16 +168,14 @@ public class StatementCodeGen extends Helper {
     }
     private void generateReturn(SReturn returnStmt) {
         if (returnStmt.value() != null) {
-            ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
-            String value = expGen.generateExpression(returnStmt.value());
+            String value = expressionCodeGen.generateExpression(returnStmt.value());
             sb.append("  ret ").append(convertType(returnStmt.value().type())).append(" ").append(value).append("\n");
         } else {
             sb.append("  ret void\n");
         }
     }
     private void generateExp(SExp expStmt) {
-        ExpressionCodeGen expGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
-        expGen.generateExpression(expStmt.exp());
+        expressionCodeGen.generateExpression(expStmt.exp());
     }
 
 }

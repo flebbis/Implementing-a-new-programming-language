@@ -26,15 +26,18 @@ public class CodeGenerator {
         sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");
         sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");
         sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");
+        sb.append("declare i8* @int_to_string(i32)\n");
+        sb.append("declare i8* @double_to_string(double)\n");
+        sb.append("declare i8* @bool_to_string(i1)\n");
+        sb.append("declare i8* @string_concat(i8*, i8*)\n");
 
 
 
 
         sb.append("define void @main() {\n");
         sb.append("entry:\n");
-
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, functionVariables);
         for (Ast.Stmt statement : program.stmts()) {
-            StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, functionVariables);
             stmtGen.generateStatement(statement);
         }
 
@@ -44,7 +47,7 @@ public class CodeGenerator {
 
         for (Ast.Func function : program.functions()) {
             System.out.println("Functions found: " + program.functions().size());
-            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, functionVariables);
+            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, functionVariables, stmtGen);
             funcGen.generateFunction(function);
         }
 

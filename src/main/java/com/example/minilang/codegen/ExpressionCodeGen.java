@@ -1,5 +1,6 @@
 package com.example.minilang.codegen;
 
+import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
 import java.util.HashSet;
@@ -44,6 +45,8 @@ public class ExpressionCodeGen extends Helper {
             if (exp instanceof EArray arrayExp) return generateArray(arrayExp);
             if (exp instanceof EArrayIndex arrayIndexExp) return generateArrayIndex(arrayIndexExp);
             if (exp instanceof EUnary unaryExp) return generateUnary(unaryExp);
+            if (exp instanceof EDInt dIntExp) return generateDInt(dIntExp);
+            if (exp instanceof EStringCast sStringCast) return generateStringCast(sStringCast);
             return "0";
     }
 
@@ -58,6 +61,7 @@ public class ExpressionCodeGen extends Helper {
         value = value.substring(1, value.length() - 1);
         int length = value.length() + 1; // +1 for null terminator
         String globalName = "@.str." + stringCounter++;
+        System.out.println("Generating global string: " + globalName + " with value: " + value);
         String register = generateRegister();
         globals.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
         sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
@@ -94,63 +98,8 @@ public class ExpressionCodeGen extends Helper {
     private String generateCall(ECall callExp) {
 
         if (callExp.name().equals("print")){
-            if (callExp.args().get(0) instanceof EString){
-                String printGlobal = generatePrintGlobal();
-                globals.append(printGlobal).append(" = private constant [").append(((EString) callExp.args().get(0)).value().length()).append(" x i8] c\"").append(((EString) callExp.args().get(0)).value().substring(1, ((EString) callExp.args().get(0)).value().length() - 1)).append("\\0A\\00\"\n");
-                String register = generateRegister();
-                sb.append(register).append(" = getelementptr inbounds [").append(((EString ) callExp.args().get(0)).value().length()).append(" x i8], [").append(((EString) callExp.args().get(0)).value().length()).append(" x i8]* ").append(printGlobal).append(", i32 0, i32 0\n");
-                sb.append("call i32 @printf(i8* ").append(register).append(")\n");
-                return register;
-            } else if (callExp.args().get(0) instanceof EId){
-                EId eId = (EId) callExp.args().get(0);
-                String type = convertType(eId.type());
-                String value = generateExpression(eId);  // This loads the value
-                    
-                if (type.equals("i32")) {
-                    String register = generateRegister();
-                    sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), i32 ")
-                        .append(value).append(")\n");
-                    return register;
-                } else if (type.equals("double")) {
-                    String register = generateRegister();
-                    sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), double ")
-                        .append(value).append(")\n");
-                    return register;
-                } else if (eId.type() instanceof TArray) {
-                    TArray arrayType = (TArray) eId.type();
-                    String arrayRegister = environment.lookup(eId.name());
-
-                    int arraySize = arrayType.arraySize();   
-                    
-                    for (int i = 0; i < arraySize; i++) {
-                        String elemPtr = generateRegister();
-                        String arrayTypeStr = convertType(arrayType);
-                        sb.append(elemPtr).append(" = getelementptr inbounds ").append(arrayTypeStr).append(", ").append(arrayTypeStr).append("* ").append(arrayRegister).append(", i32 0, i32 ").append(i).append("\n");
-                        
-                        String elemVal = generateRegister();
-                        String elemType = convertType(arrayType.elementType());
-                        sb.append(elemVal).append(" = load ").append(elemType).append(", ").append(elemType).append("* ").append(elemPtr).append("\n");
-                        
-                        sb.append(generateRegister()).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), ").append(elemType).append(" ").append(elemVal).append(")\n");
-                    }
-                    return "0";
-                } else {
-                                    // Default case if the type is not recognized
-                    String register = generateRegister();
-                    sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
-                    return register;
-                }
-            } else if (callExp.args().get(0) instanceof EInt || callExp.args().get(0) instanceof EBool){
-                String value = generateExpression(callExp.args().get(0));
-                String register = generateRegister();
-                sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), ").append(convertType(callExp.args().get(0).type())).append(" ").append(value).append(")\n");
-                return register;
-            } else if (callExp.args().get(0) instanceof EDouble){
-                String value = generateExpression(callExp.args().get(0));
-                String register = generateRegister();
-                sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), ").append("double ").append(value).append(")\n");
-                return register;
-            }
+            String register = generatePrintCall(callExp);
+            if (register != null) return register;
         } else {
             if(callExp.type() instanceof Ast.TUnknown) {
                 // Should not return anything, so we can just call the function without storing the result in a register
@@ -186,6 +135,68 @@ public class ExpressionCodeGen extends Helper {
         return "Something went wrong with function call generation";
 
     }
+
+    private String generatePrintCall(ECall callExp) {
+        Exp arg = callExp.args().get(0);
+
+        if (arg.type() instanceof TArray arrayType) {
+            return generateArrayPrint(arg, arrayType);
+        }
+
+        String value = generateExpression(arg);
+        return generatePrintValue(value, arg.type());
+    }
+
+    public String generatePrintValue(String value, Type type) {
+        if (type instanceof TInt) {
+            String register = generateRegister();
+            sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), i32 ")
+                .append(value).append(")\n");
+            return register;
+        } else if (type instanceof TDouble) {
+            String register = generateRegister();
+            sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), double ")
+                .append(value).append(")\n");
+            return register;
+        } else if (type instanceof TBool) {
+            String boolStr = generateRegister();
+            String printReg = generateRegister();
+
+            sb.append(boolStr)
+                    .append(" = call i8* @bool_to_string(i1 ")
+                    .append(value).append(")\n");
+
+            sb.append(printReg)
+                    .append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ")
+                    .append(boolStr).append(")\n");
+
+            return printReg;
+        } else {
+            String register = generateRegister();
+            sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
+            return register;
+        }
+    }
+
+    public String generateArrayPrint(Exp arg, TArray arrayType) {
+        String arrayRegister = generateExpression(arg);
+        int arraySize = arrayType.arraySize();
+        Type elementType = arrayType.elementType();
+
+        for (int i = 0; i < arraySize; i++) {
+            String elemPtr = generateRegister();
+            String arrayTypeStr = convertType(arrayType);
+            sb.append(elemPtr).append(" = getelementptr inbounds ").append(arrayTypeStr).append(", ").append(arrayTypeStr).append("* ").append(arrayRegister).append(", i32 0, i32 ").append(i).append("\n");
+
+            String elemVal = generateRegister();
+            String elemTypeStr = convertType(elementType);
+            sb.append(elemVal).append(" = load ").append(elemTypeStr).append(", ").append(elemTypeStr).append("* ").append(elemPtr).append("\n");
+
+            generatePrintValue(elemVal, elementType);
+        }
+        return "0";
+    }
+
     private String generateNot(ENot notExp) {
         String value = generateExpression(notExp.exp());
         String register = generateRegister();
@@ -206,7 +217,7 @@ public class ExpressionCodeGen extends Helper {
         String right = generateExpression(oppExp.right());
         String register = generateRegister();
         switch (oppExp.op()) {
-            case ADD -> {sb.append(register).append(" = add ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");} 
+            case ADD -> {handleEAdd(left,right,register, oppExp.type());}
             case SUB -> {sb.append(register).append(" = sub ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
             case MUL -> {sb.append(register).append(" = mul ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
             case DIV -> {sb.append(register).append(" = sdiv ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
@@ -215,6 +226,21 @@ public class ExpressionCodeGen extends Helper {
         return register;
 
     }
+
+    private String handleEAdd(String left, String right, String register, Type type) {
+        if(type instanceof Ast.TString) {
+            sb.append("  ").append(register)
+                    .append(" = call i8* @string_concat(i8* ")
+                    .append(left)
+                    .append(", i8* ")
+                    .append(right)
+                    .append(")\n");
+        } else {
+            sb.append(register).append(" = add ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append("\n");
+        }
+        return register;
+    }
+
     private String generateCmp(ECmp cmpExp) {
         String left = generateExpression(cmpExp.left());
         String right = generateExpression(cmpExp.right());
@@ -303,6 +329,47 @@ public class ExpressionCodeGen extends Helper {
         
         return register;
 
+    }
+
+    private String generateDInt(EDInt dIntExp) {
+        String value = generateExpression(dIntExp.exp());
+        String register = generateRegister();
+        sb.append(register).append(" = sitofp i32 ").append(value).append(" to double\n");
+        return register;
+    }
+
+    private String generateStringCast(EStringCast sStringCast) {
+        String value = generateExpression(sStringCast.exp());
+        Type type = sStringCast.exp().type();
+        String register = generateRegister();
+        if (type instanceof TInt) {
+            generateStringCastInt(value, register);
+        } else if (type instanceof TDouble) {
+            generateStringCastDouble(value, register);
+        } else if (type instanceof TBool) {
+            generateStringCastBool(value, register);
+        } else {
+            throw new IllegalArgumentException("Unsupported type for string cast " + TypeConverter.typeToString(type));
+        }
+        return register;
+
+    }
+
+    private void generateStringCastInt(String value, String register) {
+        sb.append("  ").append(register)
+                .append(" = call i8* @int_to_string(i32 ")
+                .append(value).append(")\n");
+    }
+
+    private void generateStringCastDouble(String value, String register) {
+        sb.append("  ").append(register)
+                .append(" = call i8* @double_to_string(double ")
+                .append(value).append(")\n");
+    }
+
+    private void generateStringCastBool(String value, String register) {
+        sb.append("  ").append(register)
+                .append(" = call i8* @bool_to_string(i1 " ).append(value).append(")\n");
     }
 
 }
