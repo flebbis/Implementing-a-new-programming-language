@@ -146,7 +146,7 @@ public class ExpressionCodeGen extends Helper {
                 sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), ").append(convertType(callExp.args().get(0).type())).append(" ").append(value).append(")\n");
                 return register;
             } else if (callExp.args().get(0) instanceof EDouble){
-                String value = generateExpression(callExp.args().get(0));
+                double value = ((EDouble) callExp.args().get(0)).value();
                 String register = generateRegister();
                 sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), ").append("double ").append(value).append(")\n");
                 return register;
@@ -262,35 +262,48 @@ public class ExpressionCodeGen extends Helper {
         return returnRegister;    
     }   
         
+    // private String Eappend(Eappend array){
+
+
+
+    // }
     
     private String generateArray(EArray arrayExp) {
         int numElements = arrayExp.elements().size();
-        Type arrayType = arrayExp.type();
-
+        String arrayType = convertType(arrayExp.type());
+  
         for (int i = 0; i < numElements; i++) {
         Exp elementExp = arrayExp.elements().get(i);
         String value = generateExpression(elementExp);
         String register = generateRegister();
-        String elementType = convertType(elementExp.type());
-        sb.append(register).append(" = getelementptr inbounds ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * ").append(environment.lookup(arrayName)).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
-        sb.append("store ").append(elementType).append(" ").append(value).append(", ").append(elementType).append("* ").append(register).append("\n");
+        //String elementType = convertType(elementExp.type());
+        
+		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(i).append("\n");
+        sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append("i32* ").append(register).append("\n");
+        // sb.append(register).append(" = getelementptr inbounds ").append(convertType(arrayType)).append(", ").append(convertType(arrayType)).append(" * ").append(environment.lookup(arrayName)).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(i).append("\n");
+        // sb.append("store ").append(elementType).append(" ").append(value).append(", ").append(elementType).append("* ").append(register).append("\n");
         }
 
-        return "%" + arrayName;
+        return environment.lookup(arrayName);
     }
 
 
     private String generateArrayIndex(EArrayIndex arrayIndexExp) {
-        String arrayName = arrayIndexExp.array() instanceof EId id ? id.name() : "unknown";
-        String register = generateRegister();
+
+    
+		String register = generateRegister();
+		String returnRegister = generateRegister();
+		String arrayType = convertType(arrayIndexExp.array().type());
         String index = generateExpression(arrayIndexExp.index());
-        String arrayType = convertType(arrayIndexExp.array().type());
-        String elementType = convertType(((TArray) arrayIndexExp.array().type()).elementType());
-        sb.append(register).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append(" * ").append(environment.lookup(arrayName)).append(", ").append(elementType).append(" 0, ").append(elementType).append(" ").append(index).append("\n");
-        String returnRegister = generateRegister();
-        sb.append(returnRegister).append(" = load ").append(elementType).append(", ").append(elementType).append("* ").append(register).append("\n");
-        return returnRegister;
+		String arrayName = ((EId) arrayIndexExp.array()).name();
+		
+		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
+        sb.append(returnRegister).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(register).append("\n");
+        
+		return returnRegister;
     }
+
+
     private String generateUnary(EUnary unaryExp) {
         String value = generateExpression(unaryExp.exp());
         String register = generateRegister();

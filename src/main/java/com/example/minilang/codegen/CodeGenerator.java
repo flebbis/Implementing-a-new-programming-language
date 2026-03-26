@@ -23,6 +23,8 @@ public class CodeGenerator {
         //External functions
         sb.append("declare double @pow(double, double)\n");
         sb.append("declare i32 @printf(i8*, ...)\n");
+        sb.append("declare i8* @malloc(i64)\n");
+        sb.append("declare void @free(i8*)\n");
         sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");
         sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");
         sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");
