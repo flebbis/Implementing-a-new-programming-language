@@ -337,6 +337,11 @@ public class ExpressionTypeChecker {
                     throw new TypeException("Attempting to index a non-array type on function call: " + TypeConverter.typeToString(array.type()), array.pos());
                 }
             }
+            if (array.type() instanceof Ast.TUnknown) {
+                //simply return the array as is with TUnknown, we're in first pass
+                Ast.TUnknown resultType = new Ast.TUnknown();
+                return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
+            }
             throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
         }
 
