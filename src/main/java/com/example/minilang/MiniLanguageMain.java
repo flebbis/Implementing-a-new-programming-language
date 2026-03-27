@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/good/array-double-index-call.ml";
+             path = testFilePath + "type/good/append-8.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {

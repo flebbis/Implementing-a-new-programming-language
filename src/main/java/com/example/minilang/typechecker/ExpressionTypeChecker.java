@@ -397,6 +397,11 @@ public class ExpressionTypeChecker {
                 }
             }
             case Ast.EArrayIndex eArrayIndex -> {
+                if (array.type() instanceof Ast.TUnknown) {
+                    //simply return the array as is with TUnknown, we're in first pass
+                    Ast.TUnknown resultType = new Ast.TUnknown();
+                    return new Ast.EAppend(array, element, resultType, eAppend.pos());
+                }
                 if (array.type() instanceof Ast.TArray) {
                     Ast.TArray tArray = (Ast.TArray) array.type();
                     typeOfArray = tArray;
@@ -407,12 +412,19 @@ public class ExpressionTypeChecker {
             case null, default ->
                     throw new TypeException("Attempting to append to a non-array expression", array.pos());
         }
-
+        if (eAppend.element().type() instanceof Ast.TUnknown) {
+            Ast.TArray appendType = new Ast.TArray(element.type(), elements);
+            return new Ast.EAppend(array, element, appendType, eAppend.pos());
+        }
         // Check that the element being appended matches the array's element type, unless it's TUnknown (inference phase)
-        if(!(typeOfArray.elementType() instanceof Ast.TUnknown) && !typeOfArray.elementType().equals(element.type())) {
+        if(!(typeOfArray.elementType() instanceof Ast.TUnknown) && !(TypeUtils.equalTypes(typeOfArray.elementType(), element.type()))) {
             if(typeOfArray.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
                 element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
-            } else {
+            } else if ((TypeUtils.equalTypes(typeOfArray.elementType(), element.type()))){
+                //Do nothing :D
+                System.out.println("asd");
+            }
+            else {
                 throw new TypeException("Attempting to append element of type " + TypeConverter.typeToString(element.type()) + " to array of type " + TypeConverter.typeToString(typeOfArray.elementType()), element.pos());
             }
         }

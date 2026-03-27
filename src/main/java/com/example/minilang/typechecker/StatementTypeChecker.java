@@ -85,18 +85,7 @@ public class StatementTypeChecker {
     }
 
     private boolean compareTypes(Ast.Type declaredType, Ast.Type valueType) {
-        if(declaredType instanceof Ast.TArray) {
-            // Specific case, since arraySize is allowed to differ
-            if(valueType instanceof Ast.TArray) {
-                return compareTypes(((Ast.TArray) declaredType).elementType(), ((Ast.TArray) valueType).elementType()); // Compare element types recursively
-            } else {
-                return false; // Didn't match an array type at all
-            }
-        }
-        if(declaredType.equals(valueType)) {
-            return true; // Exact match
-        }
-        return false;
+        return TypeUtils.equalTypes(declaredType, valueType);
     }
 
 
