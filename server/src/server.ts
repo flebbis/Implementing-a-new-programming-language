@@ -19,6 +19,10 @@ import {
 
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
 
+import { spawn } from 'child_process';
+import * as path from 'path';
+// import { URI } from "vscode-uri";
+
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
@@ -248,22 +252,24 @@ function inc(pos: Position): Position{
   return {line: pos.line, character: pos.character+1}
 }
 
+function dec(pos: Position): Position{
+  return {line: pos.line, character: pos.character-1}
+}
+
 connection.onHover((params: HoverParams, token, progrss, result) => {
   const doc = documents.get(params.textDocument.uri)
   
   let pos = params.position;
   if(doc != undefined){
-    // This didn't end up working, 
-    // })
-
-    // const r = document?.getWordRangeAtPosition(new vscode.Position(pos.line,pos.character))
-
-    // new idea: send request to client for word/range
+    
+    
+    // idea: step left untill non-word character > step right untill non-word character
+    
     const r: Range= {start: pos, end: inc(pos)}
     const word = doc.getText(r);
-    let content: MarkupContent = {kind: MarkupKind.Markdown, 
+    let content: MarkupContent = {kind: MarkupKind.Markdown,
       value: [
-        `# ${word}`,
+        `### ${word}`,
         'Some text',
         '```',
         'hover information should appear here',
@@ -278,6 +284,7 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
 })
 
 
+
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -286,6 +293,122 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
 // documents.onDidSave(async (saved) => {
 //     connection.sendRequest(mehtod, arg)
 // })
+
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Type inference
+
+type InferenceSuggestion = {
+  name: string;
+  inferredType: string;
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+  replacement: string;
+};
+
+const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
+
+
+// Handle inlay hint requests
+connection.languages.inlayHint.on((params) => {
+  const uri = params.textDocument.uri;
+  const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+
+  return suggestions.map((s) => ({
+    position: {
+      line: s.line - 1,
+      character: s.column,
+    },
+    label: `${s.inferredType} `,
+    kind: 1,
+    paddingRight: true,
+  }));
+});
+
+
+// Map to store which version was changed latest
+const latestDocumentVersions: Map<string, number> = new Map();
+
+
+documents.onDidChangeContent(change => {
+  const uri = change.document.uri;
+  const text = change.document.getText();
+  const version = change.document.version;
+  latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
+  // console.error("TEXXXT " + change.document.getText())
+
+  // Type check & inference phase
+  inferenceAnalysis(uri, text, version);
+
+});
+
+
+
+async function inferenceAnalysis(uri: string, text: string, version: number) {
+  try {
+    const result = await runJavaAnalysis(text);
+
+    // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
+    // console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
+    const suggestions: InferenceSuggestion[] = result ?? [];
+
+    inferenceSuggestionMap.set(uri, suggestions);
+    await connection.languages.inlayHint.refresh(); // Refresh inlay hints
+
+  }
+  catch (error) {
+    connection.console.error("Error running Java analysis: " + error);
+  }
+
+
+}
+
+// Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
+function runJavaAnalysis(text: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    // Path to the compiled JAR file
+    // Build with: mvn package (creates target/LLVMINI-1.0-SNAPSHOT.jar)
+    const jarPath = path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT.jar');
+
+    const java = spawn("java", ["-jar", jarPath, text]);
+
+    // Capture stdout and stderr from the Java process
+    let stdout = "";
+    let stderr = "";
+
+    java.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    // Capture stderr for error reporting (from java code)
+    java.stderr.on("data", (data) => {
+      stderr += data.toString();
+      // connection.console.error("Java stderr: " + data.toString());
+    });
+
+    // Handle process exit
+    java.on("close", (code) => {
+      if (code !== 0) { // code 0 is success code
+        // connection.console.error("Java process failed with code " + code + ": " + stderr);
+        reject(new Error(stderr || `Java process exited with code ${code}`));
+        return;
+      }
+
+      try {
+        const result = JSON.parse(stdout); // Parse JSON result from Java
+        resolve(result);
+      } catch (e) {
+        // connection.console.error("Failed to parse JSON from Java: " + stdout);
+        reject(new Error("Failed to parse JSON from Java: " + stdout));
+      }
+    });
+  });
+}
+
 
 
 // -------------------------------------------------------------------------------------------------
