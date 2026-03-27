@@ -4,7 +4,8 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
     let srcMapAsm: Map<number, number[]> = new Map();
     let currentSrcLine: number = 0;
     let currentAsmLine: number = 0;
-
+    let isFunction = false; // check if its a function or not
+    
     for(let i = 0; i < asmLines.length; i++) {
         const line = asmLines[i];
         // For each line in .s, check that it is a real instruction for assembly output
@@ -26,15 +27,15 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         const isComment   = trimmed.startsWith(';');
         const isLSymbol   = trimmed.startsWith('l_');
         const isHash      = trimmed.startsWith('#');
+        const isEmail     = trimmed.startsWith('@');
         const isBlankSpace = trimmed === '';
         // Labels that are NOT LBB labels and NOT function labels
         const isNonLBBLabel = (trimmed.startsWith('L') || trimmed.endsWith(':'))
                             && !trimmed.startsWith('LBB')
                             && !trimmed.startsWith('_');
  
-        const filtered = isDirective || isComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
+        const filtered = isDirective || isComment || isLSymbol || isHash || isEmail || isBlankSpace || isNonLBBLabel;
         const newFunction = trimmed.startsWith("_") && trimmed.includes(":");
-        let isFunction = false; // check if its a function or not
 
         if(filtered) continue;
         // peek ahead to find the next .loc line number

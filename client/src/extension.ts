@@ -85,7 +85,6 @@ export function activate(context: ExtensionContext) {
     vscode.workspace.onDidChangeTextDocument(e => {
         if (e.document.uri.toString() === AsmProvider.uri.toString()) {
             vscode.commands.executeCommand('undo');
-            vscode.window.showErrorMessage("Can´t edit")
         }
     })
 );
@@ -178,8 +177,9 @@ export function activate(context: ExtensionContext) {
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => !line.trim().startsWith('#'))
       .filter((line: string) => line.trim() !== '')
+      .filter((line: string) => !line.trim().startsWith('@'))
       .filter((line: string) => (!line.trim().startsWith("L") && !line.endsWith(":")) || line.startsWith("LBB"))
-      .map((line: string) => line.split(";")[0].split('  #')[0].trimEnd())
+      .map((line: string) => line.split(";")[0].split('  #')[0].split(' @')[0].trimEnd())
       .join('\n');
 
       // add padding for inlayHints
@@ -199,7 +199,7 @@ export function activate(context: ExtensionContext) {
       }
 
       for (let i = 0; i < lines.length; i++) {
-        lines[i] = lines[i].padEnd(maxLength + 10);
+        lines[i] = lines[i].padEnd(maxLength + 3);
       }
 
       const padding = lines.join('\n');

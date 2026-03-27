@@ -6,11 +6,12 @@
         {"include": "#Memory"},
         {"include": "#Register"},
         {"include": "#Data"},
-        {"include": "#JumpLabel"}
+        {"include": "#JumpLabel"},
+        {"include": "#MemoryX86"}
     ],
     "repository": {
         "JumpLabel": {
-            "name": "entity.name.function",
+            "name": "",
             "match": "\\.?LBB\\d+_\\d:?"
         },
         "Label": {
@@ -18,11 +19,11 @@
             "match": "^(?!.*LBB)\\w+"
         },
         "Operation": {
-            "name": "variable.other",
+            "name": "entity.name.tag",
             "match": "^\\s+\\w+\\.?\\w*"
         },
         "Memory": {
-            "name": "variable.parameter",
+            "name": "meta.brackets",
             "begin": "\\[",
             "end": "\\]",
             "patterns": [
@@ -31,12 +32,17 @@
             ]
         }, 
         "Data": {
-            "name": "storage.type",
+            "name": "constant.numeric",
             "match": "\\#-?\\d+\\w*|\\$-?\\d+?\\w*"
         },
         "Register": {
-            "name": "comment.line",
+            "name": "variable.language",
             "match": "w\\d+|x\\d+|wzr|xzr|sp|lr|fp|\\%\\w+"
+        },
+        "MemoryX86": {
+            "name": "storage.type",
+            "match": "\\-\\d+"
         }
+
     }
 }
