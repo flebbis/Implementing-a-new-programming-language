@@ -18,13 +18,10 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
 
     @Override
     public Ast.Func visitFunc(GrammarParser.FuncContext ctx) {
-        System.out.println(ctx.getText());
-        // rule: TYPE 'func' ID '(' paramSeparator ')' block
 
-        Ast.Type returnType = Ast.Type.TUnknown;
-
-        if(ctx.TYPE() != null) {
-            String returnTypeText = ctx.TYPE().getText();
+        Ast.Type returnType = new Ast.TUnknown(); // Default to TUnknown if no return type is specified
+        if(ctx.typeAnnotation() != null) {
+            String returnTypeText = ctx.typeAnnotation().getText();
             returnType = TypeConverter.mapType(returnTypeText);
         }
 
@@ -46,7 +43,7 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
                     params.add(new Ast.Arg(id, pType, pos));
                 }
                 else{
-                    params.add(new Ast.Arg(p.ID().getText(), Ast.Type.TUnknown, pos));
+                    params.add(new Ast.Arg(p.ID().getText(), new Ast.TUnknown(), pos));
 
                 }
 
