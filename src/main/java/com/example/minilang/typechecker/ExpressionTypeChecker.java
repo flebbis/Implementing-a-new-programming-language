@@ -324,6 +324,8 @@ public class ExpressionTypeChecker {
         Ast.Exp array = typeCheck(eArrayIndex.array());
         Ast.Exp index = typeCheck(eArrayIndex.index());
 
+
+
         if(!(array.type() instanceof Ast.TArray)) {
             if (array instanceof Ast.ECall) {
                 Ast.ECall eCallArray = (Ast.ECall) array;
@@ -356,7 +358,7 @@ public class ExpressionTypeChecker {
     }
     
     public Ast.Exp typeCheck(Ast.EAppend eAppend) {
-        Ast.Exp array = typeCheck(eAppend.array());
+        Ast.Exp array = typeCheck(eAppend.array());;
         Ast.Exp element = typeCheck(eAppend.element());
         int elements = 0;
         Ast.TArray typeOfArray = null;
@@ -402,13 +404,17 @@ public class ExpressionTypeChecker {
                     Ast.TUnknown resultType = new Ast.TUnknown();
                     return new Ast.EAppend(array, element, resultType, eAppend.pos());
                 }
-                if (array.type() instanceof Ast.TArray) {
+                else if (array.type() instanceof Ast.TArray) {
                     Ast.TArray tArray = (Ast.TArray) array.type();
                     typeOfArray = tArray;
                     elements = tArray.arraySize() + 1;
 
                 }
+                else {
+                    throw new TypeException("Attempting to append to a non-array type on array indexing: " + TypeConverter.typeToString(array.type()), array.pos());
+                }
             }
+
             case null, default ->
                     throw new TypeException("Attempting to append to a non-array expression", array.pos());
         }
