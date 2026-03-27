@@ -61,7 +61,6 @@ public class ExpressionCodeGen extends Helper {
         value = value.substring(1, value.length() - 1);
         int length = value.length() + 1; // +1 for null terminator
         String globalName = "@.str." + stringCounter++;
-        System.out.println("Generating global string: " + globalName + " with value: " + value);
         String register = generateRegister();
         globals.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
         sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
@@ -138,63 +137,11 @@ public class ExpressionCodeGen extends Helper {
 
     private String generatePrintCall(ECall callExp) {
         Exp arg = callExp.args().get(0);
+        String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
+        String register = generateRegister();
 
-        if (arg.type() instanceof TArray arrayType) {
-            return generateArrayPrint(arg, arrayType);
-        }
-
-        String value = generateExpression(arg);
-        return generatePrintValue(value, arg.type());
-    }
-
-    public String generatePrintValue(String value, Type type) {
-        if (type instanceof TInt) {
-            String register = generateRegister();
-            sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.int, i32 0, i32 0), i32 ")
-                .append(value).append(")\n");
-            return register;
-        } else if (type instanceof TDouble) {
-            String register = generateRegister();
-            sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.double, i32 0, i32 0), double ")
-                .append(value).append(")\n");
-            return register;
-        } else if (type instanceof TBool) {
-            String boolStr = generateRegister();
-            String printReg = generateRegister();
-
-            sb.append(boolStr)
-                    .append(" = call i8* @bool_to_string(i1 ")
-                    .append(value).append(")\n");
-
-            sb.append(printReg)
-                    .append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ")
-                    .append(boolStr).append(")\n");
-
-            return printReg;
-        } else {
-            String register = generateRegister();
-            sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
-            return register;
-        }
-    }
-
-    public String generateArrayPrint(Exp arg, TArray arrayType) {
-        String arrayRegister = generateExpression(arg);
-        int arraySize = arrayType.arraySize();
-        Type elementType = arrayType.elementType();
-
-        for (int i = 0; i < arraySize; i++) {
-            String elemPtr = generateRegister();
-            String arrayTypeStr = convertType(arrayType);
-            sb.append(elemPtr).append(" = getelementptr inbounds ").append(arrayTypeStr).append(", ").append(arrayTypeStr).append("* ").append(arrayRegister).append(", i32 0, i32 ").append(i).append("\n");
-
-            String elemVal = generateRegister();
-            String elemTypeStr = convertType(elementType);
-            sb.append(elemVal).append(" = load ").append(elemTypeStr).append(", ").append(elemTypeStr).append("* ").append(elemPtr).append("\n");
-
-            generatePrintValue(elemVal, elementType);
-        }
-        return "0";
+        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
+        return register;
     }
 
     private String generateNot(ENot notExp) {
@@ -341,18 +288,33 @@ public class ExpressionCodeGen extends Helper {
     private String generateStringCast(EStringCast sStringCast) {
         String value = generateExpression(sStringCast.exp());
         Type type = sStringCast.exp().type();
+
+        if(type instanceof Ast.TString) {
+            return value; // No need to cast if it's already a string
+        }
+
         String register = generateRegister();
+
         if (type instanceof TInt) {
             generateStringCastInt(value, register);
         } else if (type instanceof TDouble) {
             generateStringCastDouble(value, register);
         } else if (type instanceof TBool) {
             generateStringCastBool(value, register);
-        } else {
+        } else if(type instanceof TArray) {
+            generateArrayString(sStringCast, register);
+        }
+        else {
             throw new IllegalArgumentException("Unsupported type for string cast " + TypeConverter.typeToString(type));
         }
         return register;
 
+    }
+
+    private void generateArrayString(EStringCast sStringCast, String register) {
+        // TODO: fix when array is fixed
+        String arrayRegister = generateExpression(sStringCast.exp());
+        sb.append(register).append(" = call i8* @array_to_string(i8* ").append(arrayRegister).append(")\n");
     }
 
     private void generateStringCastInt(String value, String register) {
