@@ -335,7 +335,7 @@ public class ExpressionTypeChecker {
                     return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
                 }
                 else {
-                    //oklar om denna ska va här
+                    // if the function call's return type is known and is not an array, indexing it is a type error
                     throw new TypeException("Attempting to index a non-array type on function call: " + TypeConverter.typeToString(array.type()), array.pos());
                 }
             }
@@ -358,7 +358,7 @@ public class ExpressionTypeChecker {
     }
     
     public Ast.Exp typeCheck(Ast.EAppend eAppend) {
-        Ast.Exp array = typeCheck(eAppend.array());;
+        Ast.Exp array = typeCheck(eAppend.array());
         Ast.Exp element = typeCheck(eAppend.element());
         int elements = 0;
         Ast.TArray typeOfArray = null;
@@ -428,7 +428,6 @@ public class ExpressionTypeChecker {
                 element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
             } else if ((TypeUtils.equalTypes(typeOfArray.elementType(), element.type()))){
                 //Do nothing :D
-                System.out.println("asd");
             }
             else {
                 throw new TypeException("Attempting to append element of type " + TypeConverter.typeToString(element.type()) + " to array of type " + TypeConverter.typeToString(typeOfArray.elementType()), element.pos());
