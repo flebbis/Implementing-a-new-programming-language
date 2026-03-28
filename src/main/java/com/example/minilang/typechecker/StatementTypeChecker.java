@@ -58,7 +58,17 @@ public class StatementTypeChecker {
             typeToCheck = value.type();
         }
 
-
+        if(typeToCheck instanceof Ast.TArray) {
+            Ast.TArray array = (Ast.TArray) typeToCheck;
+            if(array.elementType() instanceof Ast.TUnknown) {
+                if(inferenceContext != null) {
+                    Ast.Type inferred = inferenceContext.lookupFromScopeLevel(sInit.name(), context.getScopeLevel());
+                    if(inferred != null) {
+                        typeToCheck = inferred;
+                    }
+                }
+            }
+        } else
         // Verify types match for explicit declarations
         // Allow TUnknown values to bypass checks during inference pass
         if (!compareTypes(typeToCheck, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
@@ -70,24 +80,12 @@ public class StatementTypeChecker {
             }
         }
 
-        typeToCheck = value.type();
         context.pushToCurrentScope(sInit.name(), typeToCheck);
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
 
     private boolean compareTypes(Ast.Type declaredType, Ast.Type valueType) {
-        if(declaredType instanceof Ast.TArray) {
-            // Specific case, since arraySize is allowed to differ
-            if(valueType instanceof Ast.TArray) {
-                return compareTypes(((Ast.TArray) declaredType).elementType(), ((Ast.TArray) valueType).elementType()); // Compare element types recursively
-            } else {
-                return false; // Didn't match an array type at all
-            }
-        }
-        if(declaredType.equals(valueType)) {
-            return true; // Exact match
-        }
-        return false;
+        return TypeUtils.equalTypes(declaredType, valueType);
     }
 
 

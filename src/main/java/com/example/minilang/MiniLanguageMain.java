@@ -15,7 +15,7 @@ public class MiniLanguageMain {
         String testFilePath = "src/test/resources/";
 
         if(args.length == 0) {
-             path = testFilePath + "type/good/array-return.ml";
+             path = testFilePath + "type/bad/append-5.ml";
         } else if (args.length == 1){
              path = args[0];
         } else {
