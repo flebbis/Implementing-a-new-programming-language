@@ -26,30 +26,30 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
-let hasConfigurationCabability : boolean = false;
-let hasWorkspaceFolderCapability : boolean = false;
-let hasDiagnosticRelatedInformationCapability  : boolean = false;
-let hasHoverCapability : boolean = false;
+let hasConfigurationCabability: boolean = false;
+let hasWorkspaceFolderCapability: boolean = false;
+let hasDiagnosticRelatedInformationCapability: boolean = false;
+let hasHoverCapability: boolean = false;
 
 /* Setup server */
 connection.onInitialize((params: InitializeParams) => {
-	const capabilities = params.capabilities;
+  const capabilities = params.capabilities;
 
   // probe client capabilites
   hasConfigurationCabability = !!(
-    capabilities.workspace && 
+    capabilities.workspace &&
     !!capabilities.workspace.configuration
   ),
-  hasWorkspaceFolderCapability = !!(
-    capabilities.workspace && !!capabilities.workspace.workspaceFolders
-  );
+    hasWorkspaceFolderCapability = !!(
+      capabilities.workspace && !!capabilities.workspace.workspaceFolders
+    );
   hasDiagnosticRelatedInformationCapability = !!(
-    capabilities.textDocument && 
-    capabilities.textDocument.publishDiagnostics && 
+    capabilities.textDocument &&
+    capabilities.textDocument.publishDiagnostics &&
     capabilities.textDocument.publishDiagnostics.relatedInformation
   );
   hasHoverCapability = !!(
-    capabilities.textDocument && 
+    capabilities.textDocument &&
     !!capabilities.textDocument.hover
   );
 
@@ -64,12 +64,15 @@ connection.onInitialize((params: InitializeParams) => {
       },
       hoverProvider: {
         // workDoneProgress: ?
+      },
+      signatureHelpProvider: {
+
       }
     },
   };
 
   // If client suports workspace folder
-if (hasWorkspaceFolderCapability) {
+  if (hasWorkspaceFolderCapability) {
     result.capabilities.workspace = {
       workspaceFolders: {
         supported: true
@@ -105,10 +108,10 @@ connection.onInitialized(() => {
     connection.client.register(DidChangeConfigurationNotification.type, undefined);
   }
   if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log('Workspace folder change event received.');
-		});
-	}
+    connection.workspace.onDidChangeWorkspaceFolders(_event => {
+      connection.console.log('Workspace folder change event received.');
+    });
+  }
   connection.window.showInformationMessage(
     "onInitialized: *mylang* Language server extension initialized successfully!"
   );
@@ -121,7 +124,7 @@ connection.onDidChangeConfiguration(change => {
     // Reset all cached document settings
     documentSettings.clear();
   } else {
-    globalSettings = <ServerSettings> (
+    globalSettings = <ServerSettings>(
       (change.settings.languageServer || defaultSettings)
     );
   }
@@ -133,10 +136,6 @@ connection.onDidChangeWatchedFiles(_change => {
   connection.console.log('Recieved file change event')
 })
 
-// Discard settings for closed documents
-documents.onDidClose(e => {
-  documentSettings.delete(e.document.uri);
-});
 
 documents.onDidChangeContent(change => {
   connection.console.log(
@@ -153,25 +152,25 @@ documents.onDidChangeContent(change => {
 
 // Will send error message on startup if this is not included
 connection.languages.diagnostics.on(async (params) => {
-    const doc = documents.get(params.textDocument.uri)
-    if(doc != undefined){
-      return {
-        kind: DocumentDiagnosticReportKind.Full,
-        items: await validateTextDocument(doc)
-      } satisfies DocumentDiagnosticReport;
-    } else {
-      return {
-        kind: DocumentDiagnosticReportKind.Full,
-        items: []
-      } satisfies DocumentDiagnosticReport;
-    }
+  const doc = documents.get(params.textDocument.uri)
+  if (doc != undefined) {
+    return {
+      kind: DocumentDiagnosticReportKind.Full,
+      items: await validateTextDocument(doc)
+    } satisfies DocumentDiagnosticReport;
+  } else {
+    return {
+      kind: DocumentDiagnosticReportKind.Full,
+      items: []
+    } satisfies DocumentDiagnosticReport;
+  }
 })
 
 // reads the set extension settings
 function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
   if (!hasConfigurationCabability) {
     return Promise.resolve(globalSettings);
-  } 
+  }
   let result = documentSettings.get(recource);
   if (!result) {
     result = connection.workspace.getConfiguration({
@@ -193,24 +192,24 @@ async function validateTextDocument(document: TextDocument): Promise<Diagnostic[
   let doInf = /do *(inf|\(inf\))/g
   let whileTrue = /\bwhile *(true|\(true\))/g
   let diagnostics: Diagnostic[] = [];
-  
+
   diagnostics = diagnosePattern(alternatingCaps, 'alternating upper/lower-case test', DiagnosticSeverity.Warning, settings, document, diagnostics);
   diagnostics = diagnosePattern(notRecVarName, 'not reccomended variable name', DiagnosticSeverity.Warning, settings, document, diagnostics);
   diagnostics = diagnosePattern(doInf, 'DON\'T DO THIS', DiagnosticSeverity.Error, settings, document, diagnostics);
   diagnostics = diagnosePattern(whileTrue, 'This may never terminate', DiagnosticSeverity.Warning, settings, document, diagnostics);
-  
+
   // don't send computed diagnostics, that is handeled by the diagnostics handler
   // connection.sendDiagnostics({uri:document.uri, diagnostics})
   return diagnostics
 }
 
 
-function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticSeverity, 
-      settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[] ): Diagnostic[] {
+function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticSeverity,
+  settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[]): Diagnostic[] {
   //Validator matching
   let text = document.getText();
   let d = Array.from(diagnostics) // mutate-by-copy
-  let m :RegExpExecArray | null
+  let m: RegExpExecArray | null
   let problems = 0;
   while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
     problems++;
@@ -248,22 +247,24 @@ function inc(pos: Position): Position{
   return {line: pos.line, character: pos.character+1}
 }
 
+function dec(pos: Position): Position{
+  return {line: pos.line, character: pos.character-1}
+}
+
 connection.onHover((params: HoverParams, token, progrss, result) => {
   const doc = documents.get(params.textDocument.uri)
   
   let pos = params.position;
   if(doc != undefined){
-    // This didn't end up working, 
-    // })
-
-    // const r = document?.getWordRangeAtPosition(new vscode.Position(pos.line,pos.character))
-
-    // new idea: send request to client for word/range
+    
+    
+    // idea: step left untill non-word character > step right untill non-word character
+    
     const r: Range= {start: pos, end: inc(pos)}
     const word = doc.getText(r);
-    let content: MarkupContent = {kind: MarkupKind.Markdown, 
+    let content: MarkupContent = {kind: MarkupKind.Markdown,
       value: [
-        `# ${word}`,
+        `### ${word}`,
         'Some text',
         '```',
         'hover information should appear here',
@@ -291,6 +292,13 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
+// Type inference
+
+
+
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
@@ -298,3 +306,5 @@ documents.listen(connection);
 
 // Listen on the connection
 connection.listen();
+
+

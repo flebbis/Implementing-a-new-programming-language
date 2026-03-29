@@ -199,19 +199,13 @@ export async function activate(context: ExtensionContext) {
   )
 
 
-  // If the textdocument is saved and the current document is a supported filetype, run the showAssembply command
+  // If the textdocument is saved and the current document is a supported filetype, run the showAssembply command, if setting is chosen
   workspace.onDidSaveTextDocument((document: TextDocument) => {
     const conf:Boolean | undefined = vscode.workspace.getConfiguration('assemblyExtension', document.uri).get('showAssemblyOnSave')
-    console.log("did save text document")
-    console.log('showAssemblyOnSave: ', conf)
     if (conf) {
-      console.log('document.languageId:', document.languageId, '&& document.uri.scheme: ', document.uri.scheme)
       if (document.languageId === "mylang" && document.uri.scheme === "file") {
-        console.log('try showAssembly...')
           showAssembly('-O0')
       }
-    } else {
-      console.log('whyyyyy')
     }
   });
 }
