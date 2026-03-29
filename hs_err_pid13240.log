@@ -1,0 +1,247 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007ff8dfc71b0a, pid=13240, tid=12600
+#
+# JRE version:  (25.0.2+10) (build )
+# Java VM: OpenJDK 64-Bit Server VM (25.0.2+10-LTS, mixed mode, sharing, tiered, compressed class ptrs, unknown gc, windows-amd64)
+# Problematic frame:
+# C  [jimage.dll+0x1b0a]
+#
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: 
+
+Host: Intel(R) Core(TM) i5-7200U CPU @ 2.50GHz, 4 cores, 3G,  Windows 10 , 64 bit Build 19041 (10.0.19041.6807)
+Time: Sun Mar 29 18:14:47 2026 W. Europe Summer Time elapsed time: 2.464050 seconds (0d 0h 0m 2s)
+
+---------------  T H R E A D  ---------------
+
+Current thread is native thread
+
+Stack: [0x0000003aa2700000,0x0000003aa2800000],  sp=0x0000003aa27fd930,  free space=1014k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [jimage.dll+0x1b0a]  (no source info available)
+C  [jimage.dll+0x1c93]  (no source info available)
+C  [jimage.dll+0x2581]  (no source info available)
+V  [jvm.dll+0x29a832]  (no source info available)
+V  [jvm.dll+0x1182fe]  (no source info available)
+V  [jvm.dll+0x9a900f]  (no source info available)
+V  [jvm.dll+0x5038f1]  (no source info available)
+V  [jvm.dll+0x5051b1]  (no source info available)
+C  [jli.dll+0x541e]  (no source info available)
+C  [ucrtbase.dll+0x21bb2]  (no source info available)
+C  [KERNEL32.DLL+0x17374]  (no source info available)
+C  [ntdll.dll+0x4cc91]  (no source info available)
+
+
+siginfo: EXCEPTION_ACCESS_VIOLATION (0xc0000005), reading address 0x0000000000011d64
+
+
+Registers:
+RAX=0x00007ff8dfc74298, RBX=0x0000003aa27fda21, RCX=0x00007ff8dfc76000, RDX=0x0000000000004752
+RSP=0x0000003aa27fd930, RBP=0x0000003aa27fda20, RSI=0x0000000000007676, RDI=0x0000003aa27fda20
+R8 =0x000000000000001c, R9 =0x00007ff8dfc76000, R10=0x00007ff8e1f80000, R11=0x8101010101010100
+R12=0x0000000000000000, R13=0x0000000000000002, R14=0x0000003aa27fea90, R15=0x00007ff8af1896b0
+RIP=0x00007ff8dfc71b0a, EFLAGS=0x0000000000010247
+
+XMM[0]=0x000002386ca71420 0x00007ff8f0e3f0b0
+XMM[1]=0x2f6d762f6c616e72 0x65746e692f6b646a
+XMM[2]=0x736e6f6974706f2f 0x6d762f6c616e7265
+XMM[3]=0x0000000000000000 0x0000000000000000
+XMM[4]=0x0000000000000000 0x0000000000000000
+XMM[5]=0x0000000000000000 0x0000000000000000
+XMM[6]=0x0000000000000000 0x0000000000000000
+XMM[7]=0x0000000000000000 0x0000000000000000
+XMM[8]=0x0000000000000000 0x0000000000000000
+XMM[9]=0x0000000000000000 0x0000000000000000
+XMM[10]=0x0000000000000000 0x0000000000000000
+XMM[11]=0x0000000000000000 0x0000000000000000
+XMM[12]=0x0000000000000000 0x0000000000000000
+XMM[13]=0x0000000000000000 0x0000000000000000
+XMM[14]=0x0000000000000000 0x0000000000000000
+XMM[15]=0x0000000000000000 0x0000000000000000
+  MXCSR=0x00001f80
+
+
+Top of Stack: (sp=0x0000003aa27fd930)
+0x0000003aa27fd930:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd940:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd950:   000002386ca9d210 00007ff8dfc71c93   ...l8...........
+0x0000003aa27fd960:   0000000000000009 000002386ca9d210   ...........l8...
+0x0000003aa27fd970:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd980:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd990:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd9a0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd9b0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fd9c0:   00005a86b6d33a30 0000000000000000   0:...Z..........
+0x0000003aa27fd9d0:   00007ff8af166300 0000000000000017   .c..............
+0x0000003aa27fd9e0:   000002386ca9d210 0000003aa27fea90   ...l8.......:...
+0x0000003aa27fd9f0:   0000000000000009 00007ff8dfc72581   .........%......
+0x0000003aa27fda00:   0000000000000000 0000000000000000   ................
+0x0000003aa27fda10:   0000000000000000 0000000000000000   ................
+0x0000003aa27fda20:   61622e6176616a2f 692f6b646a2f6573   /java.base/jdk/i
+0x0000003aa27fda30:   2f6c616e7265746e 6f6974706f2f6d76   nternal/vm/optio
+0x0000003aa27fda40:   000000000000736e 0000000000000000   ns..............
+0x0000003aa27fda50:   0000000000000000 0000000000000000   ................
+0x0000003aa27fda60:   0000000000000000 0000000000000000   ................
+0x0000003aa27fda70:   0000000000000000 0000000000000000   ................
+0x0000003aa27fda80:   0000000000000000 0000000000000000   ................
+0x0000003aa27fda90:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdaa0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdab0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdac0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdad0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdae0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdaf0:   0000000000000000 0000000000000000   ................
+0x0000003aa27fdb00:   0000000000000000 0000000000000101   ................
+0x0000003aa27fdb10:   0000000000000000 00007ff8f2ebdf6f   ........o.......
+0x0000003aa27fdb20:   000002386ca60000 0000003aa27fde19   ...l8.......:...
+
+Instructions: (pc=0x00007ff8dfc71b0a)
+  0x00007ff8dfc71a0a:   8a 05 00 46 00 00 f6 d8 48 1b d2 48 83 e2 d8 48
+  0x00007ff8dfc71a1a:   8b 54 1a 40 e8 c1 0e 00 00 48 c7 43 48 00 00 00
+  0x00007ff8dfc71a2a:   00 8b 4b 0c 83 f9 ff 74 0c e8 f4 0c 00 00 c7 43
+  0x00007ff8dfc71a3a:   0c ff ff ff ff 48 8b 4b 70 48 85 c9 74 12 ba 10
+  0x00007ff8dfc71a4a:   00 00 00 e8 12 0f 00 00 48 c7 43 70 00 00 00 00
+  0x00007ff8dfc71a5a:   48 83 c4 20 5b c3 40 53 48 83 ec 20 48 8b d9 48
+  0x00007ff8dfc71a6a:   8d 0d 10 48 00 00 e8 bf 0c 00 00 83 6b 08 01 75
+  0x00007ff8dfc71a7a:   24 48 8b d3 48 8d 0d 93 45 00 00 e8 42 08 00 00
+  0x00007ff8dfc71a8a:   48 8b cb e8 ca fe ff ff ba 78 00 00 00 48 8b cb
+  0x00007ff8dfc71a9a:   e8 c5 0e 00 00 48 8d 0d da 47 00 00 48 83 c4 20
+  0x00007ff8dfc71aaa:   5b e9 8c 0c 00 00 48 89 5c 24 08 48 89 74 24 10
+  0x00007ff8dfc71aba:   57 48 83 ec 20 41 8b f1 4c 8b c9 48 8b fa 4d 85
+  0x00007ff8dfc71aca:   c0 74 72 85 f6 74 6e 44 8a 12 48 8d 5a 01 48 8b
+  0x00007ff8dfc71ada:   d3 b8 93 01 00 01 eb 12 69 c0 93 01 00 01 41 0f
+  0x00007ff8dfc71aea:   b6 ca 44 8a 12 33 c1 48 ff c2 45 84 d2 75 e9 33
+  0x00007ff8dfc71afa:   d2 0f ba f0 1f f7 f6 49 8b 01 49 8b c9 48 63 d2
+=>0x00007ff8dfc71b0a:   41 8b 14 90 ff 50 08 85 c0 7e 24 8a 0f eb 10 69
+  0x00007ff8dfc71b1a:   c0 93 01 00 01 0f b6 c9 33 c1 8a 0b 48 ff c3 84
+  0x00007ff8dfc71b2a:   c9 75 ec 0f ba f0 1f 33 d2 f7 f6 8b c2 eb 09 79
+  0x00007ff8dfc71b3a:   04 f7 d0 eb 03 83 c8 ff 48 8b 5c 24 30 48 8b 74
+  0x00007ff8dfc71b4a:   24 38 48 83 c4 20 5f c3 cc cc 48 89 5c 24 08 48
+  0x00007ff8dfc71b5a:   89 74 24 10 57 48 83 ec 20 48 8b f1 48 8d 0d 13
+  0x00007ff8dfc71b6a:   47 00 00 e8 c2 0b 00 00 33 ff 39 3d 9e 44 00 00
+  0x00007ff8dfc71b7a:   76 24 48 8b 05 9d 44 00 00 48 8b d6 48 8b 1c f8
+  0x00007ff8dfc71b8a:   48 8b 0b e8 78 1f 00 00 85 c0 74 2b ff c7 3b 3d
+  0x00007ff8dfc71b9a:   7a 44 00 00 72 dc 33 db 48 8d 0d d7 46 00 00 e8
+  0x00007ff8dfc71baa:   8e 0b 00 00 48 8b 74 24 38 48 8b c3 48 8b 5c 24
+  0x00007ff8dfc71bba:   30 48 83 c4 20 5f c3 ff 43 08 eb dc cc cc 48 89
+  0x00007ff8dfc71bca:   5c 24 08 48 89 74 24 10 57 48 83 ec 20 48 8b d9
+  0x00007ff8dfc71bda:   48 8b f2 48 8b 49 10 49 8b f8 8b 53 30 48 8b 01
+  0x00007ff8dfc71bea:   ff 50 20 4c 8b 43 50 48 8b d6 48 8b 4b 10 44 8b
+  0x00007ff8dfc71bfa:   c8 e8 b0 fe ff ff 83 f8 ff 74 39 48 8b 4b 10 48
+
+
+
+---------------  P R O C E S S  ---------------
+
+VM state: not at safepoint (not fully initialized)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+CDS archive(s) mapped at: [0x0000000000000000-0x0000000000000000-0x0000000000000000), size 0, SharedBaseAddress: 0x0000000800000000, ArchiveRelocationMode: 1.
+UseCompressedClassPointers 1, UseCompactObjectHeaders 0
+Narrow klass pointer bits -1, Max shift -1
+Narrow klass base: 0xffffffffffffffff, Narrow klass shift: -1
+Encoding Range: [0xffffffffffffffff - 0x3fffffffffffffff), (4611686018427387904 bytes)
+Klass Range:    [0x0000000000000000 - 0x0000000000000000), (0 bytes)
+Klass ID Range:  [4294967295 - 0) (1)
+No protection zone.
+
+GC Precious Log:
+<Not initialized>
+
+
+Dynamic libraries:
+0x00007ff7b5de0000 - 0x00007ff7b5dee000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\java.exe
+0x00007ff8f2e90000 - 0x00007ff8f3088000 	C:\WINDOWS\SYSTEM32\ntdll.dll
+0x00007ff8f15b0000 - 0x00007ff8f1672000 	C:\WINDOWS\System32\KERNEL32.DLL
+0x00007ff8f09a0000 - 0x00007ff8f0c97000 	C:\WINDOWS\System32\KERNELBASE.dll
+0x00007ff8f0d50000 - 0x00007ff8f0e50000 	C:\WINDOWS\System32\ucrtbase.dll
+0x00007ff8e1f60000 - 0x00007ff8e1f77000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\jli.dll
+0x00007ff8f10f0000 - 0x00007ff8f128d000 	C:\WINDOWS\System32\USER32.dll
+0x00007ff8f0510000 - 0x00007ff8f0532000 	C:\WINDOWS\System32\win32u.dll
+0x00007ff8f14c0000 - 0x00007ff8f14eb000 	C:\WINDOWS\System32\GDI32.dll
+0x00007ff8f0880000 - 0x00007ff8f099a000 	C:\WINDOWS\System32\gdi32full.dll
+0x00007ff8f07e0000 - 0x00007ff8f087d000 	C:\WINDOWS\System32\msvcp_win.dll
+0x00007ff8e0bd0000 - 0x00007ff8e0e6b000 	C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.19041.6926_none_60b5a53971f8f7e6\COMCTL32.dll
+0x00007ff8f0ea0000 - 0x00007ff8f0f3e000 	C:\WINDOWS\System32\msvcrt.dll
+0x00007ff8e1f80000 - 0x00007ff8e1f9e000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\VCRUNTIME140.dll
+0x00007ff8f2630000 - 0x00007ff8f265f000 	C:\WINDOWS\System32\IMM32.DLL
+0x00007ff8ecc20000 - 0x00007ff8ecc2c000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\vcruntime140_1.dll
+0x00007ff8c6220000 - 0x00007ff8c62a9000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\msvcp140.dll
+0x00007ff8ae630000 - 0x00007ff8af55f000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\server\jvm.dll
+0x00007ff8f2d90000 - 0x00007ff8f2e41000 	C:\WINDOWS\System32\ADVAPI32.dll
+0x00007ff8f1680000 - 0x00007ff8f171f000 	C:\WINDOWS\System32\sechost.dll
+0x00007ff8f2660000 - 0x00007ff8f2786000 	C:\WINDOWS\System32\RPCRT4.dll
+0x00007ff8f0540000 - 0x00007ff8f0567000 	C:\WINDOWS\System32\bcrypt.dll
+0x00007ff8f1290000 - 0x00007ff8f12fb000 	C:\WINDOWS\System32\WS2_32.dll
+0x00007ff8f0370000 - 0x00007ff8f03bb000 	C:\WINDOWS\SYSTEM32\POWRPROF.dll
+0x00007ff8e0f00000 - 0x00007ff8e0f27000 	C:\WINDOWS\SYSTEM32\WINMM.dll
+0x00007ff8e0f90000 - 0x00007ff8e0f9a000 	C:\WINDOWS\SYSTEM32\VERSION.dll
+0x00007ff8f0350000 - 0x00007ff8f0362000 	C:\WINDOWS\SYSTEM32\UMPDC.dll
+0x00007ff8eecf0000 - 0x00007ff8eed02000 	C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+0x00007ff8dfc70000 - 0x00007ff8dfc7a000 	C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\jimage.dll
+0x00007ff8e0fd0000 - 0x00007ff8e11d1000 	C:\WINDOWS\SYSTEM32\DBGHELP.DLL
+0x00007ff8df700000 - 0x00007ff8df734000 	C:\WINDOWS\SYSTEM32\dbgcore.DLL
+0x00007ff8f05f0000 - 0x00007ff8f0672000 	C:\WINDOWS\System32\bcryptPrimitives.dll
+
+JVMTI agents: none
+
+dbghelp: loaded successfully - version: 4.0.5 - missing functions: none
+symbol engine: initialized successfully - sym options: 0x614 - pdb path: .;C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin;C:\WINDOWS\SYSTEM32;C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.19041.6926_none_60b5a53971f8f7e6;C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin\server
+
+VM Arguments:
+java_command: <unknown>
+java_class_path (initial): <not set>
+Launcher Type: SUN_STANDARD
+
+[Global flags]
+     bool UseLargePagesIndividualAllocation        = false                                  {pd product} {ergonomic}
+
+Logging:
+Log output configuration:
+ #0: stdout all=warning uptime,level,tags foldmultilines=false
+ #1: stderr all=off uptime,level,tags foldmultilines=false
+
+Release file:
+<release file has not been read>
+Environment Variables:
+JAVA_HOME=C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\
+PATH=C:\Users\DanielCole\AppData\Local\Programs\Microsoft VS Code;C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Intel\iCLS Client\;C:\Program Files\Intel\iCLS Client\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\Program Files\Intel\WiFi\bin\;C:\Program Files\Common Files\Intel\WirelessCommon\;C:\Program Files (x86)\Intel\Intel(R) Management Engine Components\DAL;C:\Program Files\Intel\Intel(R) Management Engine Components\DAL;C:\Program Files (x86)\Intel\Intel(R) Management Engine Components\IPT;C:\Program Files\Intel\Intel(R) Management Engine Components\IPT;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\IVI Foundation\VISA\WinNT\Bin\;C:\Program Files\IVI Foundation\VISA\Win64\Bin\;C:\Program Files (x86)\IVI Foundation\VISA\WinNT\Bin;C:\Program Files\dotnet\;C:\Program Files\Git\cmd;C:\Users\DanielCole\Documents\Maven\apache-maven-3.9.5\bin;C:\Program Files\Git\mingw64\bin;C:\Users\DanielCole\mingw64\bin;C:\msys64\ucrt64\bin;C:\Program Files\Microsoft\jdk-25.0.2.10-hotspot\bin;C:\Users\DanielCole\AppData\Local\Programs\Python\Python312\Scripts\;C:\Users\DanielCole\AppData\Local\Programs\Python\Python312\;C:\Users\DanielCole\scoop\apps\nodejs\current\bin;C:\Users\DanielCole\scoop\apps\nodejs\current;C:\Users\DanielCole\scoop\shims;C:\Users\DanielCole\Documents\Python\Scripts\;C:\Users\DanielCole\Documents\Python\;C:\Users\DanielCole\AppData\Local\Microsoft\WindowsApps;C:\texlive\2017\bin\win32;C:\Users\DanielCole\AppData\Local\Programs\Microsoft VS Code\bin;C:\ghcup\bin;C:\Users\DanielCole\AppData\Local\Programs\oh-my-posh\bin;C:\Users\DanielCole\Documents\Maven\apache-maven-3.9.5\bin;C:\Users\DanielCole\Documents\JavaFX\javafx-sdk-21.0.1\bin;C:\Users\DanielCole\.dotnet\tools;C:\Users\DanielCole\mingw64\bin;C:\msys64\ucrt64\bin;C:\Users\DanielCole\AppData\roaming\python\python312\site-packages;\\wsl.localhost\Ubuntu\home\cassilda\trainspotting\tsim-0.84\world\bin;C:\Program Files\Erlang OTP\bin;C:\Users\DanielCole\AppData\Local\Programs\Ollama;C:\Users\DanielCole\AppData\Local\Microsoft\WinGet\Packages\ezwinports.make_Microsoft.Winget.Source_8wekyb3d8bbwe\bin;C:\Program Files\PostgreSQL\18\bin;C:\cabal\bin\;C:\Users\DanielCole\AppData\Local\Microsoft\WinGet\Packages\JesseDuffield.lazygit_Microsoft.Winget.Source_8wekyb3d8bbwe;
+USERNAME=DaniellCole
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 142 Stepping 9, GenuineIntel
+TMP=C:\Users\DANIEL~1\AppData\Local\Temp
+TEMP=C:\Users\DANIEL~1\AppData\Local\Temp
+
+
+
+
+Compilation memory statistics disabled.
+
+Periodic native trim disabled
+
+---------------  S Y S T E M  ---------------
+
+OS:
+ Windows 10 , 64 bit Build 19041 (10.0.19041.6807)
+OS uptime: 1 days 3:49 hours
+
+CPU: total 4 (initial active 0) 
+Processor Information for the first 4 processors :
+  Max Mhz: 2712, Current Mhz: 2511, Mhz Limit: 2495
+
+Memory: 4k page, system-wide physical 3973M (387M free)
+TotalPageFile size 16261M (AvailPageFile size 1144M)
+current process WorkingSet (physical memory assigned to process): 8M, peak: 8M
+current process commit charge ("private bytes"): 3M, peak: 3M
+
+vm_info: OpenJDK 64-Bit Server VM (25.0.2+10-LTS) for windows-amd64 JRE (25.0.2+10-LTS), built on 2026-01-07T20:19:54Z with MS VC++ 17.14 (VS2022)
+
+END.
