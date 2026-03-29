@@ -1,14 +1,13 @@
 package com.example.minilang.typechecker;
 
-import com.example.minilang.Pos;
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import com.example.minilang.InferenceSuggestion;
+import com.example.minilang.Pos;
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
 
 public class TypeChecker {
 
@@ -81,7 +80,7 @@ public class TypeChecker {
 
     private List<Ast.Func> extractFunctionSignatures(List<Ast.Func> functions) {
         List<Ast.Func> funcs = new ArrayList<>();
-        for(Ast.Func func : functions) {
+        for (Ast.Func func : functions) {
             String name = func.name();
             Ast.Type returnType = func.returnType();
 
@@ -118,7 +117,7 @@ public class TypeChecker {
                 Ast.Type type = sig.paramTypes.get(i);
 
                 // Inference suggestion
-                if(!(func.params().get(i).type().equals(type))) {
+                if (!(func.params().get(i).type().equals(type))) {
                     Ast.Arg arg = func.params().get(i);
                     Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
                     addInferenceSuggestion(name, type, pos);
@@ -162,7 +161,6 @@ public class TypeChecker {
         // Is inference, add type
 
         if(sig.isInference) {
-            System.err.println("Inferred return type of function '" + name + "' as " + TypeConverter.typeToString(sig.returnType));
             addInferenceSuggestion(name, sig.returnType, func.pos());
         }
 

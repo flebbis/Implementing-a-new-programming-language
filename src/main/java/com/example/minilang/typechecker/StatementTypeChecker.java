@@ -1,12 +1,13 @@
 package com.example.minilang.typechecker;
 
-import com.example.minilang.InferenceSuggestion;
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import com.example.minilang.InferenceSuggestion;
+import com.example.minilang.Pos;
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
 
 public class StatementTypeChecker {
 
@@ -60,50 +61,106 @@ public class StatementTypeChecker {
 
         // Infer type if unknown
         if (typeToCheck instanceof Ast.TUnknown) {
-             if(!(value.type() instanceof Ast.TUnknown)) {
+            if (!(value.type() instanceof Ast.TUnknown)) {
                 typeToCheck = value.type();
-                InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
-                        sInit.name(),
-                        TypeConverter.typeToString(typeToCheck),
-                        sInit.pos().line,
-                        sInit.pos().column,
-                        sInit.pos().line,
-                        sInit.pos().column + sInit.name().length(),
-                        "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
 
-                // Avoid duplicates for multiple inference passes
-                if(!inferenceSuggestions.contains(inferenceSuggestion)) {
-                    inferenceSuggestions.add(inferenceSuggestion);
+                if (typeToCheck instanceof Ast.TArray) {
+                    inferenceCheckArray((Ast.TArray) typeToCheck, sInit.name(), sInit.pos());
+                } else {
+                    InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
+                            sInit.name(),
+                            TypeConverter.typeToString(typeToCheck),
+                            sInit.pos().line,
+                            sInit.pos().column,
+                            sInit.pos().line,
+                            sInit.pos().column + sInit.name().length(),
+                            "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
+
+                    // Avoid duplicates for multiple inference passes
+                    if (!inferenceSuggestions.contains(inferenceSuggestion)) {
+                        inferenceSuggestions.add(inferenceSuggestion);
+                    }
                 }
             }
         }
 
-        if(typeToCheck instanceof Ast.TArray) {
-            Ast.TArray array = (Ast.TArray) typeToCheck;
-            if(array.elementType() instanceof Ast.TUnknown) {
-                if(inferenceContext != null) {
-                    Ast.Type inferred = inferenceContext.lookupFromScopeLevel(sInit.name(), context.getScopeLevel());
-                    if(inferred != null) {
-                        typeToCheck = inferred;
-                    }
-                }
-            }
-        } else
         // Verify types match for explicit declarations
         // Allow TUnknown values to bypass checks during inference pass
-        if (!compareTypes(typeToCheck, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
-            if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
-            } else {
-                throw new TypeException(
-                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
-                                " but got " + TypeConverter.typeToString(value.type()),
-                        value.pos());
-            }
+        if (typeToCheck instanceof Ast.TArray) {
+            checkTypeCompatabilityArrays((Ast.TArray) typeToCheck, value);
+        } else {
+            value = checkTypeCompatabilityNonArrays(typeToCheck, value);
         }
 
         context.pushToCurrentScope(sInit.name(), typeToCheck);
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
+    }
+    
+    private void checkTypeCompatabilityArrays(Ast.TArray sInitType, Ast.Exp value) {
+        if (value.type() instanceof Ast.TArray) {
+            Ast.TArray valueType = (Ast.TArray) value.type();
+
+
+            // Element type is unkown, probably no elements yet, just pass, is okey
+            if (valueType.elementType() instanceof Ast.TUnknown) {
+
+            } else if(sInitType.elementType() instanceof Ast.TUnknown) {
+
+            } else {
+                // If both are known, they must match
+                if (!TypeUtils.equalTypes(sInitType.elementType(), valueType.elementType())) {
+                    throw new TypeException(
+                            "Incorrect initializer type, expected array of " + TypeConverter.typeToString(sInitType.elementType()) +
+                                    " but got array of " + TypeConverter.typeToString(valueType.elementType()),
+                            value.pos());
+                }
+            }
+        } else {
+            throw new TypeException("Attempting to assign non array value to array", value.pos());
+        }
+    }
+    
+    private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value) {
+        if (!compareTypes(sInitType, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
+            if (sInitType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
+                return value;
+            } else {
+                throw new TypeException(
+                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(sInitType) +
+                                " but got " + TypeConverter.typeToString(value.type()),
+                        value.pos());
+            }
+        }
+        return value;
+    }
+    
+    private void inferenceCheckArray(Ast.TArray type, String name, Pos pos) {
+        if (type.elementType() instanceof Ast.TUnknown) {
+            if (inferenceContext != null) {
+                Ast.Type inferred = inferenceContext.lookupFromScopeLevel(name, context.getScopeLevel());
+                if (inferred != null && inferred instanceof Ast.TArray) {
+                    type =  (Ast.TArray) inferred;
+                }
+            }
+        }
+
+        // If not unkown now, we can make inference suggestion
+        if (!(type.elementType() instanceof Ast.TUnknown)) {
+            InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
+                    name,
+                    TypeConverter.typeToString(type),
+                    pos.line,
+                    pos.column,
+                    pos.line,
+                    pos.column + name.length(),
+                    "Suggestion: " + TypeConverter.typeToString(type) + " " + name);
+
+            // Avoid duplicates for multiple inference passes
+            if (!inferenceSuggestions.contains(inferenceSuggestion)) {
+                inferenceSuggestions.add(inferenceSuggestion);
+            }
+        }
     }
 
     private boolean compareTypes(Ast.Type declaredType, Ast.Type valueType) {
@@ -188,11 +245,14 @@ public class StatementTypeChecker {
         Signature signature = functionSignatures.get(currentFunction);
 
         // Inference: If return type is TUnknown, infer it from the return value
-        if (signature.returnType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
+        if (isUnkownType(signature.returnType) && !isUnkownType(value.type())) {
             signature.setReturnType(value.type());
+            signature.isInference = true;
+        } else {
+            signature.isInference = false;
         }
 
-        if (!signature.returnType.equals(value.type())) {
+        if (!TypeUtils.equalTypes(signature.returnType, value.type())) {
             // Allow implicit conversion from int to double
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
@@ -203,6 +263,18 @@ public class StatementTypeChecker {
         }
 
         return new Ast.SReturn(value, stmt.pos());
+    }
+
+    private boolean isUnkownType(Ast.Type type) {
+        if (type instanceof Ast.TUnknown) {
+            return true;
+        } else if (type instanceof Ast.TArray) {
+            Ast.TArray tArray = (Ast.TArray) type;
+            if (tArray.elementType() instanceof Ast.TUnknown) {
+                return true; // unkown array type
+            }
+        }
+        return false;
     }
 
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
