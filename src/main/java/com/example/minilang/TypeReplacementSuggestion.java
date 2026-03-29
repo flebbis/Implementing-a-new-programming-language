@@ -1,4 +1,4 @@
-﻿package com.example.minilang;
+package com.example.minilang;
 
 public record TypeReplacementSuggestion (
     String name,

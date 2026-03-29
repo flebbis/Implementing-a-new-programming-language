@@ -13,7 +13,8 @@ import {
   Hover,
   DocumentDiagnosticReportKind,
   DocumentDiagnosticReport,
-  TextEdit
+  TextEdit,
+    MessageActionItem
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -175,51 +176,78 @@ documents.onDidChangeContent(change => {
 
 
 
-async function inferenceAnalysis(uri : string, text : string, version: number) {
+async function inferenceAnalysis(uri: string, text: string, version: number) {
     try {
-      const result = await runJavaAnalysis(text);
-      
-      // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
-      console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
+        const result = (await runJavaAnalysis(text)) as AnalysisResult;
 
-      inferenceSuggestionMap.set(uri, suggestions); // tror inte detta behövs längre men sparar för nu
+        // Java returns a single object with two arrays
+        const suggestions: InferenceSuggestion[] = result?.inferenceSuggestions ?? [];
+        const replacements: TypeReplacementSuggestion[] = result?.typeReplacementSuggestions ?? [];
+        const applyAction: MessageActionItem = { title: "Apply" };
+        const ignoreAction: MessageActionItem = { title: "Ignore" };
 
-      // Before applying edits, check if the document version has changed
-      // Prevent old analysis results from being applied to a newer document version
-      const latestVersion = latestDocumentVersions.get(uri);
-      if (latestVersion !== version) {
-        connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
-        return; // Discard outdated result
-      }
+        console.error("RESULT " + JSON.stringify(result));
 
+        // Keep if you still use it elsewhere
+        inferenceSuggestionMap.set(uri, suggestions);
 
-      // Apply edit in document for each inference suggestion
-      for (const s of suggestions) {
-        await connection.workspace.applyEdit({
-          changes: {
-            [uri]: [
-              TextEdit.insert(
-                {
-                  // For some reason detta va rätt place
-                  line: s.line - 1,
-                  character: s.column,
-                },
-                `${s.inferredType} `
-              )
-            ]
-          }
-        });
-      }
-      inferenceSuggestionMap.delete(uri); // Clear suggestions after applying edits
+        // Prevent applying edits from outdated analysis
+        const latestVersion = latestDocumentVersions.get(uri);
+        if (latestVersion !== version) {
+            connection.console.warn(
+                `Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`
+            );
+            return;
+        }
 
-  }
+        // 1) Ask before replacing declared types
+        for (const r of replacements) {
+            const action = await connection.window.showWarningMessage(
+                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Apply change?`,
+                applyAction,
+                ignoreAction
+            );
 
-    catch (error) {
-      connection.console.error("Error running Java analysis: " + error);
-  }
-  
-  
+            if (action?.title === "Apply") {
+                await connection.workspace.applyEdit({
+                    changes: {
+                        [uri]: [
+                            TextEdit.replace(
+                                {
+                                    start: { line: r.line - 1, character: r.column },
+                                    end: { line: r.endLine - 1, character: r.endColumn }
+                                },
+                                r.newType
+                            )
+                        ]
+                    }
+                });
+            }
+        }
+
+        // 2) Apply normal inference inserts
+        for (const s of suggestions) {
+            await connection.workspace.applyEdit({
+                changes: {
+                    [uri]: [
+                        TextEdit.insert(
+                            {
+                                line: s.line - 1,
+                                character: s.column
+                            },
+                            `${s.inferredType} `
+                        )
+                    ]
+                }
+            });
+        }
+
+        inferenceSuggestionMap.delete(uri);
+    } catch (error) {
+        connection.console.error("Error running Java analysis: " + error);
+    }
 }
+
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
 function runJavaAnalysis(text: string): Promise<any> {
