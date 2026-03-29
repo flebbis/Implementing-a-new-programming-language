@@ -1,6 +1,7 @@
 package com.example.minilang.typechecker;
 
 import com.example.minilang.TypeConverter;
+import com.example.minilang.TypeReplacementSuggestion;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
@@ -16,14 +17,17 @@ public class StatementTypeChecker {
     private HashMap<String, Signature> functionSignatures;
     private Context inferenceContext; // For tracking variable types during inference phase
     private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
+    private List<TypeReplacementSuggestion> typeReplacementSuggestions;
+
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
-            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
+            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions, List<TypeReplacementSuggestion> typeReplacementSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
+        this.typeReplacementSuggestions = typeReplacementSuggestions;
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -84,6 +88,22 @@ public class StatementTypeChecker {
             if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
+                String currentTypeStr = TypeConverter.typeToString(typeToCheck);
+                String newTypeStr = TypeConverter.typeToString(value.type());
+
+                TypeReplacementSuggestion typeReplacementSuggestion = new TypeReplacementSuggestion(
+                        sInit.name(),
+                        currentTypeStr,
+                        sInit.pos().line,
+                        sInit.pos().column,
+                        sInit.pos().line,
+                        sInit.pos().column + currentTypeStr.length(),
+                        newTypeStr
+                );
+
+                if(!typeReplacementSuggestions.contains(typeReplacementSuggestion)) {
+                    typeReplacementSuggestions.add(typeReplacementSuggestion);
+                }
                 throw new TypeException(
                         "Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
                                 " but got " + TypeConverter.typeToString(value.type()),

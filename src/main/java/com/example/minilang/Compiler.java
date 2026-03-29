@@ -24,9 +24,8 @@ public class Compiler {
         }
         String optLevel = args.length > 1 ? args[1] : "-O3";
         try {
-            List<InferenceSuggestion> suggestions = parseFile(args[0], optLevel);
-            // Output as JSON to stdout for the language server to parse
-            System.out.println(objectMapper.writeValueAsString(suggestions));
+            AnalysisResult result = parseFile(args[0], optLevel);
+            System.out.println(objectMapper.writeValueAsString(result));
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace(System.err);
@@ -34,11 +33,11 @@ public class Compiler {
         }
     }
 
-    public static List<InferenceSuggestion> parseFile(String input) throws IOException {
+    public static AnalysisResult parseFile(String input) throws IOException {
         return parseFile(input, "0");
     }
 
-    public static List<InferenceSuggestion> parseFile(String input, String optLevel) throws IOException {
+    public static AnalysisResult parseFile(String input, String optLevel) throws IOException {
 
  
         // For debugging, needs to be error so not interference with JSON output
@@ -59,9 +58,14 @@ public class Compiler {
 
         TypeChecker typeChecker = new TypeChecker();
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
-        List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
-
-        return suggestions;
+        List<InferenceSuggestion> inf = typeChecker.getInferenceSuggestions();
+        List<TypeReplacementSuggestion> repl = typeChecker.getTypeReplacementSuggestions();
+        return new AnalysisResult(inf, repl);
     }
+
+    public record AnalysisResult(
+            List<InferenceSuggestion> inferenceSuggestions,
+            List<TypeReplacementSuggestion> typeReplacementSuggestions
+    ) {}
 
 }

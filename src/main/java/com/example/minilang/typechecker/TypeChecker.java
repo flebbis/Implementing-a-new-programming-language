@@ -2,6 +2,7 @@ package com.example.minilang.typechecker;
 
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
+import com.example.minilang.TypeReplacementSuggestion;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
@@ -17,11 +18,12 @@ public class TypeChecker {
     private Context context;
     private Context inferenceContext;
     private List<InferenceSuggestion> inferenceSuggestions = new ArrayList<>();
+    private List<TypeReplacementSuggestion> typeReplacementSuggestions = new ArrayList<>();
 
     public TypeChecker() {
         this.context = new Context();
         this.inferenceContext = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions);
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions, typeReplacementSuggestions);
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -35,7 +37,7 @@ public class TypeChecker {
         // InferenceSuggestion list is the real list for inference pass, the other pass will use a temp list
 
         List<InferenceSuggestion> tempInferenceSuggestions = new ArrayList<>();
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions);
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions, typeReplacementSuggestions);
 
         // Swap to temp environment
         Context realContext = this.context;
@@ -171,5 +173,6 @@ public class TypeChecker {
     public List<InferenceSuggestion> getInferenceSuggestions() {
         return inferenceSuggestions;
     }
+    public List<TypeReplacementSuggestion> getTypeReplacementSuggestions() {return typeReplacementSuggestions;}
 
 }

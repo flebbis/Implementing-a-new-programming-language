@@ -43,6 +43,21 @@ type InferenceSuggestion = {
   endColumn: number;
   replacement: string;
 };
+type TypeReplacementSuggestion = {
+    name: string;
+    currentType: string;
+    line: number;
+    column: number;
+    endLine: number;
+    endColumn: number;
+    newType: string;
+};
+
+type AnalysisResult = {
+    inferenceSuggestions: InferenceSuggestion[];
+    typeReplacementSuggestions: TypeReplacementSuggestion[];
+};
+
 
 const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 
@@ -166,7 +181,6 @@ async function inferenceAnalysis(uri : string, text : string, version: number) {
       
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
       console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
-      const suggestions: InferenceSuggestion[] = result ?? [];
 
       inferenceSuggestionMap.set(uri, suggestions); // tror inte detta behövs längre men sparar för nu
 
@@ -178,6 +192,7 @@ async function inferenceAnalysis(uri : string, text : string, version: number) {
         return; // Discard outdated result
       }
 
+
       // Apply edit in document for each inference suggestion
       for (const s of suggestions) {
         await connection.workspace.applyEdit({
@@ -187,16 +202,18 @@ async function inferenceAnalysis(uri : string, text : string, version: number) {
                 {
                   // For some reason detta va rätt place
                   line: s.line - 1,
-                  character: s.column, 
+                  character: s.column,
                 },
                 `${s.inferredType} `
               )
             ]
           }
         });
-      } 
+      }
       inferenceSuggestionMap.delete(uri); // Clear suggestions after applying edits
+
   }
+
     catch (error) {
       connection.console.error("Error running Java analysis: " + error);
   }

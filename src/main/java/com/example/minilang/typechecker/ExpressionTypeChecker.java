@@ -233,6 +233,7 @@ public class ExpressionTypeChecker {
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
+                //TODO typeReplecamentSuggestion here?
                 throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to variable of type " + TypeConverter.typeToString(varType), eAss.pos());
             }
         }
