@@ -58,10 +58,10 @@
             "description": 
               "``Show Assembly`` will run every time the document is saved"
           },
-          "typeInferece.insertionIntensity" :{
+          "languageServer.insertionIntensity" :{
             "scope": "resource",
             "type": "string",
-            "enum": ["Nill", "hint","onSave", "onDidTextDocumentChange"],
+            "enum": ["nill", "hint","onSave", "insertOnChange"],
             "enumItemLabels": ["None", "Shadow hint", "On save", "Immediate"],
             "markdownEnumDescriptions": ["No insertion", "Shadowed inline hints", "Whenever the document is saved", "Immediately when valid syntax allows inference"],
             "default": "hint",

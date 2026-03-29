@@ -72,7 +72,8 @@ connection.onInitialize((params: InitializeParams) => {
       },
       signatureHelpProvider: {
 
-      }
+      },
+      inlayHintProvider: true
     },
   };
 
@@ -88,20 +89,49 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// settings stuff
+enum TypeInferenceSetting {
+  Nill="nill",
+  Hint="hint",
+  OnSave="onSave",
+  InsertOnChange="insertOnChange",
+}
 
 // global defult settings if client does not support workspace/configuration requests
 interface ServerSettings {
   maxNumberOfProblems: number;
-  showAssemblyOnSave: boolean;
+  insertionIntensity: TypeInferenceSetting;
+
 }
 
 const defaultSettings: ServerSettings = {
   maxNumberOfProblems: 1000,
-  showAssemblyOnSave: false}
+  insertionIntensity: TypeInferenceSetting.Nill
+}
 
 let globalSettings: ServerSettings = defaultSettings;
 
 let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
+
+
+// reads the server-side extension settings
+function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
+  if (!hasConfigurationCabability) {
+    return Promise.resolve(globalSettings);
+  }
+  let result /* Thenable<ServerSettings> */ = documentSettings.get(recource);
+  if (!result) {
+    result = connection.workspace.getConfiguration({
+      scopeUri: recource,
+      section: 'languageServer'
+    });
+    documentSettings.set(recource, result)
+  }
+  return result;
+}
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -170,23 +200,6 @@ connection.languages.diagnostics.on(async (params) => {
     } satisfies DocumentDiagnosticReport;
   }
 })
-
-// reads the set extension settings
-function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
-  if (!hasConfigurationCabability) {
-    return Promise.resolve(globalSettings);
-  }
-  let result = documentSettings.get(recource);
-  if (!result) {
-    result = connection.workspace.getConfiguration({
-      scopeUri: recource,
-      section: 'languageServer'
-    });
-    documentSettings.set(recource, result)
-  }
-  return result;
-}
-
 
 async function validateTextDocument(document: TextDocument): Promise<Diagnostic[]> {
   //lookup document settings
@@ -300,6 +313,173 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
 // -------------------------------------------------------------------------------------------------
 // Type inference
 
+type InferenceSuggestion = {
+  name: string;
+  inferredType: string;
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+  replacement: string;
+};
+
+const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
+
+
+
+// Map to store which version was changed latest
+const latestDocumentVersions: Map<string, number> = new Map();
+
+async function inferenceAnalysis(uri: string, text: string, version: number) {
+  const settings = await getDocumentSettings(uri);
+  try { 
+    const result = await runJavaAnalysis(text);
+
+    // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
+    console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
+    const suggestions: InferenceSuggestion[] = result ?? [];
+
+    inferenceSuggestionMap.set(uri, suggestions);
+    
+    if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
+      connection.languages.inlayHint.refresh(); // Refresh inlay hints
+    }
+
+  }
+  catch (error) {
+    connection.console.error("Error running Java analysis: " + error);
+  }
+  
+}
+
+// Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
+function runJavaAnalysis(text: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    // Path to the compiled JAR file
+    // Build with: mvn package (creates target/LLVMINI-1.0-SNAPSHOT.jar)
+    const jarPath = path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT.jar');
+
+    const java = spawn("java", ["-jar", jarPath, text]);
+
+    // Capture stdout and stderr from the Java process
+    let stdout = "";
+    let stderr = "";
+
+    java.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    // Capture stderr for error reporting (from java code)
+    java.stderr.on("data", (data) => {
+      stderr += data.toString();
+      connection.console.error("Java stderr: " + data.toString());
+    });
+
+    // Handle process exit
+    java.on("close", (code) => {
+      if (code !== 0) { // code 0 is success code
+        connection.console.error("Java process failed with code " + code + ": " + stderr);
+        reject(new Error(stderr || `Java process exited with code ${code}`));
+        return;
+      }
+
+      try {
+        const result = JSON.parse(stdout); // Parse JSON result from Java
+        resolve(result);
+      } catch (e) {
+        connection.console.error("Failed to parse JSON from Java: " + stdout);
+        reject(new Error("Failed to parse JSON from Java: " + stdout));
+      }
+    });
+  });
+}
+
+
+function insertInfered(uri: string) {
+  const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+  // Apply edit in document for each inference suggestion
+  for (const s of suggestions) {
+    connection.workspace.applyEdit({
+      changes: {
+        [uri]: [
+          TextEdit.insert(
+            {
+              // For some reason detta va rätt place
+              line: s.line - 1,
+              character: s.column,
+            },
+            `${s.inferredType} `
+          )
+        ]
+      }
+    });
+  }
+}
+
+
+// -------------------------------------------------------------------------------------------------
+// detect on change
+documents.onDidChangeContent(async change => {
+  const uri = change.document.uri;
+  const settings = await getDocumentSettings(uri)
+  const text = change.document.getText();
+  const version = change.document.version;
+  latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
+  // console.error("TEXXXT " + change.document.getText())
+
+  // Type check & inference phase
+  if (settings.insertionIntensity == TypeInferenceSetting.Hint 
+    || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+    await inferenceAnalysis(uri, text, version);
+  }
+  // Apply on change immediately if possible
+  if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+    insertInfered(uri);
+  }
+
+});
+
+
+// -------------------------------------------------------------------------------------------------
+// Handle inlay hint requests
+// Apply on change as inline hints
+connection.languages.inlayHint.on(async (params) => {
+  const uri = params.textDocument.uri;
+  const settings = await getDocumentSettings(uri)
+  if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
+    
+    const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+    return suggestions.map((s) => ({
+      position: {
+        line: s.line - 1,
+        character: s.column,
+      },
+      label: `${s.inferredType} `,
+      kind: 1,
+      paddingRight: true,
+    }));
+  }
+});
+
+
+// -------------------------------------------------------------------------------------------------
+// Handle document save events 
+// analysiss occur on change, but only applied on save
+documents.onDidSave(async change => {
+  const uri = change.document.uri;
+  const settings = await getDocumentSettings(uri)
+    if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
+    const text = change.document.getText();
+    const version = change.document.version;
+    latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
+    // console.error("TEXXXT " + change.document.getText())
+
+    // Type check & inference phase
+    await inferenceAnalysis(uri, text, version);
+
+    insertInfered(uri);
+  }
+})
 
 
 // -------------------------------------------------------------------------------------------------
