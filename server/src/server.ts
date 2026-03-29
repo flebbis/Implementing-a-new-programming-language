@@ -15,9 +15,14 @@ import {
   MarkupContent,
   Range,
   MarkupKind,
+  TextEdit
 } from "vscode-languageserver/node";
 
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
+
+import { spawn } from 'child_process';
+import * as path from 'path';
+// import { URI } from "vscode-uri";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -277,6 +282,7 @@ connection.onHover((params: HoverParams, token, progrss, result) => {
     return null;
   }
 })
+
 
 
 // -------------------------------------------------------------------------------------------------

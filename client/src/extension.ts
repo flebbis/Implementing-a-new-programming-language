@@ -210,6 +210,9 @@ export async function activate(context: ExtensionContext) {
   });
 }
 
+
+
+
 export async function deactivate() {
   await client?.dispose();
   client=undefined;
