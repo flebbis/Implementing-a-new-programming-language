@@ -202,12 +202,25 @@ public class ExpressionCodeGen extends Helper {
         String left = generateExpression(oppExp.left());
         String right = generateExpression(oppExp.right());
         String register = generateRegister();
+        Ast.Type type = oppExp.type();
         switch (oppExp.op()) {
             case ADD -> {handleEAdd(left,right,register, oppExp.type());}
-            case SUB -> {sb.append(register).append(" = sub ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case MUL -> {sb.append(register).append(" = mul ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case DIV -> {sb.append(register).append(" = sdiv ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case MOD -> {sb.append(register).append(" = srem ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");}
+            case SUB -> {
+                generateOppInstruction(type, "sub", left, right, register);
+            }
+            case MUL -> {
+                generateOppInstruction(type, "mul", left, right, register);
+            }
+            case DIV -> {
+                if(type instanceof Ast.TDouble) {
+                    generateOppInstruction(type, "div", left, right, register);
+                } else {
+                    generateOppInstruction(type, "sdiv", left, right, register);
+                }
+            }
+            case MOD -> {
+                sb.append(register).append(" = srem ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");
+            }
         }
         return register;
 
@@ -222,9 +235,17 @@ public class ExpressionCodeGen extends Helper {
                     .append(right)
                     .append(")\n");
         } else {
-            sb.append(register).append(" = add ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append("\n");
+            generateOppInstruction(type, "add", left, right, register);
         }
         return register;
+    }
+
+    private void generateOppInstruction(Ast.Type type, String baseInstruction, String left, String right, String register) {
+        if(type instanceof Ast.TInt) {
+            sb.append(register).append(" = ").append(baseInstruction).append(" ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append("\n");
+        } else if(type instanceof Ast.TDouble) {
+            sb.append(register).append(" = f").append(baseInstruction).append(" ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append("\n");
+        }
     }
 
     private String generateCmp(ECmp cmpExp) {
