@@ -5,7 +5,7 @@ import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
 import java.util.HashSet;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
-import static com.example.minilang.codegen.PrintGlobalGenerator.generatePrintGlobal;
+
 public class ExpressionCodeGen extends Helper {
 
     private StringBuilder sb;
@@ -57,15 +57,54 @@ public class ExpressionCodeGen extends Helper {
         return String.valueOf(doubleExp.value());
     }
     private String generateString(EString stringExp) {
-        String value = stringExp.value();
-        value = value.substring(1, value.length() - 1);
-        int length = value.length() + 1; // +1 for null terminator
+        String rawString = stringExp.value();
+        rawString = rawString.substring(1, rawString.length() - 1);
+
+        // Handle escape sequences in the raw string (e.g., convert "\\n" to an actual newline character, etc.)
+        rawString = handleEscapeSequences(rawString);
+
+        // Convert the raw string to bytes to handle non-printable characters and escape sequences correctly
+        byte[] bytes = rawString.getBytes();
+        String value = generatePrintableString(bytes);
+
+
+        int length = bytes.length + 1; // +1 for null terminator
         String globalName = "@.str." + stringCounter++;
         String register = generateRegister();
         globals.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
         sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
         return register;
     }
+
+    /**
+     * This method takes a byte array and generates a string representation that can be used in LLVM IR string constants.
+     * It converts non-printable characters to their hexadecimal character codes, å = \C3\A5 for instance
+     */
+    private String generatePrintableString(byte[] bytes) {
+        StringBuilder unsignedBytesString = new StringBuilder();
+        for(int i = 0; i < bytes.length; i++) {
+            int ub = bytes[i] & 0xFF; // Convert to unsigned (-128 will become 128, -1 will become 255, etc.)
+            if (ub >= 32 && ub <= 126 && ub != '\\' && ub != '"') {
+                unsignedBytesString.append((char) ub); // Normal printable character, append as is
+            } else {
+                unsignedBytesString.append(String.format("\\%02X", ub)); // Escape non-printable characters and backslashes/double quotes
+            }
+        }
+        return unsignedBytesString.toString();
+    }
+
+    /**
+     * This method takes a raw string (with escape sequences) and converts it into a format suitable for LLVM IR string constants.
+     * It handles common escape sequences like \n, \t, \", and \\.
+     */
+    private String handleEscapeSequences(String rawString) {
+        return rawString
+                .replace("\\n", "\n")
+                .replace("\\t", "\t")
+                .replace("\\\"", "\"")
+                .replace("\\\\", "\\");
+    }
+
     private String generateBool(EBool boolExp) {
         return String.valueOf(boolExp.value());
     }
