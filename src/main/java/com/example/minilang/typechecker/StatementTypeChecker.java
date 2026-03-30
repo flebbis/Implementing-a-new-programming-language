@@ -136,7 +136,10 @@ public class StatementTypeChecker {
     }
     
     private void inferenceCheckArray(Ast.TArray type, String name, Pos pos) {
-        if (type.elementType() instanceof Ast.TUnknown) {
+        boolean isUnkownType = TypeUtils.arrayIsUnkown(type);
+        System.err.println(isUnkownType);
+        if (TypeUtils.arrayIsUnkown(type)) {
+            System.err.println("IS UNKWONW");
             if (inferenceContext != null) {
                 Ast.Type inferred = inferenceContext.lookupFromScopeLevel(name, context.getScopeLevel());
                 if (inferred != null && inferred instanceof Ast.TArray) {
@@ -146,7 +149,8 @@ public class StatementTypeChecker {
         }
 
         // If not unkown now, we can make inference suggestion
-        if (!(type.elementType() instanceof Ast.TUnknown)) {
+        if (!TypeUtils.arrayIsUnkown(type)) {
+            System.err.println("IS NOT UNKWONW");
             InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
                     name,
                     TypeConverter.typeToString(type),

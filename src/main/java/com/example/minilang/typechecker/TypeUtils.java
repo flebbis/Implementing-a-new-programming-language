@@ -20,4 +20,15 @@ public class TypeUtils {
         // Default: use record equality for simple types (int, double, string, bool, unknown)
         return a.equals(b);
     }
+
+    public static boolean arrayIsUnkown(Ast.TArray type) {
+        if(type.elementType() instanceof Ast.TUnknown) {
+            return true;
+        }
+        if(type.elementType() instanceof Ast.TArray) {
+            Ast.TArray tArray = (Ast.TArray) type.elementType();
+            return arrayIsUnkown(tArray);
+        } 
+        return false;
+    }
 }
