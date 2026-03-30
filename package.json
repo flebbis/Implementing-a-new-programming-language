@@ -3,7 +3,7 @@
   "description": "language server following lsp for this unnamed language",
   "author": "Cole",
   "license": "MIT",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "Grupp17A",
   "repository": {
     "type": "git",

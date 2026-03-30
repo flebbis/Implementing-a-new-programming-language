@@ -357,8 +357,8 @@ function runJavaAnalysis(text: string): Promise<any> {
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
     // Build with: mvn package (creates target/LLVMINI-1.0-SNAPSHOT.jar)
-    const jarPath = path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT.jar');
-
+    const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
+    // connection.console.log("server-jarPath: " + jarPath);
     const java = spawn("java", ["-jar", jarPath, text]);
 
     // Capture stdout and stderr from the Java process

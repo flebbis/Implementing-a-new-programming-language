@@ -102,11 +102,10 @@ export async function activate(context: ExtensionContext) {
     } */
   //  OBS the jar file must be located in ./client/src/ for this to work, but it should then be able to be included in the exctension
     const JAR_PATH =  context.asAbsolutePath(
-      path.join('.','client','src','LLVMINI-1.0-SNAPSHOT.jar')
+      path.join('.','LLVMINI-1.0-SNAPSHOT.jar')
     );
     
-
-    vscode.window.showInformationMessage(JAR_PATH);
+    // console.log(JAR_PATH);
 
     vscode.window.showInformationMessage('Optimazation level' + optLevel);
     try {
