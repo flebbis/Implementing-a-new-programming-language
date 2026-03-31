@@ -156,7 +156,6 @@ public class StatementTypeChecker {
 
         // If not unkown now, we can make inference suggestion
         if (!TypeUtils.arrayIsUnkown(type)) {
-            System.err.println("IS NOT UNKWONW");
             InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
                     name,
                     TypeConverter.typeToString(type),
