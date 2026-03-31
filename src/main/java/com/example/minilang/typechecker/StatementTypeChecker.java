@@ -87,7 +87,7 @@ public class StatementTypeChecker {
         // Verify types match for explicit declarations
         // Allow TUnknown values to bypass checks during inference pass
         if (typeToCheck instanceof Ast.TArray) {
-            checkTypeCompatabilityArrays((Ast.TArray) typeToCheck, value);
+            typeToCheck = checkTypeCompatabilityArrays((Ast.TArray) typeToCheck, value);
         } else {
             value = checkTypeCompatabilityNonArrays(typeToCheck, value);
         }
@@ -96,7 +96,7 @@ public class StatementTypeChecker {
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
     
-    private void checkTypeCompatabilityArrays(Ast.TArray sInitType, Ast.Exp value) {
+    private Ast.Type checkTypeCompatabilityArrays(Ast.TArray sInitType, Ast.Exp value) {
         if (value.type() instanceof Ast.TArray) {
             Ast.TArray valueType = (Ast.TArray) value.type();
 
@@ -113,11 +113,17 @@ public class StatementTypeChecker {
                             "Incorrect initializer type, expected array of " + TypeConverter.typeToString(sInitType.elementType()) +
                                     " but got array of " + TypeConverter.typeToString(valueType.elementType()),
                             value.pos());
+                } else {
+                    // probably because of mismatch in size
+                    if(!sInitType.equals(valueType)) {
+                        return valueType; // if they dont match in size, value will be correct
+                    }
                 }
             }
         } else {
             throw new TypeException("Attempting to assign non array value to array", value.pos());
         }
+        return sInitType;
     }
     
     private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value) {

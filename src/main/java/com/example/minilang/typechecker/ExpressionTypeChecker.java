@@ -297,12 +297,13 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.EArray eArray) {
         List<Ast.Exp> checkedElements = new ArrayList<>();
         int arraySize = 0;
+        Ast.TArray type = (Ast.TArray) eArray.type();
         for (Ast.Exp element : eArray.elements()) {
             checkedElements.add(typeCheck(element));
             arraySize++;
         }
 
-        Ast.TArray type = (Ast.TArray) eArray.type();
+
         if(type.elementType() instanceof Ast.TUnknown) {
             if (!checkedElements.isEmpty()) {
                 Ast.Type inferredType = checkedElements.getFirst().type();
@@ -441,5 +442,41 @@ public class ExpressionTypeChecker {
         return new Ast.EAppend(array, element, appendType, eAppend.pos());
     }
 
+    public Ast.Exp typeCheck(Ast.EArrayIndexAssign eArrayIndexAssign) {
+        Ast.Exp array = typeCheck(eArrayIndexAssign.array());
+        Ast.Exp index = typeCheck(eArrayIndexAssign.index());
+        Ast.Exp value = typeCheck(eArrayIndexAssign.value());
 
+        if(array.type() instanceof Ast.TUnknown) {
+            //simply return the array as is with TUnknown, we're in first pass
+            Ast.TUnknown resultType = new Ast.TUnknown();
+            return new Ast.EArrayIndexAssign(array, index, value, resultType, eArrayIndexAssign.pos());
+        }
+
+        if(!(array.type() instanceof Ast.TArray)) {
+            throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
+        }
+
+        if (!(index.type() instanceof Ast.TInt)) {
+            throw new TypeException("Array index must be of type int", index.pos());
+        }
+
+        Ast.TArray arrayType = (Ast.TArray) array.type();
+
+        // Allow assignment if value is TUnknown (inference phase)
+        if (value.type() instanceof Ast.TUnknown) {
+            return new Ast.EArrayIndexAssign(array, index, value, new Ast.TUnknown(), eArrayIndexAssign.pos());
+        }
+
+        if (!arrayType.elementType().equals(value.type())) {
+            // Allow implicit conversion from int to double
+            if (arrayType.elementType() instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
+            } else {
+                throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to array of type " + TypeConverter.typeToString(arrayType.elementType()), value.pos());
+            }
+        }
+
+        return new Ast.EArrayIndexAssign(array, index, value, arrayType.elementType(), eArrayIndexAssign.pos());
+    }
 }
