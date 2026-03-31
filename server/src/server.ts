@@ -35,6 +35,7 @@ let hasConfigurationCabability: boolean = false;
 let hasWorkspaceFolderCapability: boolean = false;
 let hasDiagnosticRelatedInformationCapability: boolean = false;
 let hasHoverCapability: boolean = false;
+let hasWillSaveWaitCapabilities: boolean = false;
 
 /* Setup server */
 connection.onInitialize((params: InitializeParams) => {
@@ -46,33 +47,39 @@ connection.onInitialize((params: InitializeParams) => {
     !!capabilities.workspace.configuration
   ),
     hasWorkspaceFolderCapability = !!(
-      capabilities.workspace && !!capabilities.workspace.workspaceFolders
+      capabilities.workspace &&
+      !!capabilities.workspace.workspaceFolders
     );
   hasDiagnosticRelatedInformationCapability = !!(
     capabilities.textDocument &&
     capabilities.textDocument.publishDiagnostics &&
-    capabilities.textDocument.publishDiagnostics.relatedInformation
+    !!capabilities.textDocument.publishDiagnostics.relatedInformation
   );
   hasHoverCapability = !!(
     capabilities.textDocument &&
     !!capabilities.textDocument.hover
   );
+  hasWillSaveWaitCapabilities = !!(
+    capabilities.textDocument &&
+    capabilities.textDocument.synchronization &&
+    !!capabilities.textDocument.synchronization.willSaveWaitUntil
+  );
 
 
   const result: InitializeResult = {
     capabilities: {
-      textDocumentSync: TextDocumentSyncKind.Incremental,
+      textDocumentSync: {
+        change: TextDocumentSyncKind.Incremental,
+        openClose: true, // Apparently this is needed if the {}-options are used ._.
+        willSaveWaitUntil: true,
+      },
       diagnosticProvider: {
         // lmiting diagnostics, only consider currently active file "trusts" other files work as expected
         interFileDependencies: false,
         workspaceDiagnostics: false
       },
-      hoverProvider: {
-        // workDoneProgress: ?
-      },
-      signatureHelpProvider: {
-
-      },
+      hoverProvider: true,
+      // signatureHelpProvider: {},
       inlayHintProvider: true
     },
   };
@@ -424,9 +431,23 @@ function insertInfered(uri: string) {
   }
 }
 
+function inferedInserts(uri: string): TextEdit[] {
+  const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+  let changes: TextEdit[] = []
+  for (let i = 0; i < suggestions.length; i++) {
+    let s = suggestions[i];
+    changes[i] = TextEdit.insert({
+      // For some reason detta va rätt place
+      line: s.line - 1,
+      character: s.column
+    },
+      `${s.inferredType} `)
+  }
+  return changes;
+}
 
 // -------------------------------------------------------------------------------------------------
-// detect on change
+// on change
 documents.onDidChangeContent(async change => {
   const uri = change.document.uri;
   const settings = await getDocumentSettings(uri)
@@ -440,7 +461,6 @@ documents.onDidChangeContent(async change => {
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
     await inferenceAnalysis(uri, text, version);
   }
-
 
   if (isLatest(uri, version)) {
     // Apply on change immediately if possible
@@ -480,6 +500,26 @@ connection.languages.inlayHint.on(async (params) => {
 // -------------------------------------------------------------------------------------------------
 // Handle document save events 
 // analysiss occur on change, but only applied on save
+documents.onWillSaveWaitUntil(async (params) => {
+  const uri = params.document.uri;
+  const settings = await getDocumentSettings(uri)
+  let changes: TextEdit[] = []
+  if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
+    const text = params.document.getText();
+    const version = params.document.version;
+    latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
+
+    // Type check & inference phase
+    await inferenceAnalysis(uri, text, version);
+
+    if (isLatest(uri, version)) {
+      changes = inferedInserts(uri);
+    }
+  }
+  return changes
+})
+
+/* 
 documents.onDidSave(async change => {
   const uri = change.document.uri;
   const settings = await getDocumentSettings(uri)
@@ -497,7 +537,7 @@ documents.onDidSave(async change => {
     }
   }
 })
-
+ */
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
