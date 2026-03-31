@@ -1,1 +1,1 @@
-int i = 2
+print("test :D " + "hello world")

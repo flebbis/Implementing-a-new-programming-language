@@ -13,9 +13,10 @@ public class MiniLanguageMain {
     public static void main(String[] args) throws IOException {
         String text;
         String testFilePath = "src/test/resources/";
+        String path = "";
 
         if(args.length == 0) {
-            String path = testFilePath + "type/good/inference-1.ml";
+            path = testFilePath + "syntax/good/good-1.ml";
             text = Files.readString(Path.of(path));
         } else if (args.length == 1){
              text = args[0];
@@ -24,6 +25,6 @@ public class MiniLanguageMain {
             System.exit(1);
             return;
         }
-        Compiler.parseFile(text);
+        Compiler.parseFile(text, path, "0");
     }
 }

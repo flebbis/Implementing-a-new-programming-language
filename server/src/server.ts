@@ -162,8 +162,9 @@ documents.onDidChangeContent(change => {
 
 async function inferenceAnalysis(uri : string, text : string, version: number) {
     try {
-      const result = await runJavaAnalysis(text);
-      
+      const filePath = URI.parse(uri).fsPath;
+      const result = await runJavaAnalysis(text, filePath);
+
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
       console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
       const suggestions: InferenceSuggestion[] = result ?? [];
@@ -205,13 +206,13 @@ async function inferenceAnalysis(uri : string, text : string, version: number) {
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
-function runJavaAnalysis(text: string): Promise<any> {
+function runJavaAnalysis(text: string, filePath: string): Promise<any> {
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
     // Build with: mvn package (creates target/LLVMINI-1.0-SNAPSHOT.jar)
     const jarPath = path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT.jar');
     
-    const java = spawn("java", ["-jar", jarPath, text]);
+    const java = spawn("java", ["-jar", jarPath, text, filePath]);
 
     // Capture stdout and stderr from the Java process
     let stdout = "";
