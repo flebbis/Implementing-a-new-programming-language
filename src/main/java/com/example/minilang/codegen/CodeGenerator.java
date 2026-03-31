@@ -48,7 +48,7 @@ public class CodeGenerator {
         sb.append("}\n\n");
 
         for (Ast.Func function : program.functions()) {
-            System.out.println("Functions found: " + program.functions().size());
+            //System.out.println("Functions found: " + program.functions().size());
             FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, functionVariables, stmtGen);
             funcGen.generateFunction(function);
         }

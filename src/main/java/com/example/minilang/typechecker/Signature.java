@@ -5,6 +5,7 @@ import com.example.minilang.ast.Ast;
 import java.util.List;
 
 public class Signature {
+    public boolean isInference = false;
     public final String name;
     public Ast.Type returnType;
     public List<Ast.Type> paramTypes;

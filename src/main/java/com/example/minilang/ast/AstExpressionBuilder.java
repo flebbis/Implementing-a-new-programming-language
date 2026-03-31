@@ -5,6 +5,10 @@ import com.example.minilang.GrammarParser;
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
 
+import com.example.minilang.GrammarBaseVisitor;
+import com.example.minilang.GrammarParser;
+import com.example.minilang.Pos;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -178,6 +182,7 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
         return new Ast.ENot(exp, exp.type() , pos);
     }
 
+
     @Override
     public Ast.Exp visitPostfixExpr(GrammarParser.PostfixExprContext ctx) {
         Ast.Exp expr = visit(ctx.primary());
@@ -187,10 +192,10 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 expr = new Ast.EUnary(expr, Ast.UnaryOp.INC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             } else if(op.DEC() != null) {
                 expr = new Ast.EUnary(expr, Ast.UnaryOp.DEC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else if(op.exp() != null) {
+            } else if(op.DYNARR_START() != null) {
                 Ast.Exp index = visit(op.exp());
                 expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else {
+            } else if (op.PARAM_START() != null && op.PARAM_END() != null) {
                 // function call
                 List<Ast.Exp> args = new ArrayList<>();
                 for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
@@ -202,6 +207,10 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 } else {
                     throw new IllegalArgumentException("Function call target must be an identifier");
                 }
+            } else {
+                // Append array operation
+                Ast.Exp exp = visit(op.exp());
+                return new Ast.EAppend(expr, exp, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             }
         }
         return expr;

@@ -1,11 +1,13 @@
 package com.example.minilang.typechecker;
 
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import com.example.minilang.InferenceSuggestion;
+import com.example.minilang.Pos;
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
 
 public class StatementTypeChecker {
 
@@ -14,12 +16,15 @@ public class StatementTypeChecker {
     private String currentFunction;
     private HashMap<String, Signature> functionSignatures;
     private Context inferenceContext; // For tracking variable types during inference phase
+    private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
 
-    public StatementTypeChecker(Context context, HashMap<String, Signature>  functionSignatures, Context inferenceContext) {
+    public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
+            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
         this.inferenceContext = inferenceContext;
+        this.inferenceSuggestions = inferenceSuggestions;
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -34,6 +39,7 @@ public class StatementTypeChecker {
             case Ast.SExp SExp -> typeCheck(SExp);
         };
     }
+
 
     public Ast.Stmt typeCheck(Ast.SInit sInit) {
         Ast.Exp value = expressionTypeChecker.typeCheck(sInit.value());
@@ -55,39 +61,114 @@ public class StatementTypeChecker {
 
         // Infer type if unknown
         if (typeToCheck instanceof Ast.TUnknown) {
-            typeToCheck = value.type();
-        }
+            if (!(value.type() instanceof Ast.TUnknown)) {
+                typeToCheck = value.type();
 
+                if (typeToCheck instanceof Ast.TArray) {
+                    inferenceCheckArray((Ast.TArray) typeToCheck, sInit.name(), sInit.pos());
+                } else {
+                    InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
+                            sInit.name(),
+                            TypeConverter.typeToString(typeToCheck),
+                            sInit.pos().line,
+                            sInit.pos().column,
+                            sInit.pos().line,
+                            sInit.pos().column + sInit.name().length(),
+                            "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
+
+                    // Avoid duplicates for multiple inference passes
+                    if (!inferenceSuggestions.contains(inferenceSuggestion)) {
+                        inferenceSuggestions.add(inferenceSuggestion);
+                    }
+                }
+            }
+        }
 
         // Verify types match for explicit declarations
         // Allow TUnknown values to bypass checks during inference pass
-        if (!compareTypes(typeToCheck, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
-            if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
-            } else {
-                throw new TypeException("Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
-                        " but got " + TypeConverter.typeToString(value.type()), value.pos());
-            }
+        if (typeToCheck instanceof Ast.TArray) {
+            checkTypeCompatabilityArrays((Ast.TArray) typeToCheck, value);
+        } else {
+            value = checkTypeCompatabilityNonArrays(typeToCheck, value);
         }
 
-        typeToCheck = value.type();
         context.pushToCurrentScope(sInit.name(), typeToCheck);
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
+    
+    private void checkTypeCompatabilityArrays(Ast.TArray sInitType, Ast.Exp value) {
+        if (value.type() instanceof Ast.TArray) {
+            Ast.TArray valueType = (Ast.TArray) value.type();
 
-    private boolean compareTypes(Ast.Type declaredType, Ast.Type valueType) {
-        if(declaredType instanceof Ast.TArray) {
-            // Specific case, since arraySize is allowed to differ
-            if(valueType instanceof Ast.TArray) {
-                return compareTypes(((Ast.TArray) declaredType).elementType(), ((Ast.TArray) valueType).elementType()); // Compare element types recursively
+
+            // Element type is unkown, probably no elements yet, just pass, is okey
+            if (valueType.elementType() instanceof Ast.TUnknown) {
+
+            } else if(sInitType.elementType() instanceof Ast.TUnknown) {
+
             } else {
-                return false; // Didn't match an array type at all
+                // If both are known, they must match
+                if (!TypeUtils.equalTypes(sInitType.elementType(), valueType.elementType())) {
+                    throw new TypeException(
+                            "Incorrect initializer type, expected array of " + TypeConverter.typeToString(sInitType.elementType()) +
+                                    " but got array of " + TypeConverter.typeToString(valueType.elementType()),
+                            value.pos());
+                }
+            }
+        } else {
+            throw new TypeException("Attempting to assign non array value to array", value.pos());
+        }
+    }
+    
+    private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value) {
+        if (!compareTypes(sInitType, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
+            if (sInitType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
+                return value;
+            } else {
+                throw new TypeException(
+                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(sInitType) +
+                                " but got " + TypeConverter.typeToString(value.type()),
+                        value.pos());
             }
         }
-        if(declaredType.equals(valueType)) {
-            return true; // Exact match
+        return value;
+    }
+    
+    private void inferenceCheckArray(Ast.TArray type, String name, Pos pos) {
+        boolean isUnkownType = TypeUtils.arrayIsUnkown(type);
+        System.err.println(isUnkownType);
+        if (TypeUtils.arrayIsUnkown(type)) {
+            System.err.println("IS UNKWONW");
+            if (inferenceContext != null) {
+                Ast.Type inferred = inferenceContext.lookupFromScopeLevel(name, context.getScopeLevel());
+                if (inferred != null && inferred instanceof Ast.TArray) {
+                    type =  (Ast.TArray) inferred;
+                }
+            }
         }
-        return false;
+
+        // If not unkown now, we can make inference suggestion
+        if (!TypeUtils.arrayIsUnkown(type)) {
+            System.err.println("IS NOT UNKWONW");
+            InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
+                    name,
+                    TypeConverter.typeToString(type),
+                    pos.line,
+                    pos.column,
+                    pos.line,
+                    pos.column + name.length(),
+                    "Suggestion: " + TypeConverter.typeToString(type) + " " + name);
+
+            // Avoid duplicates for multiple inference passes
+            if (!inferenceSuggestions.contains(inferenceSuggestion)) {
+                inferenceSuggestions.add(inferenceSuggestion);
+            }
+        }
+    }
+
+    private boolean compareTypes(Ast.Type declaredType, Ast.Type valueType) {
+        return TypeUtils.equalTypes(declaredType, valueType);
     }
 
 
@@ -103,8 +184,18 @@ public class StatementTypeChecker {
             // If unknown, try checking the inference context for the type
             int scopeLvl = context.getScopeLevel();
 
-            if(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null) {
+            if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null && !(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) instanceof Ast.TUnknown)) {
                 type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
+                // Add to suggestions for language server
+                System.err.println("Found type for " + sDecl.name() + " in inference context: " + TypeConverter.typeToString(type));
+                inferenceSuggestions.add(new InferenceSuggestion(
+                        sDecl.name(),
+                        TypeConverter.typeToString(type),
+                        sDecl.pos().line,
+                        sDecl.pos().column,
+                        sDecl.pos().line,
+                        sDecl.pos().column + sDecl.name().length(),
+                        "Suggestion: " + TypeConverter.typeToString(type) + " " + sDecl.name()));
             }
         } else {
             type = sDecl.type();
@@ -137,7 +228,8 @@ public class StatementTypeChecker {
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
         if (!(exp.type() instanceof Ast.TInt)) {
-            throw new TypeException("Expression in do statement must be of type int, type " + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
+            throw new TypeException("Expression in do statement must be of type int, type "
+                    + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
         }
 
         // Check body
@@ -157,20 +249,36 @@ public class StatementTypeChecker {
         Signature signature = functionSignatures.get(currentFunction);
 
         // Inference: If return type is TUnknown, infer it from the return value
-        if (signature.returnType instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
+        if (isUnkownType(signature.returnType) && !isUnkownType(value.type())) {
             signature.setReturnType(value.type());
+            signature.isInference = true;
+        } else {
+            signature.isInference = false;
         }
 
-        if (!signature.returnType.equals(value.type())) {
+        if (!TypeUtils.equalTypes(signature.returnType, value.type())) {
             // Allow implicit conversion from int to double
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
-                value = new Ast.EDInt(value, value.type(), value.pos());
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
-                throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
+                throw new TypeException("Function returns type " + value.type()
+                        + ", does not match declared function return type " + signature.returnType, stmt.pos());
             }
         }
 
         return new Ast.SReturn(value, stmt.pos());
+    }
+
+    private boolean isUnkownType(Ast.Type type) {
+        if (type instanceof Ast.TUnknown) {
+            return true;
+        } else if (type instanceof Ast.TArray) {
+            Ast.TArray tArray = (Ast.TArray) type;
+            if (tArray.elementType() instanceof Ast.TUnknown) {
+                return true; // unkown array type
+            }
+        }
+        return false;
     }
 
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
@@ -181,25 +289,27 @@ public class StatementTypeChecker {
         }
 
         // Check then branch
-        if(!(stmt.thenBranch() instanceof Ast.SBlock)) {
+        if (!(stmt.thenBranch() instanceof Ast.SBlock)) {
             throw new TypeException("Then branch of if statement must be a block statement", stmt.thenBranch().pos());
         }
 
         context.pushNewScope();
-        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch()); // Check for any type errors in the then branch before checking the else branch (for better error messages)
+        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch()); // Check for any type errors in the then branch before
+                                                          // checking the else branch (for better error messages)
         context.popScope();
 
         Ast.Stmt elseStmt = null;
         if(stmt.elseBranch() != null) {
-            if (!(stmt.elseBranch() instanceof Ast.SBlock || stmt.elseBranch() instanceof Ast.SIf)) {
-                throw new TypeException("Else branch of if statement must be a block statement", stmt.elseBranch().pos());
+            if (!(stmt.elseBranch() instanceof Ast.SBlock)) {
+                throw new TypeException("Else branch of if statement must be a block statement",
+                        stmt.elseBranch().pos());
             }
             context.pushNewScope();
             elseStmt = typeCheck(stmt.elseBranch());
             context.popScope();
         }
 
-        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos());
+        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos()); // Placeholder
     }
 
     public Ast.SBlock typeCheck(Ast.SBlock stmt) {

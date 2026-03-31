@@ -30,6 +30,13 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+### LSP ###
+out
+node_modules
+client/server
+.vscode-test
+tsconfig.tsbuildinfo
+
 
 ### General ###
 /target
@@ -41,3 +48,5 @@ target/
 *.tokens
 /.idea/
 *.iml
+*.ll
+*.s
