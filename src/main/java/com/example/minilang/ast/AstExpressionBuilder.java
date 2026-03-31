@@ -38,6 +38,11 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 } else if (ctx.MULT_ASSIGN() != null) {
                     return new Ast.EAss(id.name(), right, Ast.AssOp.MULT_ASSIGN, type, pos);
                 }
+            } else if(left instanceof Ast.EArrayIndex arrayIndex) {
+                Ast.Type type = arrayIndex.type();
+                Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+                return new Ast.EArrayIndexAssign(arrayIndex.array(), arrayIndex.index(), right, type, pos);
+
             }
         }
         return left;
