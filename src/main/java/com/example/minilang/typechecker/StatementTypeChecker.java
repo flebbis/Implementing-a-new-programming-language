@@ -191,7 +191,7 @@ public class StatementTypeChecker {
 
         Ast.Stmt elseStmt = null;
         if(stmt.elseBranch() != null) {
-            if (!(stmt.elseBranch() instanceof Ast.SBlock)) {
+            if (!(stmt.elseBranch() instanceof Ast.SBlock || stmt.elseBranch() instanceof Ast.SIf)) {
                 throw new TypeException("Else branch of if statement must be a block statement", stmt.elseBranch().pos());
             }
             context.pushNewScope();
@@ -199,7 +199,7 @@ public class StatementTypeChecker {
             context.popScope();
         }
 
-        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos()); // Placeholder
+        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos());
     }
 
     public Ast.SBlock typeCheck(Ast.SBlock stmt) {

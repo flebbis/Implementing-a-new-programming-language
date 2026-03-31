@@ -248,7 +248,9 @@ public class ExpressionTypeChecker {
             // Special case for print: allow one argument of any type
             List<Ast.Exp> args = new ArrayList<>();
             for (Ast.Exp arg : eCall.args()) {
-                args.add(typeCheck(arg));
+                Ast.Exp checkedArg = typeCheck(arg);
+                Ast.EStringCast stringArg = new Ast.EStringCast(checkedArg, new Ast.TString(), checkedArg.pos());
+                args.add(stringArg);
             }
             return new Ast.ECall(eCall.name(), args, new Ast.TUnknown(), eCall.pos());
         }
