@@ -94,10 +94,10 @@ connection.onInitialize((params: InitializeParams) => {
 // -------------------------------------------------------------------------------------------------
 // settings stuff
 enum TypeInferenceSetting {
-  Nill="nill",
-  Hint="hint",
-  OnSave="onSave",
-  InsertOnChange="insertOnChange",
+  Nill = "nill",
+  Hint = "hint",
+  OnSave = "onSave",
+  InsertOnChange = "insertOnChange",
 }
 
 // global defult settings if client does not support workspace/configuration requests
@@ -114,11 +114,11 @@ const defaultSettings: ServerSettings = {
 
 let globalSettings: ServerSettings = defaultSettings;
 
-let documentSettings: Map<string,Thenable<ServerSettings>> = new Map();
+let documentSettings: Map<string, Thenable<ServerSettings>> = new Map();
 
 
 // reads the server-side extension settings
-function getDocumentSettings(recource : string) : Thenable<ServerSettings> {
+function getDocumentSettings(recource: string): Thenable<ServerSettings> {
   if (!hasConfigurationCabability) {
     return Promise.resolve(globalSettings);
   }
@@ -261,37 +261,39 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // Hover
-function inc(pos: Position): Position{
-  return {line: pos.line, character: pos.character+1}
+function inc(pos: Position): Position {
+  return { line: pos.line, character: pos.character + 1 }
 }
 
-function dec(pos: Position): Position{
-  return {line: pos.line, character: pos.character-1}
+function dec(pos: Position): Position {
+  return { line: pos.line, character: pos.character - 1 }
 }
 
 connection.onHover((params: HoverParams, token, progrss, result) => {
   const doc = documents.get(params.textDocument.uri)
-  
+
   let pos = params.position;
-  if(doc != undefined){
-    
-    
+  if (doc != undefined) {
+
+
     // idea: step left untill non-word character > step right untill non-word character
-    
-    const r: Range= {start: pos, end: inc(pos)}
+
+    const r: Range = { start: pos, end: inc(pos) }
     const word = doc.getText(r);
-    let content: MarkupContent = {kind: MarkupKind.Markdown,
+    let content: MarkupContent = {
+      kind: MarkupKind.Markdown,
       value: [
         `### ${word}`,
         'Some text',
         '```',
         'hover information should appear here',
         '```'
-      ].join('\n')}
-    let res : Hover = {contents: content, range: r}
+      ].join('\n')
+    }
+    let res: Hover = { contents: content, range: r }
     return res
   }
-  else{
+  else {
     return null;
   }
 })
@@ -330,17 +332,17 @@ const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 // Map to store which version was changed latest
 const latestDocumentVersions: Map<string, number> = new Map();
 
-function isLatest(uri: string, version: number) : boolean {
-const latestVersion = latestDocumentVersions.get(uri);
-    if (latestVersion !== version) {
-      connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
-      return false; // Discard outdated result
-    }
-    return true;
+function isLatest(uri: string, version: number): boolean {
+  const latestVersion = latestDocumentVersions.get(uri);
+  if (latestVersion !== version) {
+    connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
+    return false; // Discard outdated result
+  }
+  return true;
 }
 
 async function inferenceAnalysis(uri: string, text: string, version: number) {
-  try { 
+  try {
     const result = await runJavaAnalysis(text);
 
     // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
@@ -355,7 +357,7 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
   catch (error) {
     connection.console.error("Error running Java analysis: " + error);
   }
-  
+
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
@@ -434,20 +436,20 @@ documents.onDidChangeContent(async change => {
   // console.error("TEXXXT " + change.document.getText())
 
   // Type check & inference phase
-  if (settings.insertionIntensity == TypeInferenceSetting.Hint 
+  if (settings.insertionIntensity == TypeInferenceSetting.Hint
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
     await inferenceAnalysis(uri, text, version);
   }
 
-  
-  if (isLatest(uri,version)) {
+
+  if (isLatest(uri, version)) {
     // Apply on change immediately if possible
     if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
       insertInfered(uri);
     }
     // Refresh inlay hints
     if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-      connection.languages.inlayHint.refresh(); 
+      connection.languages.inlayHint.refresh();
     }
   }
 });
@@ -460,7 +462,7 @@ connection.languages.inlayHint.on(async (params) => {
   const uri = params.textDocument.uri;
   const settings = await getDocumentSettings(uri)
   if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-    
+
     const suggestions = inferenceSuggestionMap.get(uri) ?? [];
     return suggestions.map((s) => ({
       position: {
@@ -481,7 +483,7 @@ connection.languages.inlayHint.on(async (params) => {
 documents.onDidSave(async change => {
   const uri = change.document.uri;
   const settings = await getDocumentSettings(uri)
-    if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
+  if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
     const text = change.document.getText();
     const version = change.document.version;
     latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
@@ -490,7 +492,9 @@ documents.onDidSave(async change => {
     // Type check & inference phase
     await inferenceAnalysis(uri, text, version);
 
-    insertInfered(uri);
+    if (isLatest(uri, version)) {
+      insertInfered(uri);
+    }
   }
 })
 
