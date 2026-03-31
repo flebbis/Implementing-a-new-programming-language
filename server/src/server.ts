@@ -330,8 +330,16 @@ const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 // Map to store which version was changed latest
 const latestDocumentVersions: Map<string, number> = new Map();
 
+function isLatest(uri: string, version: number) : boolean {
+const latestVersion = latestDocumentVersions.get(uri);
+    if (latestVersion !== version) {
+      connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
+      return false; // Discard outdated result
+    }
+    return true;
+}
+
 async function inferenceAnalysis(uri: string, text: string, version: number) {
-  const settings = await getDocumentSettings(uri);
   try { 
     const result = await runJavaAnalysis(text);
 
@@ -339,10 +347,8 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
     console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
     const suggestions: InferenceSuggestion[] = result ?? [];
 
-    inferenceSuggestionMap.set(uri, suggestions);
-    
-    if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-      connection.languages.inlayHint.refresh(); // Refresh inlay hints
+    if (isLatest(uri, version)) {
+      inferenceSuggestionMap.set(uri, suggestions);
     }
 
   }
@@ -432,11 +438,18 @@ documents.onDidChangeContent(async change => {
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
     await inferenceAnalysis(uri, text, version);
   }
-  // Apply on change immediately if possible
-  if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
-    insertInfered(uri);
-  }
 
+  
+  if (isLatest(uri,version)) {
+    // Apply on change immediately if possible
+    if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+      insertInfered(uri);
+    }
+    // Refresh inlay hints
+    if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
+      connection.languages.inlayHint.refresh(); 
+    }
+  }
 });
 
 
