@@ -335,12 +335,16 @@ const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 // Map to store which version was changed latest
 const latestDocumentVersions: Map<string, number> = new Map();
 
-async function inferenceAnalysis(uri: string, text: string, version: number) {
+function isLatest(uri: string, version: number): boolean {
   const latestVersion = latestDocumentVersions.get(uri);
   if (latestVersion !== version) {
-    connection.console.warn("Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}");
-    return; // Discard outdated result
+    connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
+    return false; // Discard outdated result
   }
+  return true;
+}
+
+async function inferenceAnalysis(uri: string, text: string, version: number) {
   try {
     const result = await runJavaAnalysis(text);
 
@@ -348,11 +352,15 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
     console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
     const suggestions: InferenceSuggestion[] = result ?? [];
 
-    inferenceSuggestionMap.set(uri, suggestions);
+    if (isLatest(uri, version)) {
+      inferenceSuggestionMap.set(uri, suggestions);
+    }
+
   }
   catch (error) {
     connection.console.error("Error running Java analysis: " + error);
   }
+
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
@@ -437,13 +445,17 @@ documents.onDidChangeContent(async change => {
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
     await inferenceAnalysis(uri, text, version);
   }
-  // Apply on change immediately if possible
-  if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
-    await insertInfered(uri);
-  }
 
-  if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-    connection.languages.inlayHint.refresh(); // Refresh inlay hints
+
+  if (isLatest(uri, version)) {
+    // Apply on change immediately if possible
+    if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+      insertInfered(uri);
+    }
+    // Refresh inlay hints
+    if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
+      connection.languages.inlayHint.refresh();
+    }
   }
 });
 
@@ -455,6 +467,7 @@ connection.languages.inlayHint.on(async (params) => {
   const uri = params.textDocument.uri;
   const settings = await getDocumentSettings(uri)
   if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
+
     const suggestions = inferenceSuggestionMap.get(uri) ?? [];
     return suggestions.map((s) => ({
       position: {
@@ -514,8 +527,9 @@ documents.onDidSave(async change => {
     // Type check & inference phase
     let inferDone = await inferenceAnalysis(uri, text, version);
 
-    if (inferDone)
-      await insertInfered(uri);
+    if (isLatest(uri, version)) {
+      insertInfered(uri);
+    }
   }
 }) */
 
