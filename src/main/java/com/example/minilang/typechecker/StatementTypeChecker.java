@@ -142,10 +142,7 @@ public class StatementTypeChecker {
     }
     
     private void inferenceCheckArray(Ast.TArray type, String name, Pos pos) {
-        boolean isUnkownType = TypeUtils.arrayIsUnkown(type);
-        System.err.println(isUnkownType);
         if (TypeUtils.arrayIsUnkown(type)) {
-            System.err.println("IS UNKWONW");
             if (inferenceContext != null) {
                 Ast.Type inferred = inferenceContext.lookupFromScopeLevel(name, context.getScopeLevel());
                 if (inferred != null && inferred instanceof Ast.TArray) {

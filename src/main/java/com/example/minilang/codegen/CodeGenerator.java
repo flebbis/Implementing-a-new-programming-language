@@ -32,9 +32,10 @@ public class CodeGenerator {
         sb.append("declare i8* @double_to_string(double)\n");
         sb.append("declare i8* @bool_to_string(i1)\n");
         sb.append("declare i8* @string_concat(i8*, i8*)\n");
-
-
-
+        sb.append("declare i8* @array_int_to_string(i32*, i32)\n");
+        sb.append("declare i8* @array_double_to_string(double*, i32)\n");
+        sb.append("declare i8* @array_bool_to_string(i1*, i32)\n");
+        sb.append("declare i8* @array_string_to_string(i8*, i32)\n");
 
         sb.append("define void @main() {\n");
         sb.append("entry:\n");

@@ -1,3 +1,9 @@
-x = [1.1]
-y= 2
-x[y] = 2
+x = ["hej", "hå"]
+
+func test(x) {
+    return x
+}
+
+y = test(x)
+
+print(y + " test")
