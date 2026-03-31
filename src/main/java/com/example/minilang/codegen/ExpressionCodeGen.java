@@ -177,8 +177,8 @@ public class ExpressionCodeGen extends Helper {
     private String generatePrintCall(ECall callExp) {
         Exp arg = callExp.args().get(0);
         String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
-        String register = generateRegister();
-
+		String register = generateRegister();
+        
         sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
         return register;
     }
