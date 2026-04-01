@@ -58,7 +58,7 @@ In the following section, the basic syntax of FIKA is explained, including varia
 Variables in FIKA are declared using a simple assignment syntax. The type of the variable is inferred from the assigned value, 
 but can also be explicitly specified if desired.
 
-For instance, both of the following examples are valid variable initializations:
+For instance, both of the following examples are valid variable initializations of an integer variable named `x`:
 ```
 x = 2
 int x = 2
