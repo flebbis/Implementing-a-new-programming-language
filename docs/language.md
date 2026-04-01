@@ -57,6 +57,8 @@ In the following section, the basic syntax of FIKA is explained, including varia
 ### Variables
 Variables in FIKA are declared using a simple assignment syntax. The type of the variable is inferred from the assigned value, 
 but can also be explicitly specified if desired.
+
+For instance, both of the following examples are valid variable initializations:
 ```
 x = 2
 int x = 2
@@ -69,7 +71,7 @@ x = 2; y = 3;
 
 Declaration works in a similar manner, explicit type declaration is optional, but can be used for clarity or to specify a different type than the inferred one. 
 
-Example:
+Example of variable declarations (both are valid):
 ```
 x;
 int x;
@@ -78,7 +80,7 @@ int x;
 ### Control Flow
 FIKA supports standard control flow constructs such as `if`, `else`, `while`, and a unique `do` loop that executes a block of code a specified number of times.
 
-### If Statements
+#### If Statements
 If statements are used for conditional execution of code blocks. The syntax is straightforward, with the condition enclosed in parentheses and the code block enclosed in curly braces.
 
 Example:
@@ -113,7 +115,7 @@ will output:
 x is negative
 ```
 
-### While Loops
+#### While Loops
 While loops allow for repeated execution of a block of code as long as a specified condition is true. The syntax is similar to if statements, with the condition enclosed in parentheses and the code block enclosed in curly braces.
 
 Example:
@@ -131,7 +133,7 @@ will output:
 2
 ```
 
-### Do Loops
+#### Do Loops
 The `do` loop is a unique control flow construct in FIKA that allows you to execute a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block.
 
 Example:
@@ -149,8 +151,8 @@ Hello, FIKA!
 Hello, FIKA!
 ```
 
-## Functions
-### Function Definitions
+### Functions
+#### Function Definitions
 Functions are defined by using the `func` keyword, followed by the function name, a list of comma-separated parameters in parentheses, and the function body enclosed in curly braces. 
 The return type can be specified before the func keyword, but is optional if it can be inferred.
 Example:
@@ -175,7 +177,7 @@ func printMessage(string message) {
 }
 ```
 
-### Function Calls
+#### Function Calls
 Functions are called by using the function name followed by a list of comma-separated arguments in parentheses.
 
 Example of calling the `add` function defined earlier:
