@@ -4,6 +4,7 @@ import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
 import java.util.HashSet;
+import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 
 public class ExpressionCodeGen extends Helper {
@@ -305,12 +306,12 @@ public class ExpressionCodeGen extends Helper {
 
         int numElements = arrayExp.elements().size();
         String arrayType = convertType(arrayExp.type());
-
 		String basePointer = generateRegister();
 		String spacePointer = generateRegister();
         int allocatedSpace = (arrayType.equals("double")) ? numElements * 8 : numElements * 4;
         sb.append(spacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
         sb.append(basePointer).append(" = bitcast i8* ").append(spacePointer).append(" to i32*\n");
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   
         for (int i = 0; i < numElements; i++) {
         Exp elementExp = arrayExp.elements().get(i);
@@ -321,6 +322,48 @@ public class ExpressionCodeGen extends Helper {
         sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append("i32* ").append(elemPointer).append("\n");
         }
 
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        String arrayGlobal = generateLabel("array");
+        globals.append("@").append(arrayGlobal).append(" = private constant [").append(numElements).append(" x ").append(arrayType).append("] [");
+        for (int i = 0; i < numElements; i++) {
+            Exp elementExp = arrayExp.elements().get(i);
+            String value = generateExpression(elementExp);
+            globals.append(arrayType).append(" ").append(value);
+            if (i < numElements - 1) {
+                globals.append(", ");
+            }
+        }
+        globals.append("]\n");
+
+        String counter = generateRegister();
+        sb.append(counter).append(" = alloca i32\n");
+        sb.append("store i32 ").append(0).append(", i32* ").append(counter).append("\n");
+        String loop = generateLabel("loop");
+        sb.append("br label %").append(loop).append("\n");
+        sb.append(loop).append(":\n");
+        String currentIndex = generateRegister();
+        sb.append(currentIndex).append(" = load i32, i32* ").append(counter).append("\n");
+        String condition = generateRegister();
+        sb.append(condition).append(" = icmp slt i32 ").append(currentIndex).append(", ").append(numElements).append("\n");
+        String loopMain = generateLabel("loopMain");
+        String loopEnd = generateLabel("loopEnd");
+        sb.append("br i1 ").append(condition).append(", label %").append(loopMain).append(", label %").append(loopEnd).append("\n");
+        sb.append(loopMain).append(":\n");
+        String globalElemPointer = generateRegister();
+        sb.append(globalElemPointer).append(" = getelementptr inbounds [").append(numElements).append(" x ").append(arrayType).append("], [").append(numElements).append(" x ").append(arrayType).append("]* @").append(arrayGlobal).append(", i32 0, i32 ").append(currentIndex).append("\n");
+        String globalValue = generateRegister();
+        sb.append(globalValue).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(globalElemPointer).append("\n");
+
+        String elemPointer = generateRegister();
+        sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(basePointer).append(", i32 ").append(currentIndex).append("\n");
+        sb.append("store ").append(arrayType).append(" ").append(globalValue).append(", ").append("i32* ").append(elemPointer).append("\n");
+        String nextIndex = generateRegister();
+
+
+        sb.append(nextIndex).append(" = add i32 ").append(currentIndex).append(", 1\n");
+        sb.append("store i32 ").append(nextIndex).append(", i32* ").append(counter).append("\n");
+        sb.append("br label %").append(loop).append("\n");
+        sb.append(loopEnd).append(":\n");
         return basePointer;
     }
 
