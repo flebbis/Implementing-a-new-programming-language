@@ -41,6 +41,7 @@ In the following sections, we will explore the syntax and features of FIKA in mo
   - [More on inference](#more-on-inference)
     - [Simple inference example](#simple-inference-example)
     - [int to double promotion](#int-to-double-promotion)
+    - [String concatenation](#string-concatenation)
     - [Function type inference](#function-type-inference)
 - [Standard Library](#standard-library)
 
@@ -228,6 +229,31 @@ will output:
 7.5
 ```
 Where result will automatically be inferred as a double, since it is the result of adding an int and a double.
+
+#### String concatenation
+Similarly to int to double promotion, when using the `+` operator with strings, the language will automatically concatenate them. For example:
+```
+greeting = "Hello, "
+name = "FIKA"
+message = greeting + name
+print(message)
+```
+will output:
+```
+Hello, FIKA
+```
+
+When using the `+` operator with a string and a non-string type, the non-string type will be converted to a string before concatenation. For example:
+```
+number = 42
+message = "The answer is: " + number
+print(message)
+```
+will output:
+```
+The answer is: 42
+```
+with `message` being inferred as a string automatically.
 
 #### Function type inference
 FIKA also supports inference of function return types. If a function does not have an explicitly specified return type, the language will infer the return type based on the types of the values returned by the function. For example:
