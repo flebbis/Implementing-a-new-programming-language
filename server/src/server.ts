@@ -268,6 +268,10 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // Hover
+const wordChar: RegExp = /[A-z0-9\_]/
+const opChar: RegExp = /\-|\<|\>|\=|\!|\+|\*|\%/
+const typeWord: RegExp = /int|bool|string|double/
+
 function inc(pos: Position): Position {
   return { line: pos.line, character: pos.character + 1 }
 }
@@ -276,36 +280,74 @@ function dec(pos: Position): Position {
   return { line: pos.line, character: pos.character - 1 }
 }
 
-connection.onHover((params: HoverParams, token, progrss, result) => {
+connection.onHover((params: HoverParams) => {
+  connection.console.log(">>>>>>>> Attempting hover")
+
   const doc = documents.get(params.textDocument.uri)
+  let res: Hover | null = null
 
   let pos = params.position;
   if (doc != undefined) {
-
-
     // idea: step left untill non-word character > step right untill non-word character
 
-    const r: Range = { start: pos, end: inc(pos) }
-    const word = doc.getText(r);
-    let content: MarkupContent = {
-      kind: MarkupKind.Markdown,
-      value: [
-        `### ${word}`,
-        'Some text',
-        '```',
-        'hover information should appear here',
-        '```'
-      ].join('\n')
+    if (!/ /.test(doc.getText(charRange(pos)))) {
+      const { word, range } = findSymbolAt(pos, doc)
+      let description = "tmp..."
+      let contents: MarkupContent = {
+        kind: MarkupKind.Markdown,
+        value: [
+          `### ${word}`,
+          '```',
+          `${description}`,
+          '```'
+        ].join('\n')
+      }
+      res = { contents, range }
     }
-    let res: Hover = { contents: content, range: r }
-    return res
   }
-  else {
-    return null;
-  }
+  return res
 })
 
 
+// Symbol is either an operator or a word string
+function findSymbolAt(pos: Position, doc: TextDocument): { word: string; range: Range; } {
+  let cRange: Range = charRange(pos)
+  let regex: RegExp = /[]/
+  let char = doc.getText(cRange)
+  if (wordChar.test(char)) {
+    regex = wordChar;
+    connection.console.log(">>>>>>>> HOVER: word")
+  }
+  if (opChar.test(char)) {
+    regex = opChar;
+    connection.console.log(">>>>>>>> HOVER: operator")
+  }
+  return symSearch(regex, doc, pos);
+}
+
+
+function charRange(pos: Position): Range {
+  return { start: pos, end: inc(pos) }
+}
+
+
+function symSearch(reg: RegExp, doc: TextDocument, pos: Position): { word: string; range: Range; } {
+  const range = {
+    start:   lim(reg, pos, dec, doc),
+    end: inc(lim(reg, pos, inc, doc))
+  }
+  return { word: doc.getText(range), range};
+}
+
+function lim(reg : RegExp, start: Position, step: (p: Position) => Position, doc : TextDocument) : Position {
+  let pos : Position = start
+  let next : Position = step(start)
+  while(reg.test(doc.getText(charRange(next)))) {
+    pos = next
+    next = step(next)
+  }
+  return pos
+}
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
@@ -528,5 +570,3 @@ documents.listen(connection);
 
 // Listen on the connection
 connection.listen();
-
-
