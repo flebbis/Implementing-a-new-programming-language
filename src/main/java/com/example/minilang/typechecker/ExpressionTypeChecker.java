@@ -306,6 +306,7 @@ public class ExpressionTypeChecker {
 
         if(type.elementType() instanceof Ast.TUnknown) {
             if (!checkedElements.isEmpty()) {
+                checkedElements = inferArrayType(checkedElements);
                 Ast.Type inferredType = checkedElements.getFirst().type();
                 type = new Ast.TArray(inferredType, arraySize);
             } else {
@@ -316,12 +317,54 @@ public class ExpressionTypeChecker {
 
         for (Ast.Exp element : checkedElements) {
             if (!element.type().equals(type.elementType())) {
+                System.out.println(type.elementType() + " " + element.type());
+                if(type.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
+
+                    // Allow implicit conversion from int to double
+                    element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
+                }
                 throw new TypeException("Array elements must be of the same type. Expected " + TypeConverter.typeToString(type.elementType())
                         + " but got " + TypeConverter.typeToString(element.type()), element.pos());
             }
         }
 
         return new Ast.EArray(checkedElements, type, eArray.pos());
+    }
+
+    private List<Ast.Exp> inferArrayType(List<Ast.Exp> elements) {
+        if (elements.isEmpty()) {
+            return elements;
+        }
+
+        List<Ast.Exp> checkedElements = new ArrayList<>();
+        Ast.Type inferedType = elements.get(0).type();
+
+        if(arrayContainsDouble(elements)) {
+            inferedType = new Ast.TDouble();
+        }
+
+        for (Ast.Exp element : elements) {
+            if (!element.type().equals(inferedType)) {
+                if(inferedType instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
+                    element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
+                } else {
+                    throw new TypeException("Array elements must be of the same type. Expected " + TypeConverter.typeToString(inferedType)
+                            + " but got " + TypeConverter.typeToString(element.type()), element.pos());
+                }
+            }
+            checkedElements.add(element);
+
+        }
+        return checkedElements;
+    }
+
+    private boolean arrayContainsDouble(List<Ast.Exp> elements) {
+        for (Ast.Exp element : elements) {
+            if (element.type() instanceof Ast.TDouble) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Ast.Exp typeCheck(Ast.EArrayIndex eArrayIndex) {
