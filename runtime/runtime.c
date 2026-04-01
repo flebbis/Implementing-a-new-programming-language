@@ -2,6 +2,29 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <locale.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#endif
+
+// Ensure console uses UTF-8 so characters like å, ä, ö render correctly without manual shell tweaks
+static void runtime_set_utf8(void) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    setlocale(LC_ALL, ".UTF-8");
+    _setmode(_fileno(stdout), _O_BINARY);
+#else
+    setlocale(LC_ALL, "");
+#endif
+}
+
+__attribute__((constructor))
+static void runtime_init(void) {
+    runtime_set_utf8();
+}
 
 // for EStringCast int to string
 char* int_to_string(int x) {

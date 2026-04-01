@@ -4,6 +4,7 @@ import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -65,7 +66,7 @@ public class ExpressionCodeGen extends Helper {
         rawString = handleEscapeSequences(rawString);
 
         // Convert the raw string to bytes to handle non-printable characters and escape sequences correctly
-        byte[] bytes = rawString.getBytes();
+        byte[] bytes = rawString.getBytes(StandardCharsets.UTF_8);
         String value = generatePrintableString(bytes);
 
 
@@ -104,6 +105,9 @@ public class ExpressionCodeGen extends Helper {
         return rawString
                 .replace("\\n", "\n")
                 .replace("\\t", "\t")
+                .replace("\\r", "\r")
+                .replace("\\b", "\b")
+                .replace("\\f", "\f")
                 .replace("\\\"", "\"")
                 .replace("\\\\", "\\");
     }
