@@ -3,32 +3,32 @@ package com.example.minilang.codegen;
 import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
+
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+
 import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 
 public class ExpressionCodeGen extends Helper {
-
+    private static Map<String, String> stringRegisterToGlobal = new HashMap<>();
+    private static Map<String, Integer> stringGlobalToLength = new HashMap<>();
     private StringBuilder sb;
     private StringBuilder globals;
-    private String arrayName; // For array initialization, we need to keep track of the array name to generate the correct GEP instructions.
+    private StringBuilder globalStrings;
     private int stringCounter = 0;
     private HashSet<String> functionVariables;
     private Environment environment;
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, Environment environment) {
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment) {
         this.sb = sb;
         this.globals = globals;
+        this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.environment = environment;
     }
 
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, Environment environment, String arrayName){
-        this.sb = sb;
-        this.globals = globals;
-        this.functionVariables = functionVariables;
-        this.environment = environment;
-        this.arrayName = arrayName;
-    }
+
 
     public String generateExpression(Exp exp) {
             if (exp instanceof EInt intExp) return generateInt(intExp);
@@ -72,8 +72,10 @@ public class ExpressionCodeGen extends Helper {
         int length = bytes.length + 1; // +1 for null terminator
         String globalName = "@.str." + stringCounter++;
         String register = generateRegister();
-        globals.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
+        globalStrings.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
         sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
+        stringRegisterToGlobal.put(register, globalName);
+        stringGlobalToLength.put(globalName, length);
         return register;
     }
 
@@ -112,6 +114,10 @@ public class ExpressionCodeGen extends Helper {
 
     private String generateId(EId idExp) {
         if (!functionVariables.contains(idExp.name())){
+            if(idExp.type() instanceof Ast.TArray) {
+                return environment.lookup(idExp.name());
+            }
+
             String variableRegister = environment.lookup(idExp.name());
             String register = generateRegister();
             sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
@@ -177,6 +183,7 @@ public class ExpressionCodeGen extends Helper {
 
     private String generatePrintCall(ECall callExp) {
         Exp arg = callExp.args().get(0);
+        System.out.println(callExp);
         String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
 		String register = generateRegister();
         
@@ -312,8 +319,21 @@ public class ExpressionCodeGen extends Helper {
         sb.append(spacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
         sb.append(basePointer).append(" = bitcast i8* ").append(spacePointer).append(" to i32*\n");
         String arrayGlobal = generateLabel("array");
+
         globals.append("@").append(arrayGlobal).append(" = private constant [").append(numElements).append(" x ").append(arrayType).append("] [");
-        for (int i = 0; i < numElements; i++) {
+        if (arrayType.equals("i8*")){
+            for (int i = 0; i < numElements; i++){
+                Exp elementExp = arrayExp.elements().get(i);
+                String value = generateExpression(elementExp);
+                String globalName = stringRegisterToGlobal.get(value);
+                int length = stringGlobalToLength.get(globalName);
+                globals.append("i8* getelementptr inbounds ([").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0)");
+                if (i < numElements - 1) {
+                    globals.append(", ");
+                }
+            }
+        } else {
+            for (int i = 0; i < numElements; i++) {
             Exp elementExp = arrayExp.elements().get(i);
             String value = generateExpression(elementExp);
             globals.append(arrayType).append(" ").append(value);
@@ -321,6 +341,8 @@ public class ExpressionCodeGen extends Helper {
                 globals.append(", ");
             }
         }
+        }
+
         globals.append("]\n");
 
         String counter = generateRegister();
@@ -363,7 +385,7 @@ public class ExpressionCodeGen extends Helper {
 		String arrayType = convertType(arrayIndexExp.array().type());
         String index = generateExpression(arrayIndexExp.index());
 		String arrayName = ((EId) arrayIndexExp.array()).name();
-		
+
 		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
         sb.append(returnRegister).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(register).append("\n");
         
@@ -419,9 +441,31 @@ public class ExpressionCodeGen extends Helper {
     }
 
     private void generateArrayString(EStringCast sStringCast, String register) {
-        // TODO: fix when array is fixed
-        String arrayRegister = generateExpression(sStringCast.exp());
-        sb.append(register).append(" = call i8* @array_to_string(i8* ").append(arrayRegister).append(")\n");
+        String arrayRegister = generateExpression(sStringCast.exp()); // generate pointer to register
+        Ast.TArray type = (Ast.TArray) sStringCast.exp().type(); // cast to tarray
+        int size = type.arraySize();
+        Ast.Type elementType = type.elementType();
+        String elementTypeStr = convertType(elementType); // Get LLVM IR type string for the array element type
+
+        String funcName;
+        if(elementType instanceof Ast.TInt) {
+            funcName = "@array_int_to_string";
+        } else if (elementType instanceof Ast.TDouble) {
+            funcName = "@array_double_to_string";
+        } else if (elementType instanceof Ast.TBool) {
+            funcName = "@array_bool_to_string";
+        } else if(elementType instanceof Ast.TString) {
+            funcName = "@array_string_to_string";
+        } else {
+            throw new IllegalArgumentException("Unsupported array element type for string cast " + TypeConverter.typeToString(elementType));
+        }
+
+        // call runtime function to convert it to string
+        sb.append("  ").append(register)
+                .append(" = call i8* ").append(funcName)
+                .append("(").append(elementTypeStr).append("* ").append(arrayRegister)
+                .append(", i32 ").append(size).append(")\n");
+
     }
 
     private void generateStringCastInt(String value, String register) {

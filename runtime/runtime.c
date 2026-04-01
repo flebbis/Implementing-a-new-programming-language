@@ -35,3 +35,120 @@ char* string_concat(const char* a, const char* b) {
     memcpy(result + len1, b, len2 + 1);
     return result;
 }
+
+// for array int to string
+char* array_int_to_string(int* arr, int len) {
+    if (len == 0) {
+        char* empty = malloc(3);
+        if (empty == NULL) return NULL;
+        empty[0] = '[';
+        empty[1] = ']';
+        empty[2] = '\0';
+        return empty;
+    }
+    // pessimistic buffer: each int up to 11 chars incl sign, plus comma/space
+    size_t buf_size = (size_t)len * 14 + 3;
+    char* buf = malloc(buf_size);
+    char* p = buf;
+    *p++ = '[';
+    for(int i = 0; i < len; i++) {
+        int written = sprintf(p, "%d", arr[i]);
+        p += written;
+        if(i != len - 1) {
+            *p++ = ',';
+            *p++ = ' ';
+        }
+    }
+    *p++ = ']';
+    *p = '\0';
+    return buf;
+}
+
+// for array double to string
+char* array_double_to_string(double* arr, int len) {
+    if (len == 0) {
+        char* empty = malloc(3);
+        if (empty == NULL) return NULL;
+        empty[0] = '[';
+        empty[1] = ']';
+        empty[2] = '\0';
+        return empty;
+    }
+    // each double approx 24 chars incl decimals/sign, plus comma/space
+    size_t buf_size = (size_t)len * 28 + 3;
+    char* buf = malloc(buf_size);
+    char* p = buf;
+    *p++ = '[';
+    for(int i = 0; i < len; i++) {
+        int written = sprintf(p, "%g", arr[i]);
+        p += written;
+        if(i != len - 1) {
+            *p++ = ',';
+            *p++ = ' ';
+        }
+    }
+    *p++ = ']';
+    *p = '\0';
+    return buf;
+}
+
+// for array bool to string
+char* array_bool_to_string(bool* arr, int len) {
+    if (len == 0) {
+        char* empty = malloc(3);
+        if (empty == NULL) return NULL;
+        empty[0] = '[';
+        empty[1] = ']';
+        empty[2] = '\0';
+        return empty;
+    }
+    size_t buf_size = (size_t)len * 6 + 3; // "false" len 5 + comma/space
+    char* buf = malloc(buf_size);
+    char* p = buf;
+    *p++ = '[';
+    for(int i = 0; i < len; i++) {
+        const char* lit = arr[i] ? "true" : "false";
+        size_t written = strlen(lit);
+        memcpy(p, lit, written);
+        p += written;
+        if(i != len - 1) {
+            *p++ = ',';
+            *p++ = ' ';
+        }
+    }
+    *p++ = ']';
+    *p = '\0';
+    return buf;
+}
+
+char* array_string_to_string(char** arr, int len) {
+    if (len == 0) {
+        char* empty = malloc(3);
+        if (empty == NULL) return NULL;
+        empty[0] = '[';
+        empty[1] = ']';
+        empty[2] = '\0';
+        return empty;
+    }
+    size_t buf_size = 2; // for [ and ]
+    for(int i = 0; i < len; i++) {
+        buf_size += strlen(arr[i]) + 4; // for quotes and comma/space
+    }
+    char* buf = malloc(buf_size);
+    char* p = buf;
+    *p++ = '[';
+    for(int i = 0; i < len; i++) {
+        *p++ = '"';
+        size_t written = strlen(arr[i]);
+        memcpy(p, arr[i], written);
+        p += written;
+        *p++ = '"';
+        if(i != len - 1) {
+            *p++ = ',';
+            *p++ = ' ';
+        }
+    }
+    *p++ = ']';
+    *p = '\0';
+    return buf;
+}

@@ -11,14 +11,16 @@ public class FunctionCodeGen {
     private HashSet<String> declaredVariables;
     private Environment environment;
     private StringBuilder globals;
+    private StringBuilder globalStrings;
     private HashSet<String> functionVariables;
     private StatementCodeGen stmtGen;
 
-    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, HashSet<String> functionVariables, StatementCodeGen stmtGen) {
+    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen) {
 
         this.sb = sb;
         this.environment = environment;
         this.globals = globals;
+        this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.stmtGen = stmtGen;
     }

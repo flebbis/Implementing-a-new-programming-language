@@ -11,17 +11,19 @@ public class StatementCodeGen extends Helper {
     private StringBuilder sb;
     private Environment environment;
     private StringBuilder globals;
+    private StringBuilder globalStrings;
     private HashSet<String> functionVariables;
     private ExpressionCodeGen expressionCodeGen;
     private final LabelGenerator labelGenerator;
 
-    public StatementCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, HashSet<String> functionVariables) {
+    public StatementCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables) {
         this.sb = sb;
         this.environment = environment;
         this.globals = globals;
+        this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.labelGenerator = new LabelGenerator();
-        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, functionVariables, environment);
+        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, globalStrings, functionVariables, environment);
     }
 
     public void generateStatement(Stmt stmt) {

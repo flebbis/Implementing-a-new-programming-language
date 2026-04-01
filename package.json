@@ -1,0 +1,139 @@
+{
+  "name": "mylang",
+  "description": "language server following lsp for this unnamed language",
+  "author": "Cole",
+  "license": "MIT",
+  "version": "0.0.2",
+  "publisher": "Grupp17A",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [],
+  "main": "./client/out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mylang",
+        "extensions": [
+          ".ml"
+        ],
+        "aliases": [
+          "mylang",
+          "myLang",
+          "MyLang"
+        ],
+        "configuration": "./language-tools/language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mylang",
+        "scopeName": "source.mylang",
+        "path": "./language-tools/mylang.tmLanguage.json"
+      }
+    ],
+    "configuration":[
+      {
+        "type": "object",
+        "title": "myLang language server and language tools",
+        "properties": {
+          "languageServer.maxNumberOfProblems" : {
+            "scope": "resource",
+            "type": "number",
+            "default": 100,
+            "description": 
+              "Sets the maximum number of problems that can be produced/highlighted by the language server"
+          }
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "assembly-preview.show",
+        "title": "Show Assembly"
+      },
+      {
+        "command": "opt.buttons",
+        "title": "optimazation"
+      },
+      {
+        "command": "O0",
+        "title": "No optimazation"
+      },
+      {
+        "command": "O1",
+        "title": "Basic optimazation"
+      },
+      {
+        "command": "O2",
+        "title": "More optimazation"
+      },
+      {
+        "command": "O3",
+        "title": "Max optimazation"
+      }
+    ],
+
+  "submenus":[
+    {
+      "id": "opt",
+      "label": "optimazation",
+      "icon": "$(list-selection)"
+    }
+  ],  
+
+  "menus": {
+    "editor/title": [
+      {
+        "submenu": "opt",
+        "when": "true",
+        "group": "navigation"
+      }
+    ],
+
+  "opt": [
+    {
+      "command": "O0",
+      "group": "navigation" 
+    },
+    {
+      "command": "O1",
+      "group": "navigation" 
+    },
+    {
+      "command": "O2",
+      "group": "navigation" 
+    },
+    {
+      "command": "O3",
+      "group": "navigation" 
+    }
+  ]
+}
+
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.7",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  }
+}
+
