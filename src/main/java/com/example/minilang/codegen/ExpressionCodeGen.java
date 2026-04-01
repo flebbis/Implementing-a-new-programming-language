@@ -311,18 +311,6 @@ public class ExpressionCodeGen extends Helper {
         int allocatedSpace = (arrayType.equals("double")) ? numElements * 8 : numElements * 4;
         sb.append(spacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
         sb.append(basePointer).append(" = bitcast i8* ").append(spacePointer).append(" to i32*\n");
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-        for (int i = 0; i < numElements; i++) {
-        Exp elementExp = arrayExp.elements().get(i);
-        String value = generateExpression(elementExp);
-        String elemPointer = generateRegister();
-        
-		sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(basePointer).append(", i32 ").append(i).append("\n");
-        sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append("i32* ").append(elemPointer).append("\n");
-        }
-
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         String arrayGlobal = generateLabel("array");
         globals.append("@").append(arrayGlobal).append(" = private constant [").append(numElements).append(" x ").append(arrayType).append("] [");
         for (int i = 0; i < numElements; i++) {
