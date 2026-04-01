@@ -45,6 +45,7 @@ public class ExpressionCodeGen extends Helper {
             if (exp instanceof ELogic logicExp) return generateLogic(logicExp);
             if (exp instanceof EAss assExp) return generateAss(assExp);
             if (exp instanceof EArray arrayExp) return generateArray(arrayExp);
+            if (exp instanceof EArrayIndexAssign arrayIndexAssignExp) return generateArrayIndexAssign(arrayIndexAssignExp);
             if (exp instanceof EArrayIndex arrayIndexExp) return generateArrayIndex(arrayIndexExp);
             if (exp instanceof EUnary unaryExp) return generateUnary(unaryExp);
             if (exp instanceof EDInt dIntExp) return generateDInt(dIntExp);
@@ -392,6 +393,21 @@ public class ExpressionCodeGen extends Helper {
 
 		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
         sb.append(returnRegister).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(register).append("\n");
+        
+		return returnRegister;
+    }
+
+    private String generateArrayIndexAssign(EArrayIndexAssign arrayIndexAssignExp) {
+
+		String register = generateRegister();
+		String returnRegister = generateRegister();
+		String arrayType = convertType(arrayIndexAssignExp.array().type());
+        String index = generateExpression(arrayIndexAssignExp.index());
+		String arrayName = ((EId) arrayIndexAssignExp.array()).name();
+        String value = generateExpression(arrayIndexAssignExp.value());
+
+		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
+        sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(register).append("\n");
         
 		return returnRegister;
     }
