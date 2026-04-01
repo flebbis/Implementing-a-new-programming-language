@@ -230,7 +230,7 @@ public class ExpressionTypeChecker {
             varType = value.type();
         }
 
-        if (!varType.equals(value.type())) {
+        if (!TypeUtils.equalTypes(varType, value.type())) {
             // Allow implicit conversion from int to double
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
