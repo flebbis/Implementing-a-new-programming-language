@@ -342,7 +342,7 @@ const latestDocumentVersions: Map<string, number> = new Map();
 function isLatest(uri: string, version: number): boolean {
   const latestVersion = latestDocumentVersions.get(uri);
   if (latestVersion !== version) {
-    connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
+    // connection.console.warn(`Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`);
     return false; // Discard outdated result
   }
   return true;
@@ -350,10 +350,12 @@ function isLatest(uri: string, version: number): boolean {
 
 async function inferenceAnalysis(uri: string, text: string, version: number) {
   try {
-    const result = await runJavaAnalysis(text);
-
+    let result;
+    if (isLatest(uri, version)) {
+      result = await runJavaAnalysis(text);
+    }
     // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
-    console.error("RESULT " + JSON.stringify(result)) // Debug the JSON result from java
+    console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
     const suggestions: InferenceSuggestion[] = result ?? [];
 
     if (isLatest(uri, version)) {
@@ -373,7 +375,6 @@ function runJavaAnalysis(text: string): Promise<any> {
     // Path to the compiled JAR file
     // Build with: mvn package (creates target/LLVMINI-1.0-SNAPSHOT.jar)
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
-    // connection.console.log("server-jarPath: " + jarPath);
     const java = spawn("java", ["-jar", jarPath, text]);
 
     // Capture stdout and stderr from the Java process
@@ -387,7 +388,6 @@ function runJavaAnalysis(text: string): Promise<any> {
     // Capture stderr for error reporting (from java code)
     java.stderr.on("data", (data) => {
       stderr += data.toString();
-      connection.console.error("Java stderr: " + data.toString());
     });
 
     // Handle process exit
@@ -402,7 +402,6 @@ function runJavaAnalysis(text: string): Promise<any> {
         const result = JSON.parse(stdout); // Parse JSON result from Java
         resolve(result);
       } catch (e) {
-        connection.console.error("Failed to parse JSON from Java: " + stdout);
         reject(new Error("Failed to parse JSON from Java: " + stdout));
       }
     });
@@ -454,7 +453,6 @@ documents.onDidChangeContent(async change => {
   const text = change.document.getText();
   const version = change.document.version;
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
-  // console.error("TEXXXT " + change.document.getText())
 
   // Type check & inference phase
   if (settings.insertionIntensity == TypeInferenceSetting.Hint
@@ -519,25 +517,6 @@ documents.onWillSaveWaitUntil(async (params) => {
   return changes
 })
 
-/* 
-documents.onDidSave(async change => {
-  const uri = change.document.uri;
-  const settings = await getDocumentSettings(uri)
-  if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
-    const text = change.document.getText();
-    const version = change.document.version;
-    latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
-    // console.error("TEXXXT " + change.document.getText())
-
-    // Type check & inference phase
-    await inferenceAnalysis(uri, text, version);
-
-    if (isLatest(uri, version)) {
-      insertInfered(uri);
-    }
-  }
-})
- */
 
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
