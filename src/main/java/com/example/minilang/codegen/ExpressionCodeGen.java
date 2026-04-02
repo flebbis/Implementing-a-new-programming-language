@@ -1,14 +1,37 @@
 package com.example.minilang.codegen;
 
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-import com.example.minilang.ast.Ast.*;
-
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
+import com.example.minilang.ast.Ast.AssOp;
+import com.example.minilang.ast.Ast.EArray;
+import com.example.minilang.ast.Ast.EArrayIndex;
+import com.example.minilang.ast.Ast.EArrayIndexAssign;
+import com.example.minilang.ast.Ast.EAss;
+import com.example.minilang.ast.Ast.EBool;
+import com.example.minilang.ast.Ast.ECall;
+import com.example.minilang.ast.Ast.ECmp;
+import com.example.minilang.ast.Ast.EDInt;
+import com.example.minilang.ast.Ast.EDouble;
+import com.example.minilang.ast.Ast.EId;
+import com.example.minilang.ast.Ast.EInt;
+import com.example.minilang.ast.Ast.ELogic;
+import com.example.minilang.ast.Ast.ENot;
+import com.example.minilang.ast.Ast.EOpp;
+import com.example.minilang.ast.Ast.EPower;
+import com.example.minilang.ast.Ast.EString;
+import com.example.minilang.ast.Ast.EStringCast;
+import com.example.minilang.ast.Ast.EUnary;
+import com.example.minilang.ast.Ast.Exp;
+import com.example.minilang.ast.Ast.TArray;
+import com.example.minilang.ast.Ast.TBool;
+import com.example.minilang.ast.Ast.TDouble;
+import com.example.minilang.ast.Ast.TInt;
+import com.example.minilang.ast.Ast.Type;
 import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 
@@ -21,6 +44,7 @@ public class ExpressionCodeGen extends Helper {
     private int stringCounter = 0;
     private HashSet<String> functionVariables;
     private Environment environment;
+    
     public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment) {
         this.sb = sb;
         this.globals = globals;

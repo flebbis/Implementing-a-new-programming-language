@@ -61,14 +61,16 @@ public class StatementCodeGen extends Helper {
         sb.append(condLabel).append(":\n");
         String condValue = expressionCodeGen.generateExpression(whileStmt.condition()); // Should be a boolean value (i1 in LLVM)
         // Branch based on condition
-        sb.append("  br i1 ").append(condValue).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n");
+        sb.append("  br i1 ").append(condValue).append(", label %").append(bodyLabel).append(", label %").append(endLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(whileStmt.pos().line)).append("\n");
 
         // Loop body
         sb.append(bodyLabel).append(":\n");
         generateStatement(whileStmt.body());
 
         // After body, jump back to condition
-        sb.append("  br label %").append(condLabel).append("\n");
+        sb.append("  br label %").append(condLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(whileStmt.pos().line)).append("\n");
 
         // End of loop
         sb.append(endLabel).append(":\n");
@@ -91,7 +93,8 @@ public class StatementCodeGen extends Helper {
         sb.append("store i32 ").append(times).append(", i32* ").append(limitPtr).append("\n");
 
         // Condition
-        sb.append("br label %").append(condLabel).append("\n");
+        sb.append("br label %").append(condLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(doStmt.pos().line)).append("\n");
         sb.append(condLabel).append(":\n");
 
         String currentCounter = generateRegister();
@@ -101,7 +104,8 @@ public class StatementCodeGen extends Helper {
         sb.append(" ").append(currentCounter).append(" = load i32, i32* ").append(counterPtr).append("\n"); // Load current counter value
         sb.append(" ").append(currentLimit).append(" = load i32, i32* ").append(limitPtr).append("\n"); // Load current counter value
         sb.append(" ").append(cmpReg).append(" = icmp slt i32 ").append(currentCounter).append(", ").append(currentLimit).append("\n"); // Compare counter with limit
-        sb.append(" ").append("br i1 ").append(cmpReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append("\n"); // jump to body if counter < limit
+        sb.append(" ").append("br i1 ").append(cmpReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(doStmt.pos().line)).append("\n"); // jump to body if counter < limit
 
         // Body
         sb.append(bodyLabel).append(":\n");
@@ -113,7 +117,8 @@ public class StatementCodeGen extends Helper {
         sb.append(next).append(" = add i32 ").append(old).append(", 1\n");
         sb.append("store i32 ").append(next).append(", i32* ").append(counterPtr).append("\n");
         // After body, jump back to condition
-        sb.append("  br label %").append(condLabel).append("\n");
+        sb.append("  br label %").append(condLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(doStmt.pos().line)).append("\n");
 
         // End of loop
         sb.append(endLabel).append(":\n");
@@ -128,19 +133,22 @@ public class StatementCodeGen extends Helper {
         String condValue = expressionCodeGen.generateExpression(ifStmt.condition()); // Should be a boolean value (i1 in LLVM)
 
         // Jump to then if true, else jump to else
-        sb.append("  br i1 ").append(condValue).append(", label %").append(thenLabel).append(", label %").append(elseLabel).append("\n");
+        sb.append("  br i1 ").append(condValue).append(", label %").append(thenLabel).append(", label %").append(elseLabel)
+         .append(", !dbg !").append(debugMetaData.getLineId(ifStmt.pos().line)).append("\n");
 
         // Then block
         sb.append(thenLabel).append(":\n");
         generateStatement(ifStmt.thenBranch());
-        sb.append("  br label %").append(endLabel).append("\n");
+        sb.append("  br label %").append(endLabel)
+         .append(", !dbg !").append(debugMetaData.getLineId(ifStmt.pos().line)).append("\n");
 
         // Else block
         sb.append(elseLabel).append(":\n");
         if (ifStmt.elseBranch() != null) {
             generateStatement(ifStmt.elseBranch());
         }
-        sb.append("  br label %").append(endLabel).append("\n");
+        sb.append("  br label %").append(endLabel)
+         .append(", !dbg !").append(debugMetaData.getLineId(ifStmt.pos().line)).append("\n");
 
         // End of if
         sb.append(endLabel).append(":\n");
