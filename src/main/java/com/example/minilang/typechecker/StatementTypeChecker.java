@@ -15,13 +15,13 @@ public class StatementTypeChecker {
     private ExpressionTypeChecker expressionTypeChecker;
     private String currentFunction;
     private HashMap<String, Signature> functionSignatures;
-    private Context inferenceContext; // For tracking variable types during inference phase
-    private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
+    private Context inferenceContext;
+    private List<InferenceSuggestion> inferenceSuggestions;
     private List<TypeReplacementSuggestion> typeReplacementSuggestions;
 
-
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
-            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions, List<TypeReplacementSuggestion> typeReplacementSuggestions) {
+                                Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions,
+                                List<TypeReplacementSuggestion> typeReplacementSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
@@ -48,15 +48,15 @@ public class StatementTypeChecker {
         Ast.Type typeToCheck = sInit.type();
 
         // Logical Check: Is this a redeclaration or an assignment?
-        // We look up if the variable exists in the current scope chain.
-        Ast.Type existingType = context.lookupLatest(sInit.name());
+        // Look up if the variable exists in the current scope chain.
+        Binding existingBinding = context.lookupLatestBinding(sInit.name());
 
-        // If the variable exists and this is an implicit statement (e.g. "x = 5" not
-        // "int x = 5"),
+        // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
         // treat it as an Assignment to the existing variable.
-        if (existingType != null && typeToCheck instanceof Ast.TUnknown) {
+        if (existingBinding != null && typeToCheck instanceof Ast.TUnknown) {
             // Transform to an expression
-            Ast.EAss assign = new Ast.EAss(sInit.name(), value, Ast.AssOp.ASSIGN, existingType, sInit.pos());
+            Ast.EAss assign = new Ast.EAss(sInit.name(), value, Ast.AssOp.ASSIGN,
+                    existingBinding.inferredType, sInit.pos());
             return new Ast.SExp(expressionTypeChecker.typeCheck(assign), sInit.pos());
         }
 
@@ -64,7 +64,7 @@ public class StatementTypeChecker {
 
         // Infer type if unknown
         if (typeToCheck instanceof Ast.TUnknown) {
-             if(!(value.type() instanceof Ast.TUnknown)) {
+            if(!(value.type() instanceof Ast.TUnknown)) {
                 typeToCheck = value.type();
                 InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
                         sInit.name(),
@@ -111,7 +111,22 @@ public class StatementTypeChecker {
             }
         }
 
-        context.pushToCurrentScope(sInit.name(), typeToCheck);
+        // Create binding for this variable
+        String bindingId = context.createBinding(
+                sInit.name(),
+                Binding.Kind.VARIABLE,
+                sInit.pos(),
+                sInit.type(),           // declared type (may be TUnknown)
+                typeToCheck,            // inferred type
+                !(sInit.type() instanceof Ast.TUnknown)  // explicit?
+        );
+
+        // Extract root variable from expression and add dependency
+        String rootBindingId = extractRootVariableId(value);
+        if (rootBindingId != null) {
+            context.addDependency(bindingId, rootBindingId);
+        }
+
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
 
@@ -126,9 +141,10 @@ public class StatementTypeChecker {
         if (sDecl.type() instanceof Ast.TUnknown) {
             // If unknown, try checking the inference context for the type
             int scopeLvl = context.getScopeLevel();
-            
-            if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null && !(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) instanceof Ast.TUnknown)) {
-                type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
+
+            Binding inferredBinding = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
+            if (inferredBinding != null && !(inferredBinding.inferredType instanceof Ast.TUnknown)) {
+                type = inferredBinding.inferredType;
                 // Add to suggestions for language server
                 System.err.println("Found type for " + sDecl.name() + " in inference context: " + TypeConverter.typeToString(type));
                 inferenceSuggestions.add(new InferenceSuggestion(
@@ -143,7 +159,17 @@ public class StatementTypeChecker {
         } else {
             type = sDecl.type();
         }
-        context.pushToCurrentScope(sDecl.name(), type);
+
+        // Create binding for this declaration
+        String bindingId = context.createBinding(
+                sDecl.name(),
+                Binding.Kind.VARIABLE,
+                sDecl.pos(),
+                sDecl.type(),           // declared type
+                type,                   // inferred type
+                !(sDecl.type() instanceof Ast.TUnknown)  // explicit?
+        );
+
         return new Ast.SDecl(type, sDecl.name(), sDecl.pos());
     }
 
@@ -167,7 +193,6 @@ public class StatementTypeChecker {
     }
 
     public Ast.Stmt typeCheck(Ast.SDo stmt) {
-
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
         if (!(exp.type() instanceof Ast.TInt)) {
@@ -223,8 +248,7 @@ public class StatementTypeChecker {
         }
 
         context.pushNewScope();
-        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch()); // Check for any type errors in the then branch before
-                                                          // checking the else branch (for better error messages)
+        Ast.Stmt thenStmt = typeCheck(stmt.thenBranch());
         context.popScope();
 
         Ast.Stmt elseStmt = null;
@@ -238,7 +262,7 @@ public class StatementTypeChecker {
             context.popScope();
         }
 
-        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos()); // Placeholder
+        return new Ast.SIf(condition, thenStmt, elseStmt, stmt.pos());
     }
 
     public Ast.SBlock typeCheck(Ast.SBlock stmt) {
@@ -258,5 +282,70 @@ public class StatementTypeChecker {
 
     public void updateInferenceContext(Context context) {
         inferenceContext = context;
+    }
+
+    /**
+     * Extract the root variable id from an expression.
+     * For now, handles:
+     * - EId: direct variable reference
+     * - Other expressions: recursively extracts from subexpressions
+     *
+     * Returns null if no variable dependency is found.
+     * For complex expressions, this could be enhanced to collect multiple roots.
+     */
+    private String extractRootVariableId(Ast.Exp exp) {
+        return switch (exp) {
+            case Ast.EId id -> {
+                // Direct variable reference
+                Binding binding = context.lookupLatestBinding(id.name());
+                yield binding != null ? binding.id : null;
+            }
+            case Ast.EInt _ -> null;
+            case Ast.EDouble _ -> null;
+            case Ast.EString _ -> null;
+            case Ast.EBool _ -> null;
+            case Ast.EOpp opp -> {
+                // Binary operation - could have multiple dependencies
+                // For now, prioritize left side
+                String leftId = extractRootVariableId(opp.left());
+                yield leftId != null ? leftId : extractRootVariableId(opp.right());
+            }
+            case Ast.ECall call -> {
+                // Function call - depends on return type
+                // Could extract from args, but return type is primary
+                yield null; // Will handle in ECall propagation
+            }
+            case Ast.EArray arr -> {
+                // Array literal - depends on first element
+                if (!arr.elements().isEmpty()) {
+                    yield extractRootVariableId(arr.elements().get(0));
+                }
+                yield null;
+            }
+            case Ast.EArrayIndex idx -> {
+                // Array indexing - depends on array variable
+                yield extractRootVariableId(idx.array());
+            }
+            case Ast.EDInt di -> extractRootVariableId(di.exp());
+            case Ast.EStringCast sc -> extractRootVariableId(sc.exp());
+            case Ast.ENot not -> extractRootVariableId(not.exp());
+            case Ast.EPower pow -> {
+                String baseId = extractRootVariableId(pow.base());
+                yield baseId != null ? baseId : extractRootVariableId(pow.exponent());
+            }
+            case Ast.ECmp cmp -> {
+                String leftId = extractRootVariableId(cmp.left());
+                yield leftId != null ? leftId : extractRootVariableId(cmp.right());
+            }
+            case Ast.ELogic logic -> {
+                String leftId = extractRootVariableId(logic.left());
+                yield leftId != null ? leftId : extractRootVariableId(logic.right());
+            }
+            case Ast.EUnary un -> extractRootVariableId(un.exp());
+            case Ast.EAss ass -> {
+                // Assignment - depends on the value being assigned
+                yield extractRootVariableId(ass.value());
+            }
+        };
     }
 }

@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.example.minilang.InferenceSuggestion;
+import com.sun.source.doctree.DocTree;
 
 public class TypeChecker {
 
@@ -66,6 +67,9 @@ public class TypeChecker {
 
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
         List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
+
+        context.printBindings();
+
 
         return new Ast.Program(stmts, checkedFuncs);
     }
@@ -129,7 +133,9 @@ public class TypeChecker {
 
                 Ast.Arg oldArg = func.params().get(i);
 
-                context.pushToCurrentScope(oldArg.name(), type);
+//                context.pushToCurrentScope(oldArg.name(), type);
+                Pos pos = new Pos(oldArg.pos().line, oldArg.pos().column + offSet);
+                context.createBinding(oldArg.name(), Binding.Kind.PARAMETER, pos, type, func.params().get(i).type(), false );
                 currentParams.add(new Ast.Arg(oldArg.name(), type, oldArg.pos()));
             }
 
