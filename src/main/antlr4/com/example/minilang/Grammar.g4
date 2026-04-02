@@ -10,7 +10,7 @@ def
     | stmt    #DStm
     ;
 
-func: TYPE? 'func' ID '(' paramSeparator ')' block
+func: typeAnnotation? 'func' ID '(' paramSeparator ')' block
     ;
 
 param: TYPE? ID;
@@ -47,10 +47,16 @@ ifStmt
     ;
 
 
-decl: TYPE? ID
+// A type annotation: either a simple type (int, double, ...) or an array type ([int], [double], ...)
+typeAnnotation
+    : TYPE                    # SimpleType
+    | DYNARR_START TYPE DYNARR_END  # ArrayType
     ;
 
-init: TYPE? ID ASSIGN exp
+decl: typeAnnotation? ID
+    ;
+
+init: typeAnnotation? ID ASSIGN exp
     ;
 
 
@@ -113,14 +119,13 @@ postFixOp
     ;
 
 primary
-    : '(' exp ')'
-    | INT
-    | DOUBLE
-    | STRING
-    | BOOL
-    | ID
-    | '[' TYPE ']' ID ASSIGN DYNARR_START expSeparator DYNARR_END
-    | ID ASSIGN DYNARR_START expSeparator DYNARR_END
+    : '(' exp ')'                                        # PrimaryParen
+    | INT                                                # PrimaryInt
+    | DOUBLE                                             # PrimaryDouble
+    | STRING                                             # PrimaryString
+    | BOOL                                               # PrimaryBool
+    | ID                                                 # PrimaryId
+    | DYNARR_START expSeparator DYNARR_END               # PrimaryArrayLiteral
     ;
 
 expSeparator: (exp (',' exp)* )?; //x, y, z

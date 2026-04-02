@@ -5,7 +5,7 @@ func hello(a,b){
     return a + b
 }
 
-y = hello(x,y) + 3
+z = hello(x,y) + 3
 
 
 

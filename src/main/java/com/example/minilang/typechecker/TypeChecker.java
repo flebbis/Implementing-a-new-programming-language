@@ -11,10 +11,12 @@ public class TypeChecker {
     private HashMap<String, Signature> functionSignatures = new HashMap<>();
     private StatementTypeChecker statementTypeChecker;
     private Context context;
+    private Context inferenceContext;
 
     public TypeChecker() {
         this.context = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures);
+        this.inferenceContext = new Context();
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext);
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -25,7 +27,7 @@ public class TypeChecker {
         // We use a temporary Context and Checker to run the logic just for the side-effects
         // of updating the 'functionSignatures' map. We discard the AST produced here.
         Context tempContext = new Context();
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures);
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context());
 
         // Swap to temp environment
         Context realContext = this.context;
@@ -38,12 +40,16 @@ public class TypeChecker {
 
         // Pass 2: Scan bodies -> Infers Return Types from return statements
         // (Now that params are known from Pass 1, we can successfully type check the body)
+        context.popScope();
+
         checkFunctionBodies(rawFuncs);
 
         // --- GENERATION PHASE ---
         // Restore real environment
         this.context = realContext;
         this.statementTypeChecker = realChecker;
+
+        statementTypeChecker.updateInferenceContext(tempContext);
 
         // Pass 3: Re-scan statements -> Generates final AST with correct ECall types
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
@@ -57,6 +63,9 @@ public class TypeChecker {
     private List<Ast.Stmt> typeCheckStatements(List<Ast.Stmt> statements) {
         List<Ast.Stmt> stmts = new ArrayList<>();
         for(Ast.Stmt stmt : statements) {
+            if(stmt == null) {
+                continue; // for some reason this happened
+            }
             stmts.add(statementTypeChecker.typeCheck(stmt));
         }
         return stmts;
