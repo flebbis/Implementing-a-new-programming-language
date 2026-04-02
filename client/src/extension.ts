@@ -12,6 +12,7 @@ import {
 } from "vscode-languageclient/node";
 import { countReset } from "console";
 import { PROFILES } from "./architecture";
+import { buildStackMap, buildVarMap, zippedVarMap } from "./varMap";
 
 // my own jar file,, fix later
 // const JAR_PATH ='/Users/felixtan/Documents/Uni/ar3/kandidat/Implementing-a-new-programming-language/target/LLVMINI-1.0-SNAPSHOT.jar';
@@ -108,6 +109,7 @@ export function activate(context: ExtensionContext) {
         backgroundColor: 'rgba(61, 145, 197, 0.56)'
       })
   let lineMap: {asmMapSrc: Map<number, number>, srcMapAsm: Map<number, number[]>} | undefined;
+  let zippVarMap: Map<string, Map<string,string>>;
   let optLevel: string
   let assembly: string
 
@@ -182,14 +184,26 @@ export function activate(context: ExtensionContext) {
       .map((line: string) => line.split(";")[0].split('  #')[0].split(' @')[0].trimEnd())
       .join('\n');
 
-      // add padding for inlayHints
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
-      lineMap = buildLineMap(asm.split("\n"), PROFILES[assembly]);
+      lineMap = buildLineMap(asm.split('\n'), PROFILES[assembly]);
       if(!lineMap){
         console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")
       }
+      console.log('llContent first 200 chars:', llContent.substring(0, 200));
+      console.log('asm first 200 chars:', asm.substring(0, 200));
+      const varMap = buildVarMap(llContent);
+      console.log('funcVarMap:', JSON.stringify([...varMap.funcVarMap]));
+      console.log('funcVarMap:', varMap.funcVarMap);
+      const stackMap = buildStackMap(asm.split('\n'), PROFILES[assembly]);
+      console.log('funcStackMap:', JSON.stringify([...stackMap.funcStackMap]));
+      console.log('funcStackMap:', stackMap.funcStackMap);
+      zippVarMap = zippedVarMap(varMap.funcVarMap, stackMap.funcStackMap);
+      console.log('zippVarMap:', zippVarMap);
+
+      
+      // add padding for inlayHints
 
       let maxLength: number = 0;
       for (let i = 0; i < lines.length; i++) {
@@ -222,12 +236,27 @@ export function activate(context: ExtensionContext) {
  context.subscriptions.push(
     vscode.languages.registerInlayHintsProvider({scheme: 'asm-preview'}, new class implements vscode.InlayHintsProvider {
       provideInlayHints(document: vscode.TextDocument, range: vscode.Range): vscode.InlayHint[] {
-        console.log('provideInlayHints called, lines:', document.lineCount);
         const hints: vscode.InlayHint[] = [];
+        
         // loop through the lines, reetrieve the arguments and trim away l q to match x86 and x86-64
         // If there is matching operand Then apply the inylayhints for the given line
         for (let i = 0; i < document.lineCount; i++) {
-          const tokens = document.lineAt(i).text.trim().split(/\s+/).map((t: string) => t.replace(",", ""))
+          const trimmed = document.lineAt(i).text.trim();
+          if(trimmed.startsWith('_') && trimmed.endsWith(':')){
+            console.log('Found function label:', trimmed);
+            const funcName = trimmed.match(/_([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
+            console.log('Extracted funcName:', funcName);
+            const varStackMap = zippVarMap?.get(funcName);
+            console.log('varStackMap:', varStackMap);
+            if (!varStackMap) continue;
+            let sb = "Variables: ";
+            for (const [k,v] of varStackMap) {
+              sb += `${k} → ${v}   `; 
+            }
+            const il = new vscode.InlayHint(new vscode.Position(i,0), sb);
+            hints.push(il);
+          }
+          const tokens = trimmed.split(/\s+/).map((t: string) => t.replace(",", ""))
           .map((t: string) => t.replace("#", ""));
           const [op, arg1, arg2, arg3, arg4] = tokens;
           const clearOp = op.replace(/[lq]$/, '')

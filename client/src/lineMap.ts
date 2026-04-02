@@ -2,6 +2,7 @@ import { architecture } from "./architecture"
 export function buildLineMap(asmLines: string[], profile: architecture) {
     let asmMapSrc: Map<number, number> = new Map();
     let srcMapAsm: Map<number, number[]> = new Map();
+    
     let currentSrcLine: number = 0;
     let currentAsmLine: number = 0;
     let isFunction = false; // check if its a function or not
