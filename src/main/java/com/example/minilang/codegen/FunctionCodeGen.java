@@ -1,6 +1,8 @@
 package com.example.minilang.codegen;
 
 import java.util.HashSet;
+
+import com.example.minilang.DebugMetaData;
 import com.example.minilang.ast.Ast;
 
 
@@ -14,8 +16,9 @@ public class FunctionCodeGen {
     private StringBuilder globalStrings;
     private HashSet<String> functionVariables;
     private StatementCodeGen stmtGen;
+    private DebugMetaData debugMetaData;
 
-    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen) {
+    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen, DebugMetaData debugMetaData) {
 
         this.sb = sb;
         this.environment = environment;
@@ -23,6 +26,7 @@ public class FunctionCodeGen {
         this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.stmtGen = stmtGen;
+        this.debugMetaData = debugMetaData;
     }
 
     public void generateFunction(Ast.Func function) {

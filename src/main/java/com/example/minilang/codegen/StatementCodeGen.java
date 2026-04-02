@@ -1,9 +1,19 @@
 package com.example.minilang.codegen;
 
 import java.util.HashSet;
-import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 
-import com.example.minilang.ast.Ast.*;
+import com.example.minilang.DebugMetaData;
+import com.example.minilang.ast.Ast.SBlock;
+import com.example.minilang.ast.Ast.SDecl;
+import com.example.minilang.ast.Ast.SDo;
+import com.example.minilang.ast.Ast.SExp;
+import com.example.minilang.ast.Ast.SIf;
+import com.example.minilang.ast.Ast.SInit;
+import com.example.minilang.ast.Ast.SReturn;
+import com.example.minilang.ast.Ast.SWhile;
+import com.example.minilang.ast.Ast.Stmt;
+import com.example.minilang.ast.Ast.TArray;
+import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
 
 public class StatementCodeGen extends Helper {
     // This class will contain the logic to convert our AST into LLVM IR code.
@@ -15,8 +25,9 @@ public class StatementCodeGen extends Helper {
     private HashSet<String> functionVariables;
     private ExpressionCodeGen expressionCodeGen;
     private final LabelGenerator labelGenerator;
+    private DebugMetaData debugMetaData;
 
-    public StatementCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables) {
+    public StatementCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, DebugMetaData debugMetaData) {
         this.sb = sb;
         this.environment = environment;
         this.globals = globals;
@@ -24,6 +35,7 @@ public class StatementCodeGen extends Helper {
         this.functionVariables = functionVariables;
         this.labelGenerator = new LabelGenerator();
         this.expressionCodeGen = new ExpressionCodeGen(sb, globals, globalStrings, functionVariables, environment);
+        this.debugMetaData = debugMetaData;
     }
 
     public void generateStatement(Stmt stmt) {
@@ -146,7 +158,8 @@ public class StatementCodeGen extends Helper {
     private void generateDecl(SDecl declStmt) {
         String register = generateRegister();
 
-        sb.append(register).append(" = alloca ").append(convertType(declStmt.type())).append("\n");
+        sb.append(register).append(" = alloca ").append(convertType(declStmt.type()))
+        .append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
         environment.pushToCurrentScope(declStmt.name(), register);
         // }
     }
@@ -156,7 +169,8 @@ public class StatementCodeGen extends Helper {
 
             String register = generateRegister();
 
-            sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type())).append("\n");
+            sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type()))
+            .append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
             environment.pushToCurrentScope(initStmt.name(), register);
         }
         
@@ -168,7 +182,8 @@ public class StatementCodeGen extends Helper {
         } else {
             String value = expressionCodeGen.generateExpression(initStmt.value());
             String newRegister = environment.lookup(initStmt.name());
-            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* ").append(newRegister).append("\n");
+            sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* ").append(newRegister)
+            .append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
 
         }
 
@@ -177,9 +192,11 @@ public class StatementCodeGen extends Helper {
     private void generateReturn(SReturn returnStmt) {
         if (returnStmt.value() != null) {
             String value = expressionCodeGen.generateExpression(returnStmt.value());
-            sb.append("  ret ").append(convertType(returnStmt.value().type())).append(" ").append(value).append("\n");
+            sb.append("  ret ").append(convertType(returnStmt.value().type())).append(" ").append(value)
+            .append(", !dbg !").append(debugMetaData.getLineId(returnStmt.pos().line)).append("\n");
         } else {
-            sb.append("  ret void\n");
+            sb.append("  ret void")
+            .append(", !dbg !").append(debugMetaData.getLineId(returnStmt.pos().line)).append("\n");
         }
     }
     private void generateExp(SExp expStmt) {

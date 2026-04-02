@@ -1,6 +1,8 @@
 package com.example.minilang.codegen;
 
 import java.util.HashSet;
+
+import com.example.minilang.DebugMetaData;
 import com.example.minilang.ast.Ast;
 
 
@@ -12,12 +14,14 @@ public class CodeGenerator {
     private final StringBuilder globals;
     private final StringBuilder globalStrings;
     private final HashSet<String> functionVariables = new HashSet<>();
+    private final String fileName;
 
-    public CodeGenerator(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings) {
+    public CodeGenerator(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, String fileName) {
         this.environment = new Environment();
         this.sb = sb;
         this.globals = globals;
         this.globalStrings = globalStrings;
+        this.fileName = fileName;
         // Initialize any necessary state here (e.g., symbol tables, label generators, etc.)
     }
 
@@ -39,9 +43,10 @@ public class CodeGenerator {
         sb.append("declare i8* @array_bool_to_string(i1*, i32)\n");
         sb.append("declare i8* @array_string_to_string(i8*, i32)\n");
 
+        DebugMetaData debugMetaData = new DebugMetaData(fileName);
         sb.append("define void @main() {\n");
         sb.append("entry:\n");
-        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables);
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables, debugMetaData);
         for (Ast.Stmt statement : program.stmts()) {
             stmtGen.generateStatement(statement);
         }
@@ -52,12 +57,10 @@ public class CodeGenerator {
 
         for (Ast.Func function : program.functions()) {
             //System.out.println("Functions found: " + program.functions().size());
-            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtGen);
+            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtGen, debugMetaData);
             funcGen.generateFunction(function);
         }
-
-
-
+        sb.append(debugMetaData.emit());
     }
 
 }
