@@ -191,6 +191,9 @@ will output:
 15
 ```
 
+### Arrays 
+//TDOD: add array syntax and examples
+
 ### Comments
 Comments in FIKA are denoted by `//` for single-line comments and `/* ... */` for multi-line comments.
 ```
