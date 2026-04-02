@@ -349,24 +349,21 @@ function isLatest(uri: string, version: number): boolean {
 }
 
 async function inferenceAnalysis(uri: string, text: string, version: number) {
-  try {
-    let result;
-    if (isLatest(uri, version)) {
-      result = await runJavaAnalysis(text);
+  if (isLatest(uri, version)) {
+    try {
+      let result = await runJavaAnalysis(text);
+      // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
+      console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
+      const suggestions: InferenceSuggestion[] = result ?? [];
+
+      if (isLatest(uri, version)) {
+        inferenceSuggestionMap.set(uri, suggestions);
+      }
     }
-    // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
-    console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
-    const suggestions: InferenceSuggestion[] = result ?? [];
-
-    if (isLatest(uri, version)) {
-      inferenceSuggestionMap.set(uri, suggestions);
+    catch (error) {
+      connection.console.error("Error running Java analysis: " + error);
     }
-
   }
-  catch (error) {
-    connection.console.error("Error running Java analysis: " + error);
-  }
-
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
@@ -455,20 +452,18 @@ documents.onDidChangeContent(async change => {
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
   // Type check & inference phase
-  if (settings.insertionIntensity == TypeInferenceSetting.Hint
-    || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+  if (isLatest(uri, version) && (settings.insertionIntensity == TypeInferenceSetting.Hint
+    || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange)) {
     await inferenceAnalysis(uri, text, version);
   }
 
-  if (isLatest(uri, version)) {
-    // Apply on change immediately if possible
-    if (settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
-      insertInfered(uri);
-    }
-    // Refresh inlay hints
-    if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-      connection.languages.inlayHint.refresh();
-    }
+  // Apply on change immediately if possible
+  if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+    insertInfered(uri);
+  }
+  // Refresh inlay hints
+  if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.Hint) {
+    connection.languages.inlayHint.refresh();
   }
 });
 
