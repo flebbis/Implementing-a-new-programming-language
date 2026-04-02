@@ -325,7 +325,7 @@ function findSymbolAt(pos: Position, doc: TextDocument): { word: string; range: 
     regex = wordChar;
     connection.console.log(">>>>>>>> HOVER: word")
   }
-  if (opChar.test(char)) {
+  if (opChar.test(char)) { // maybe scrap this? No hover on operators?
     regex = opChar;
     connection.console.log(">>>>>>>> HOVER: operator")
   }
