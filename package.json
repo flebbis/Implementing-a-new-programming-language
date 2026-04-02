@@ -4,7 +4,7 @@
   "author": "Cole",
   "license": "MIT",
   "version": "0.0.2",
-  "publisher": "Cole",
+  "publisher": "Grupp17A",
   "repository": {
     "type": "git",
     "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
@@ -13,7 +13,7 @@
     "Programming Languages"
   ],
   "engines": {
-    "vscode": "^1.109.0"
+    "vscode": "^1.80.0"
   },
   "activationEvents": [],
   "main": "./client/out/extension",
@@ -47,6 +47,21 @@
         "path": "./language-tools/asm-preview.tmLanguage.json"
       }
       
+    ],
+    "configuration":[
+      {
+        "type": "object",
+        "title": "myLang language server and language tools",
+        "properties": {
+          "languageServer.maxNumberOfProblems" : {
+            "scope": "resource",
+            "type": "number",
+            "default": 100,
+            "description": 
+              "Sets the maximum number of problems that can be produced/highlighted by the language server"
+          }
+        }
+      }
     ],
     "commands": [
       {
@@ -169,7 +184,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.5.7",
-    "@types/vscode": "^1.109.0",
+    "@types/vscode": "^1.80.0",
     "typescript": "^5.2.2"
   },
   "dependencies": {

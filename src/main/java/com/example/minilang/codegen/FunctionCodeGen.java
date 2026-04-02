@@ -11,14 +11,18 @@ public class FunctionCodeGen {
     private HashSet<String> declaredVariables;
     private Environment environment;
     private StringBuilder globals;
+    private StringBuilder globalStrings;
     private HashSet<String> functionVariables;
+    private StatementCodeGen stmtGen;
 
-    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, HashSet<String> functionVariables) {
+    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen) {
 
         this.sb = sb;
         this.environment = environment;
         this.globals = globals;
+        this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
+        this.stmtGen = stmtGen;
     }
 
     public void generateFunction(Ast.Func function) {
@@ -44,7 +48,6 @@ public class FunctionCodeGen {
 
         }
 
-        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, functionVariables);
         stmtGen.generateStatement(function.body());
         if(function.returnType() instanceof Ast.TUnknown) {
             sb.append("  ret void\n");

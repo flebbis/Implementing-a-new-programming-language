@@ -2,7 +2,7 @@
   "name": "mylang-server",
   "description": "language server server for unnamed language",
   "version": "0.0.1",
-  "publisher": "Cole",
+  "publisher": "Grupp17A",
   "license": "MIT",
   "engines": {
     "node": "*"
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "vscode-languageserver": "^8.1.0",
-    "vscode-languageserver-textdocument": "^1.0.8"
+    "vscode-languageserver-textdocument": "^1.0.8",
+    "vscode-uri": "^3.1.0"
   }
 }

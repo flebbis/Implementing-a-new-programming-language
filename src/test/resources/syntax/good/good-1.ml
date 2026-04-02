@@ -1,13 +1,9 @@
-int func increase(int x, int y){
-    return (x + y);
+x = ["hej", "hå"]
+
+func test(x) {
+    return x
 }
 
+y = test(x)
 
-print("Hello world! Does this work Lucas?")
-[int] y = [6,7,8]
-int x = 5
-print(1)
-print(x)
-print(2.5)
-print(true)
-print (y)
+print(y + " test")

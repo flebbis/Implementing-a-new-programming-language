@@ -4,33 +4,43 @@ import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.codegen.CodeGenerator;
 import com.example.minilang.typechecker.TypeChecker;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import com.example.minilang.ast.Ast;
-import com.example.minilang.ast.AstBuilderVisitor;
-import com.example.minilang.typechecker.TypeChecker;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 public class Compiler {
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
+        if (args.length < 2) {
             System.err.println("Usage: java -jar compiler.jar <sourcefile>");
             System.exit(1);
         }
-        String optLevel = args.length > 1 ? args[1] : "-O3";
-        parseFile(Path.of(args[0]), optLevel);
-
+        String optLevel = args.length > 2 ? args[1] : "-O3";
+        String filePath = args[1];
+        try {
+            List<InferenceSuggestion> suggestions = parseFile(args[0], filePath, optLevel);
+            // Output as JSON to stdout for the language server to parse
+            System.out.println(objectMapper.writeValueAsString(suggestions));
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
 
-    public static void parseFile(Path path) throws IOException {
-        parseFile(path, "0");
-    }
+    public static List<InferenceSuggestion> parseFile(String input, String strPath, String optLevel) throws IOException {
 
-     public static void parseFile(Path path, String optLevel) throws IOException {
-
-        String input = Files.readString(path);
+        // For debugging, needs to be error so not interference with JSON output
+        System.err.println("=== COMPILATION START ===");
+        System.err.println("Reading: " + input);
 
         // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
@@ -45,29 +55,35 @@ public class Compiler {
         ParseTree tree = parser.program();
 
 
+
         // 5. Output
-      //  System.out.println("Equation: " + input);
         //System.out.println("Tree: " + tree.toStringTree(parser));
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        System.out.println("AST:      " + astRoot);
+        System.err.println("unchecked AST: " + astRoot + " \n\n");
+        //System.out.println("AST:      " + astRoot + "\n\n");
 
         TypeChecker typeChecker = new TypeChecker();
-        Ast.Program typeAnnotatedProgram = typeChecker.typeCheck(astRoot);
-        System.out.println("Type Annotated AST: " + typeAnnotatedProgram);
+        Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
+        System.err.println(typeCheckedAst);
+        List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
 
+        Path path = Path.of(strPath);
         String outputFileName = path.getFileName().toString().replace(".ml", ".ll");
         Path outputPath = path.getParent().resolve(outputFileName);
-        String llvmCode = generateLLVM(typeAnnotatedProgram);
+        String llvmCode = generateLLVM(typeCheckedAst);
         Files.writeString(outputPath, llvmCode);
-        System.out.println("\nOutput written to: " + outputPath);
+        //System.out.println("\nOutput written to: " + outputPath);
+        return suggestions;
     }
-        // 7. Code Generation
-        private static String generateLLVM(Ast.Program program) {
+
+    // 7. Code Generation
+    private static String generateLLVM(Ast.Program program) {
         StringBuilder sb = new StringBuilder();
         StringBuilder globals = new StringBuilder();
+        StringBuilder globalStrings = new StringBuilder();
 
         // ===== External Declarations =====
         /*sb.append("declare i32 @printf(i8*, ...)\n");
@@ -81,7 +97,7 @@ public class Compiler {
         sb.append("@.fmt.newline = private constant [2 x i8] c\"\\0A\\00\"\n");      // "\n\0"
         sb.append("\n");*/
 
-    
+
 
         // ===== Generate Code for Global Statements =====
         // (These are top-level statements, if any)
@@ -89,13 +105,13 @@ public class Compiler {
 
 
 
-        CodeGenerator codeGen = new CodeGenerator(sb, globals);
+        CodeGenerator codeGen = new CodeGenerator(sb, globals, globalStrings);
         codeGen.generate(program);
 
         // ===== Generate Code for Each Function =====
 
 
 
-        return globals.append(sb).toString();
+        return globalStrings.append(globals).append(sb).toString();
     }
 }

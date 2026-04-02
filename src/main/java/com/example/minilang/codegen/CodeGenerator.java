@@ -10,12 +10,14 @@ public class CodeGenerator {
     private final StringBuilder sb;
     private Environment environment;
     private final StringBuilder globals;
+    private final StringBuilder globalStrings;
     private final HashSet<String> functionVariables = new HashSet<>();
 
-    public CodeGenerator(StringBuilder sb, StringBuilder globals) {
+    public CodeGenerator(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings) {
         this.environment = new Environment();
         this.sb = sb;
         this.globals = globals;
+        this.globalStrings = globalStrings;
         // Initialize any necessary state here (e.g., symbol tables, label generators, etc.)
     }
 
@@ -23,18 +25,24 @@ public class CodeGenerator {
         //External functions
         sb.append("declare double @pow(double, double)\n");
         sb.append("declare i32 @printf(i8*, ...)\n");
+        sb.append("declare i8* @malloc(i64)\n");
+        sb.append("declare void @free(i8*)\n");
         sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");
         sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");
         sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");
-
-
-
+        sb.append("declare i8* @int_to_string(i32)\n");
+        sb.append("declare i8* @double_to_string(double)\n");
+        sb.append("declare i8* @bool_to_string(i1)\n");
+        sb.append("declare i8* @string_concat(i8*, i8*)\n");
+        sb.append("declare i8* @array_int_to_string(i32*, i32)\n");
+        sb.append("declare i8* @array_double_to_string(double*, i32)\n");
+        sb.append("declare i8* @array_bool_to_string(i1*, i32)\n");
+        sb.append("declare i8* @array_string_to_string(i8*, i32)\n");
 
         sb.append("define void @main() {\n");
         sb.append("entry:\n");
-
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables);
         for (Ast.Stmt statement : program.stmts()) {
-            StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, functionVariables);
             stmtGen.generateStatement(statement);
         }
 
@@ -43,8 +51,8 @@ public class CodeGenerator {
         sb.append("}\n\n");
 
         for (Ast.Func function : program.functions()) {
-            System.out.println("Functions found: " + program.functions().size());
-            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, functionVariables);
+            //System.out.println("Functions found: " + program.functions().size());
+            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtGen);
             funcGen.generateFunction(function);
         }
 

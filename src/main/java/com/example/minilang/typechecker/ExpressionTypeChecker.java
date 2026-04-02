@@ -36,6 +36,8 @@ public class ExpressionTypeChecker {
             case Ast.EUnary eUnary -> typeCheck(eUnary);
             case Ast.EDInt edInt -> typeCheck(edInt);
             case Ast.EStringCast eStringCast -> typeCheck(eStringCast);
+            case Ast.EAppend eAppend -> typeCheck(eAppend);
+            case Ast.EArrayIndexAssign eArrayIndexAssign -> typeCheck(eArrayIndexAssign);
 
             // More to be implemented
             default -> throw new TypeException("Unknown expression type: " + exp.getClass().getSimpleName(), exp.pos());
@@ -228,7 +230,7 @@ public class ExpressionTypeChecker {
             varType = value.type();
         }
 
-        if (!varType.equals(value.type())) {
+        if (!TypeUtils.equalTypes(varType, value.type())) {
             // Allow implicit conversion from int to double
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
@@ -248,7 +250,9 @@ public class ExpressionTypeChecker {
             // Special case for print: allow one argument of any type
             List<Ast.Exp> args = new ArrayList<>();
             for (Ast.Exp arg : eCall.args()) {
-                args.add(typeCheck(arg));
+                Ast.Exp checkedArg = typeCheck(arg);
+                Ast.EStringCast stringArg = new Ast.EStringCast(checkedArg, new Ast.TString(), checkedArg.pos());
+                args.add(stringArg);
             }
             return new Ast.ECall(eCall.name(), args, new Ast.TUnknown(), eCall.pos());
         }
@@ -257,14 +261,6 @@ public class ExpressionTypeChecker {
         List<Ast.Exp> args = new ArrayList<>();
         for (Ast.Exp arg : eCall.args()) {
             args.add(typeCheck(arg));
-        }
-
-        if(eCall.name().equals("print")) {
-            if(args.size() != 1) {
-                throw new TypeException("print function expects exactly one argument", eCall.pos());
-            }
-            // print can accept any type, so we return early with the correct return type
-            return new Ast.ECall(eCall.name(), args, Ast.Type.TVoid, eCall.pos());
         }
 
         // Then look up the function signature
@@ -301,26 +297,32 @@ public class ExpressionTypeChecker {
     public Ast.Exp typeCheck(Ast.EArray eArray) {
         List<Ast.Exp> checkedElements = new ArrayList<>();
         int arraySize = 0;
+        Ast.TArray type = (Ast.TArray) eArray.type();
         for (Ast.Exp element : eArray.elements()) {
             checkedElements.add(typeCheck(element));
             arraySize++;
         }
 
-        Ast.TArray type = (Ast.TArray) eArray.type();
+
         if(type.elementType() instanceof Ast.TUnknown) {
-            //TODO: observe this
-            // If the array type is unknown, we can infer it from the first element
             if (!checkedElements.isEmpty()) {
+                checkedElements = inferArrayType(checkedElements);
                 Ast.Type inferredType = checkedElements.getFirst().type();
                 type = new Ast.TArray(inferredType, arraySize);
             } else {
-                // If the array is empty and the type is unknown, we can't infer the element type
-                throw new TypeException("Cannot infer type of empty array", eArray.pos());
+                // EMpty array with unkown type
+                return new Ast.EArray(checkedElements, new Ast.TArray(new Ast.TUnknown(), arraySize), eArray.pos());
             }
         }
 
         for (Ast.Exp element : checkedElements) {
             if (!element.type().equals(type.elementType())) {
+                System.out.println(type.elementType() + " " + element.type());
+                if(type.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
+
+                    // Allow implicit conversion from int to double
+                    element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
+                }
                 throw new TypeException("Array elements must be of the same type. Expected " + TypeConverter.typeToString(type.elementType())
                         + " but got " + TypeConverter.typeToString(element.type()), element.pos());
             }
@@ -329,11 +331,66 @@ public class ExpressionTypeChecker {
         return new Ast.EArray(checkedElements, type, eArray.pos());
     }
 
+    private List<Ast.Exp> inferArrayType(List<Ast.Exp> elements) {
+        if (elements.isEmpty()) {
+            return elements;
+        }
+
+        List<Ast.Exp> checkedElements = new ArrayList<>();
+        Ast.Type inferedType = elements.get(0).type();
+
+        if(arrayContainsDouble(elements)) {
+            inferedType = new Ast.TDouble();
+        }
+
+        for (Ast.Exp element : elements) {
+            if (!element.type().equals(inferedType)) {
+                if(inferedType instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
+                    element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
+                } else {
+                    throw new TypeException("Array elements must be of the same type. Expected " + TypeConverter.typeToString(inferedType)
+                            + " but got " + TypeConverter.typeToString(element.type()), element.pos());
+                }
+            }
+            checkedElements.add(element);
+
+        }
+        return checkedElements;
+    }
+
+    private boolean arrayContainsDouble(List<Ast.Exp> elements) {
+        for (Ast.Exp element : elements) {
+            if (element.type() instanceof Ast.TDouble) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public Ast.Exp typeCheck(Ast.EArrayIndex eArrayIndex) {
         Ast.Exp array = typeCheck(eArrayIndex.array());
         Ast.Exp index = typeCheck(eArrayIndex.index());
 
+
+
         if(!(array.type() instanceof Ast.TArray)) {
+            if (array instanceof Ast.ECall) {
+                Ast.ECall eCallArray = (Ast.ECall) array;
+                if (eCallArray.type() instanceof Ast.TUnknown) {
+                    //simply return the array as is with TUnknown, we're in first pass
+                    Ast.TUnknown resultType = new Ast.TUnknown();
+                    return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
+                }
+                else {
+                    //oklar om denna ska va här
+                    throw new TypeException("Attempting to index a non-array type on function call: " + TypeConverter.typeToString(array.type()), array.pos());
+                }
+            }
+            if (array.type() instanceof Ast.TUnknown) {
+                //simply return the array as is with TUnknown, we're in first pass
+                Ast.TUnknown resultType = new Ast.TUnknown();
+                return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
+            }
             throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
         }
 
@@ -345,5 +402,124 @@ public class ExpressionTypeChecker {
 
         Ast.Type resultType = (array.type() instanceof Ast.TArray arr) ? arr.elementType() : new Ast.TUnknown();
         return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
+    }
+    
+    public Ast.Exp typeCheck(Ast.EAppend eAppend) {
+        Ast.Exp array = typeCheck(eAppend.array());;
+        Ast.Exp element = typeCheck(eAppend.element());
+        int elements = 0;
+        Ast.TArray typeOfArray = null;
+
+        switch (array) {
+            case Ast.EId arrayId -> {
+                Ast.Type arrayType = context.lookupLatest(arrayId.name());
+                if (arrayType instanceof Ast.TArray) {
+                    Ast.TArray tArray = (Ast.TArray) arrayType;
+                    typeOfArray = tArray;
+
+                    // Handle inference: If array type is TUnknown, we can infer it from the element being appended
+                    if (tArray.elementType() instanceof Ast.TUnknown) {
+                        arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
+                        context.update(arrayId.name(), arrayType);
+                        array = new Ast.EId(arrayId.name(), arrayType, arrayId.pos());
+                    }
+                    elements = tArray.arraySize() + 1; // New size after append
+
+                } else {
+                    throw new TypeException("Attempting to append to a non-array variable: " + arrayId.name() + " of type " + TypeConverter.typeToString(arrayType), arrayId.pos());
+                }
+            }
+            case Ast.ECall arrayCall -> {
+                // Handle case where array is the result of a function call, we can only allow this if the function return type is TArray
+                if (arrayCall.type() instanceof Ast.TArray) {
+                    Ast.TArray tArray = (Ast.TArray) arrayCall.type();
+                    typeOfArray = tArray;
+                    elements = tArray.arraySize() + 1; // New size after append
+
+                    // Handle inference: If array type is TUnknown, we can infer it from the element being appended
+                    if (tArray.elementType() instanceof Ast.TUnknown) {
+                        array = new Ast.ECall(arrayCall.name(), arrayCall.args(), new Ast.TArray(element.type(), elements), arrayCall.pos());
+                    }
+
+                } else {
+                    return eAppend;
+                }
+            }
+            case Ast.EArrayIndex eArrayIndex -> {
+                if (array.type() instanceof Ast.TUnknown) {
+                    //simply return the array as is with TUnknown, we're in first pass
+                    Ast.TUnknown resultType = new Ast.TUnknown();
+                    return new Ast.EAppend(array, element, resultType, eAppend.pos());
+                }
+                else if (array.type() instanceof Ast.TArray) {
+                    Ast.TArray tArray = (Ast.TArray) array.type();
+                    typeOfArray = tArray;
+                    elements = tArray.arraySize() + 1;
+
+                }
+                else {
+                    throw new TypeException("Attempting to append to a non-array type on array indexing: " + TypeConverter.typeToString(array.type()), array.pos());
+                }
+            }
+
+            case null, default ->
+                    throw new TypeException("Attempting to append to a non-array expression", array.pos());
+        }
+        if (eAppend.element().type() instanceof Ast.TUnknown) {
+            Ast.TArray appendType = new Ast.TArray(element.type(), elements);
+            return new Ast.EAppend(array, element, appendType, eAppend.pos());
+        }
+        // Check that the element being appended matches the array's element type, unless it's TUnknown (inference phase)
+        if(!(typeOfArray.elementType() instanceof Ast.TUnknown) && !(TypeUtils.equalTypes(typeOfArray.elementType(), element.type()))) {
+            if(typeOfArray.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
+                element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
+            } else if ((TypeUtils.equalTypes(typeOfArray.elementType(), element.type()))){
+                //Do nothing :D
+                System.out.println("asd");
+            }
+            else {
+                throw new TypeException("Attempting to append element of type " + TypeConverter.typeToString(element.type()) + " to array of type " + TypeConverter.typeToString(typeOfArray.elementType()), element.pos());
+            }
+        }
+        Ast.TArray appendType = new Ast.TArray(element.type(), elements);
+        return new Ast.EAppend(array, element, appendType, eAppend.pos());
+    }
+
+    public Ast.Exp typeCheck(Ast.EArrayIndexAssign eArrayIndexAssign) {
+        Ast.Exp array = typeCheck(eArrayIndexAssign.array());
+        Ast.Exp index = typeCheck(eArrayIndexAssign.index());
+        Ast.Exp value = typeCheck(eArrayIndexAssign.value());
+
+        if(array.type() instanceof Ast.TUnknown) {
+            //simply return the array as is with TUnknown, we're in first pass
+            Ast.TUnknown resultType = new Ast.TUnknown();
+            return new Ast.EArrayIndexAssign(array, index, value, resultType, eArrayIndexAssign.pos());
+        }
+
+        if(!(array.type() instanceof Ast.TArray)) {
+            throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
+        }
+
+        if (!(index.type() instanceof Ast.TInt)) {
+            throw new TypeException("Array index must be of type int", index.pos());
+        }
+
+        Ast.TArray arrayType = (Ast.TArray) array.type();
+
+        // Allow assignment if value is TUnknown (inference phase)
+        if (value.type() instanceof Ast.TUnknown) {
+            return new Ast.EArrayIndexAssign(array, index, value, new Ast.TUnknown(), eArrayIndexAssign.pos());
+        }
+
+        if (!arrayType.elementType().equals(value.type())) {
+            // Allow implicit conversion from int to double
+            if (arrayType.elementType() instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
+                value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
+            } else {
+                throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to array of type " + TypeConverter.typeToString(arrayType.elementType()), value.pos());
+            }
+        }
+
+        return new Ast.EArrayIndexAssign(array, index, value, arrayType.elementType(), eArrayIndexAssign.pos());
     }
 }
