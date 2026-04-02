@@ -281,18 +281,25 @@ function dec(pos: Position): Position {
 }
 
 connection.onHover((params: HoverParams) => {
-  connection.console.log(">>>>>>>> Attempting hover")
 
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
 
   let pos = params.position;
   if (doc != undefined) {
-    // idea: step left untill non-word character > step right untill non-word character
-
+    //Don't begin a hover over whitespace
     if (!/ /.test(doc.getText(charRange(pos)))) {
       const { word, range } = findSymbolAt(pos, doc)
-      let description = "tmp..."
+      let m: RegExpMatchArray | null = doc.getText().match(word)
+      let description = "" 
+      if (m&&m.index) {//ensures there is at least one match
+        const mPos = doc.positionAt(m.index)
+        let r:Range = {
+          start: {line: mPos.line, character:0},
+          end:   {line: mPos.line, character:80}
+      }
+      description = doc.getText(r).trim()
+    }
       let contents: MarkupContent = {
         kind: MarkupKind.Markdown,
         value: [
