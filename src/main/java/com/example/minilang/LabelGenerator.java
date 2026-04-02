@@ -1,9 +1,9 @@
-package com.example.minilang;
+// package com.example.minilang;
 
-public class LabelGenerator {
-    private int labelCount = 0;
+// public class LabelGenerator {
+//     private int labelCount = 0;
     
-    public String generateLabel(String prefix){
-        return prefix + "_" + labelCount++;
-    }
-}
+//     public String generateLabel(String prefix){
+//         return prefix + "_" + labelCount++;
+//     }
+// }

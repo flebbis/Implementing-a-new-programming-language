@@ -1,4 +1,4 @@
-package com.example.minilang;
+/*package com.example.minilang;
 import java.util.List;
 
 import com.example.minilang.ast.Ast;
@@ -36,4 +36,4 @@ public class CodeGenerator {
     sb.append('\n');
   }
 
-}
+}*/
