@@ -31,13 +31,13 @@ public class FunctionCodeGen {
 
     public void generateFunction(Ast.Func function) {
 
-
         Helper helper = new Helper();
 
+        int funcId = debugMetaData.createSubProgram(function.name(), function.pos().line);
         sb.append("define " + helper.convertType(function.returnType()) + " @" + function.name() + "(");
 
         if(function.params().isEmpty()){
-            sb.append(") {\nentry:\n");
+            sb.append(") !dbg !").append(funcId).append(" {\nentry:\n");
         }
 
         int i = 0;

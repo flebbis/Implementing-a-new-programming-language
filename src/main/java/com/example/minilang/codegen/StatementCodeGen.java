@@ -34,7 +34,7 @@ public class StatementCodeGen extends Helper {
         this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.labelGenerator = new LabelGenerator();
-        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, globalStrings, functionVariables, environment);
+        this.expressionCodeGen = new ExpressionCodeGen(sb, globals, globalStrings, functionVariables, environment, debugMetaData);
         this.debugMetaData = debugMetaData;
     }
 

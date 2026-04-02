@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+import com.example.minilang.DebugMetaData;
 import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.AssOp;
@@ -44,16 +45,15 @@ public class ExpressionCodeGen extends Helper {
     private int stringCounter = 0;
     private HashSet<String> functionVariables;
     private Environment environment;
-    
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment) {
+    private DebugMetaData debugMetaData;
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment, DebugMetaData debugMetadata) {
         this.sb = sb;
         this.globals = globals;
         this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.environment = environment;
+        this.debugMetaData = debugMetadata;
     }
-
-
 
     public String generateExpression(Exp exp) {
             if (exp instanceof EInt intExp) return generateInt(intExp);
@@ -99,7 +99,9 @@ public class ExpressionCodeGen extends Helper {
         String globalName = "@.str." + stringCounter++;
         String register = generateRegister();
         globalStrings.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
-        sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
+        sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0")
+        .append(", !dbg !").append(debugMetaData.getLineId(stringExp.pos().line)).append("\n");
+        
         stringRegisterToGlobal.put(register, globalName);
         stringGlobalToLength.put(globalName, length);
         return register;
@@ -149,7 +151,8 @@ public class ExpressionCodeGen extends Helper {
 
             String variableRegister = environment.lookup(idExp.name());
             String register = generateRegister();
-            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
+            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister)
+            .append(", !dbg !").append(debugMetaData.getLineId(idExp.pos().line)).append("\n");
             return register;
 
         } else {
@@ -161,7 +164,8 @@ public class ExpressionCodeGen extends Helper {
                     // If it does, we need to load it from memory
                     String variableRegister = environment.lookup(idExp.name());
                     String register = generateRegister();
-                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
+                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister)
+                    .append(", !dbg !").append(debugMetaData.getLineId(idExp.pos().line)).append("\n");
                     return register;
                 }
             }
@@ -216,14 +220,16 @@ public class ExpressionCodeGen extends Helper {
         String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
 		String register = generateRegister();
         
-        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
+        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value)
+        .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
         return register;
     }
 
     private String generateNot(ENot notExp) {
         String value = generateExpression(notExp.exp());
         String register = generateRegister();
-        sb.append(register).append(" = xor i1 ").append(value).append(", 1\n");
+        sb.append(register).append(" = xor i1 ").append(value).append(", 1")
+        .append(", !dbg !").append(debugMetaData.getLineId(notExp.pos().line)).append("\n");
         return register;
 
     }
@@ -231,7 +237,8 @@ public class ExpressionCodeGen extends Helper {
         String base = generateExpression(powerExp.base());
         String exponent = generateExpression(powerExp.exponent());
         String register = generateRegister();
-        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent).append(")\n");
+        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent)
+        .append(", !dbg !").append(debugMetaData.getLineId(powerExp.pos().line)).append("\n");
         return register;
 
     }
@@ -256,7 +263,8 @@ public class ExpressionCodeGen extends Helper {
                 }
             }
             case MOD -> {
-                sb.append(register).append(" = srem ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");
+                sb.append(register).append(" = srem ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right)
+                .append(", !dbg !").append(debugMetaData.getLineId(oppExp.pos().line)).append("\n");
             }
         }
         return register;
@@ -290,12 +298,12 @@ public class ExpressionCodeGen extends Helper {
         String right = generateExpression(cmpExp.right());
         String register = generateRegister();
         switch (cmpExp.op()) {
-            case LT -> {sb.append(register).append(" = icmp slt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case GT -> {sb.append(register).append(" = icmp sgt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case LE -> {sb.append(register).append(" = icmp sle ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case GE -> {sb.append(register).append(" = icmp sge ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case EQ -> {sb.append(register).append(" = icmp eq ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case NE -> {sb.append(register).append(" = icmp ne ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
+            case LT -> {sb.append(register).append(" = icmp slt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(", !dbg !").append(debugMetaData.getLineId(cmpExp.pos().line)).append("\n");}
+            case GT -> {sb.append(register).append(" = icmp sgt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(cmpExp.pos().line)).append("\n");}
+            case LE -> {sb.append(register).append(" = icmp sle ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(cmpExp.pos().line)).append("\n");}
+            case GE -> {sb.append(register).append(" = icmp sge ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(cmpExp.pos().line)).append("\n");}
+            case EQ -> {sb.append(register).append(" = icmp eq ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(cmpExp.pos().line)).append("\n");}
+            case NE -> {sb.append(register).append(" = icmp ne ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(cmpExp.pos().line)).append("\n");}
         }
         return register;
 
@@ -305,8 +313,8 @@ public class ExpressionCodeGen extends Helper {
         String right = generateExpression(logicExp.right());
         String register = generateRegister();
         switch (logicExp.op()) {
-            case AND -> {sb.append(register).append(" = and ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}    
+            case AND -> {sb.append(register).append(" = and ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");}
+            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");} 
         }
         return register;
 
@@ -314,7 +322,8 @@ public class ExpressionCodeGen extends Helper {
     private String generateAss(EAss assExp) {
         String value = generateExpression(assExp.value());
         if (assExp.op() == AssOp.ASSIGN) {
-        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name()))
+        .append(", !dbg !").append(debugMetaData.getLineId(assExp.pos().line)).append("\n");
         return value; }
             
         String operation = switch (assExp.op()) {

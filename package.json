@@ -31,9 +31,12 @@
         ],
         "configuration": "./language-tools/language-configuration.json"
       },
-      { "id": "asm-preview", 
-      "aliases": ["Assembly Preview"] 
-    }
+      {
+        "id": "asm-preview",
+        "aliases": [
+          "Assembly Preview"
+        ]
+      }
     ],
     "grammars": [
       {
@@ -46,19 +49,17 @@
         "scopeName": "source.asm-preview",
         "path": "./language-tools/asm-preview.tmLanguage.json"
       }
-      
     ],
-    "configuration":[
+    "configuration": [
       {
         "type": "object",
         "title": "myLang language server and language tools",
         "properties": {
-          "languageServer.maxNumberOfProblems" : {
+          "languageServer.maxNumberOfProblems": {
             "scope": "resource",
             "type": "number",
             "default": 100,
-            "description": 
-              "Sets the maximum number of problems that can be produced/highlighted by the language server"
+            "description": "Sets the maximum number of problems that can be produced/highlighted by the language server"
           }
         }
       }
@@ -99,7 +100,7 @@
       {
         "command": "mylang.arm64",
         "title": "arm64"
-      }, 
+      },
       {
         "command": "mylang.x86",
         "title": "x86"
@@ -109,72 +110,68 @@
         "title": "arm32"
       }
     ],
-
-  "submenus":[
-    {
-      "id": "opt",
-      "label": "optimazation",
-      "icon": "$(dashboard)"
-    },
-    {
-      "id": "asm",
-      "label": "assemblyOptions",
-      "icon": "$(chip)"
-    }
-  ],  
-
-  "menus": {
-    "editor/title": [
+    "submenus": [
       {
-        "submenu": "opt",
-        "when": "true",
-        "group": "navigation"
+        "id": "opt",
+        "label": "optimazation",
+        "icon": "$(dashboard)"
       },
       {
-        "submenu": "asm",
-        "when": "true",
-        "group": "navigation"
+        "id": "asm",
+        "label": "assemblyOptions",
+        "icon": "$(chip)"
       }
     ],
-    
-  "opt": [
-    {
-      "command": "O0",
-      "group": "navigation" 
-    },
-    {
-      "command": "O1",
-      "group": "navigation" 
-    },
-    {
-      "command": "O2",
-      "group": "navigation" 
-    },
-    {
-      "command": "O3",
-      "group": "navigation" 
+    "menus": {
+      "editor/title": [
+        {
+          "submenu": "opt",
+          "when": "true",
+          "group": "navigation"
+        },
+        {
+          "submenu": "asm",
+          "when": "true",
+          "group": "navigation"
+        }
+      ],
+      "opt": [
+        {
+          "command": "O0",
+          "group": "navigation"
+        },
+        {
+          "command": "O1",
+          "group": "navigation"
+        },
+        {
+          "command": "O2",
+          "group": "navigation"
+        },
+        {
+          "command": "O3",
+          "group": "navigation"
+        }
+      ],
+      "asm": [
+        {
+          "command": "mylang.x86-64",
+          "group": "navigation"
+        },
+        {
+          "command": "mylang.arm64",
+          "group": "navigation"
+        },
+        {
+          "command": "mylang.x86",
+          "group": "navigation"
+        },
+        {
+          "command": "mylang.arm",
+          "group": "navigation"
+        }
+      ]
     }
-  ],
-  "asm": [
-    {
-      "command": "mylang.x86-64",
-      "group": "navigation"
-    },
-    {
-      "command": "mylang.arm64",
-      "group": "navigation"
-    },
-    {
-      "command": "mylang.x86",
-      "group": "navigation"
-    },
-    {
-      "command": "mylang.arm",
-      "group": "navigation"
-    }
-  ]
-}
-
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -190,7 +187,7 @@
   "dependencies": {
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12"
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-uri": "^3.1.0"
   }
 }
-
