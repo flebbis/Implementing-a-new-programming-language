@@ -419,11 +419,11 @@ public class ExpressionTypeChecker {
 
                     // Handle inference: If array type is TUnknown, we can infer it from the element being appended
                     if (tArray.elementType() instanceof Ast.TUnknown) {
-                        arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
-                        context.update(arrayId.name(), arrayType);
                         array = new Ast.EId(arrayId.name(), arrayType, arrayId.pos());
                     }
                     elements = tArray.arraySize() + 1; // New size after append
+                    arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
+                    context.update(arrayId.name(), arrayType);
 
                 } else {
                     throw new TypeException("Attempting to append to a non-array variable: " + arrayId.name() + " of type " + TypeConverter.typeToString(arrayType), arrayId.pos());
@@ -443,6 +443,23 @@ public class ExpressionTypeChecker {
 
                 } else {
                     return eAppend;
+                }
+            }
+            case Ast.EAppend arrayAppend -> {
+                // Handle chained append: the array expression itself is an EAppend from a previous append
+                if (arrayAppend.type() instanceof Ast.TUnknown) {
+                    // still unknown in inference pass
+                    return new Ast.EAppend(array, element, new Ast.TUnknown(), eAppend.pos());
+                } else if (arrayAppend.type() instanceof Ast.TArray) {
+                    Ast.TArray tArray = (Ast.TArray) arrayAppend.type();
+                    typeOfArray = tArray;
+                    elements = tArray.arraySize() + 1;
+                    // If elementType is unknown, update the nested EAppend node's type to reflect inference
+                    if (tArray.elementType() instanceof Ast.TUnknown) {
+                        array = new Ast.EAppend(arrayAppend.array(), arrayAppend.element(), new Ast.TArray(element.type(), elements - 1), arrayAppend.pos());
+                    }
+                } else {
+                    throw new TypeException("Attempting to append to a non-array expression", arrayAppend.pos());
                 }
             }
             case Ast.EArrayIndex eArrayIndex -> {

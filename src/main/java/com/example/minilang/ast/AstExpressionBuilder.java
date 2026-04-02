@@ -195,11 +195,13 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
             } else if(op.DYNARR_START() != null) {
                 Ast.Exp index = visit(op.exp());
                 expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else if (op.PARAM_START() != null && op.PARAM_END() != null) {
-                // function call
+            } else if (op.PARAM_START() != null && op.PARAM_END() != null && op.DOT() == null) {
+                // function call (no dot)
                 List<Ast.Exp> args = new ArrayList<>();
-                for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
-                    args.add(visit(expCtx));
+                if (op.expSeparator() != null && op.expSeparator().exp() != null) {
+                    for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
+                        args.add(visit(expCtx));
+                    }
                 }
                 // Should always be an EId if it's a function call, but we can check to be safe
                 if (expr instanceof Ast.EId id) {
@@ -207,10 +209,24 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 } else {
                     throw new IllegalArgumentException("Function call target must be an identifier");
                 }
+            } else if (op.DOT() != null) {
+                // dotted method call: DOT ID PARAM_START expSeparator PARAM_END
+                String method = op.ID().getText();
+                Pos pos = new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine());
+                if ("append".equals(method)) {
+                    // append expects a single argument
+                    Ast.Exp arg = null;
+                    if (op.expSeparator() != null && op.expSeparator().exp() != null && !op.expSeparator().exp().isEmpty()) {
+                        arg = visit(op.expSeparator().exp(0));
+                    } else {
+                        throw new IllegalArgumentException("append requires one argument");
+                    }
+                    expr = new Ast.EAppend(expr, arg, expr.type(), pos);
+                } else {
+                    throw new IllegalArgumentException("Unknown dotted method: " + method);
+                }
             } else {
-                // Append array operation
-                Ast.Exp exp = visit(op.exp());
-                return new Ast.EAppend(expr, exp, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
+                throw new IllegalArgumentException("Unknown postfix operator");
             }
         }
         return expr;
