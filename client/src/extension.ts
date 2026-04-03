@@ -175,20 +175,28 @@ export async function activate(context: ExtensionContext) {
 
       // filter away lines. that start with (. or ends with :) ,l_, ;, !==, 
       // take away the comments from the assembly output
-      const filtered = asm.split('\n')
+       const filtered = asm.split('\n')
       .filter((line: string) => !line.trim().startsWith('.') || line.trim().startsWith('.LBB'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
       .filter((line: string) => !line.trim().startsWith('#'))
       .filter((line: string) => line.trim() !== '')
       .filter((line: string) => !line.trim().startsWith('@'))
-      .filter((line: string) => (!line.trim().startsWith("L") && !line.endsWith(":")) || line.startsWith("LBB"))
+      .filter((line: string) => (!line.trim().startsWith('L') && !line.endsWith(':')) || line.startsWith('LBB'))
       .map((line: string) => line.split(";")[0].split('  #')[0].split(' @')[0].trimEnd())
       .join('\n');
 
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
-      lineMap = buildLineMap(asm.split('\n'), PROFILES[assembly]);
+      lineMap = buildLineMap(asm.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
+      console.log('srcMapAsm entries:');
+      for (const [src, asms] of lineMap.srcMapAsm) {
+        console.log(`  src line ${src} -> asm lines [${asms}]`);
+      }
+      console.log('asmMapSrc entries:');
+      for (const [asm2, src] of lineMap.asmMapSrc) {
+        console.log(`  asm line ${asm2} -> src line ${src}`);
+      }
       if(!lineMap){
         console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")
@@ -198,7 +206,7 @@ export async function activate(context: ExtensionContext) {
       const varMap = buildVarMap(llContent);
       console.log('funcVarMap:', JSON.stringify([...varMap.funcVarMap]));
       console.log('funcVarMap:', varMap.funcVarMap);
-      const stackMap = buildStackMap(asm.split('\n'), PROFILES[assembly]);
+      const stackMap = buildStackMap(asm.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
       console.log('funcStackMap:', JSON.stringify([...stackMap.funcStackMap]));
       console.log('funcStackMap:', stackMap.funcStackMap);
       zippVarMap = zippedVarMap(varMap.funcVarMap, stackMap.funcStackMap);
@@ -227,7 +235,7 @@ export async function activate(context: ExtensionContext) {
       // open and show the assembly document to the right of the screen
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
     } catch(e: any) {
-      vscode.window.showErrorMessage(`Error:   e.message`);
+      vscode.window.showErrorMessage(`Error:   ${e.message}`);
     }
   }
 
@@ -245,11 +253,9 @@ export async function activate(context: ExtensionContext) {
         for (let i = 0; i < document.lineCount; i++) {
           const trimmed = document.lineAt(i).text.trim();
           if(trimmed.startsWith('_') && trimmed.endsWith(':')){
-            console.log('Found function label:', trimmed);
             const funcName = trimmed.match(/_([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
-            console.log('Extracted funcName:', funcName);
+            if (!funcName) continue;
             const varStackMap = zippVarMap?.get(funcName);
-            console.log('varStackMap:', varStackMap);
             if (!varStackMap) continue;
             let sb = "Variables: ";
             for (const [k,v] of varStackMap) {

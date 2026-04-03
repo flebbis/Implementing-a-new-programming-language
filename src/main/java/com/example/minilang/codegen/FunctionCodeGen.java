@@ -45,7 +45,8 @@ public class FunctionCodeGen {
             if (i < function.params().size()-1){
                 sb.append(helper.convertType(arg.type()) + " %" + arg.name() + ", ");
             } else {
-                sb.append(helper.convertType(arg.type()) + " %" + arg.name() + ") {\nentry:\n");
+                sb.append(helper.convertType(arg.type()) + " %" + arg.name() + ") {\nentry:")
+                .append(") !dbg !").append(funcId).append(" {\nentry:\n");
             }
             functionVariables.add(arg.name());
             i++;

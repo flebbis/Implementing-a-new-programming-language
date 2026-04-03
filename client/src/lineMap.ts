@@ -52,8 +52,18 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
                 const linePeek = asmLines[k].trim();
                 const lineNumberPeek = linePeek.split(/\s+/);
                 const lineNumber = Number(lineNumberPeek[2]);
-                if(linePeek.startsWith(".loc" ) && lineNumber != 0) {
+                if(linePeek.startsWith(".loc") && lineNumber != 0) {
                     currentSrcLine = lineNumber;
+                    const funcDeclLine = lineNumber - 1;
+                    
+                    console.log(`Function found: ${trimmed}, funcDeclLine: ${funcDeclLine}`);
+                    console.log(`Scanning from i=${i} to k=${k}`);
+                    
+                    let asmOffset = currentAsmLine;
+                    for (let j = i + 1; j < k; j++) {
+                        const between = asmLines[j].trim();
+                        console.log(`  j=${j} asmOffset=${asmOffset} line: "${between}"`);
+                    }
                     break;
                 }
             }
