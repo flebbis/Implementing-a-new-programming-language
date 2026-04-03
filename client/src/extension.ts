@@ -98,6 +98,7 @@ export async function activate(context: ExtensionContext) {
     const JAR_PATH = context.asAbsolutePath(
       path.join('.', 'LLVMINI-1.0-SNAPSHOT.jar')
     );
+    console.log(JAR_PATH)
 
     vscode.window.showInformationMessage('Optimazation level' + optLevel);
     try {

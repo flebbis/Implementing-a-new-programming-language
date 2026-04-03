@@ -10,7 +10,9 @@
         {"include": "#ControllStatement"},
         {"include": "#Expression"},
         {"include": "#StatementBlock"},
-        {"include": "#VariableDeclaration"}
+        {"include": "#VariableDeclaration"},
+        {"include": "#VariableDeclarationArray"}
+        
       ]
     },
     "StatementBlock": {
@@ -205,7 +207,8 @@
       "begin": "(\\b[a-zA-Z_][a-zA-Z0-9]*\\b)? *(\\bfunc\\b) *(\\b[a-zA-Z_][a-zA-Z0-9]*\\b) *\\(",
       "end": "\\)",
       "patterns": [
-        {"include": "#ArgumentDeclaration"}
+        {"include": "#ArgumentDeclaration"},
+        {"include": "#ArgumentDeclarationArray"}
       ],
       "beginCaptures": {
         "1": {"name": "entity.name.type"},
@@ -221,13 +224,50 @@
         "2": {"name": "variable.parameter"}
       }
     },
+    "ArgumentDeclarationArray": {
+      "name": "meta.function.declaration.argument.array",
+      "begin": "\\[",
+      "end":   "\\] *([a-zA-Z_][a-zA-Z0-9]*)",
+      "patterns":[
+        {"include": "#Type"},
+        {"include": "#ArrayRecursive"}
+      ],
+      "captures":{
+        "1": {"name": "variable.parameter"}
+      }
+    },
+    "ArrayRecursive":{
+      "name": "meta.array.type",
+      "begin": "\\[",
+      "end"  : "\\]",
+      "patterns":[
+        {"include": "#Type"},
+        {"include": "#ArrayRecursive"}
+      ]
+    },
     "VariableDeclaration": {
       "name": "meta.statement.declaration.variable",
-      "match": "(?=^|.*;) *([a-z]+)? *\\b([a-zA-Z_][a-zA-Z0-9]*) *(?=;|=|$|//|/\\*)",
+      "match": "(?=^|.*;) *([a-z]{3,7})? *\\b([a-zA-Z_][a-zA-Z0-9]*) *(?=;|=|$|//|/\\*)",
       "captures":{
         "1":{"name": "storage.type"},
         "2":{"name": "variable"}
       }
+    },
+    "VariableDeclarationArray": {
+      "name": "meta.statement.declaration.variable.array",
+      "begin": "(?=^|.*;) *\\[",
+      "end": "\\] *\\b([a-zA-Z_][a-zA-Z0-9]*) *(?=;|=|$|//|/\\*)",
+      "patterns":[
+        {"include": "#Type"},
+        {"include": "#ArrayRecursive"}
+      ],
+      "captures":{
+        "1":{"name": "variable"}
+      }
+    },
+    "Type": {
+      "name": "storage.type",
+      "match": "[a-z]{3,7}"
     }
   }
 }
