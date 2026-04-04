@@ -15,10 +15,11 @@ import {
   MarkupContent,
   Range,
   MarkupKind,
-  TextEdit
+  TextEdit,
+  Position
 } from "vscode-languageserver/node";
 
-import { Position, TextDocument } from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { spawn } from 'child_process';
 import * as path from 'path';
@@ -482,10 +483,17 @@ connection.languages.inlayHint.on(async (params) => {
     return suggestions.map((s) => ({
       position: {
         line: s.line - 1,
-        character: s.column,
+        character: s.column
       },
       label: `${s.inferredType} `,
       kind: 1,
+      textEdits: [{
+        range: {
+          start: { line: s.line - 1, character: s.column },
+          end: { line: s.line - 1, character: s.column }
+        },
+        newText: `${s.inferredType} `
+      }],
       paddingRight: true,
     }));
   }
