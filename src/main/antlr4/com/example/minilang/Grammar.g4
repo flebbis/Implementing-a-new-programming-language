@@ -116,7 +116,7 @@ postFixOp
     | DEC
     | DYNARR_START exp DYNARR_END
     | PARAM_START expSeparator PARAM_END
-    | '.append(' exp ')'
+    | DOT ID PARAM_START expSeparator PARAM_END
     ;
 
 primary
@@ -158,6 +158,7 @@ NE          : '!=';
 AND         : 'and';
 OR          : 'or';
 NOT         : 'not';
+DOT         : '.';
 ID          : [a-zA-Z_][a-zA-Z0-9_]*; // need help
 ASSIGN      : '=';
 DYNARR_START : '[';
