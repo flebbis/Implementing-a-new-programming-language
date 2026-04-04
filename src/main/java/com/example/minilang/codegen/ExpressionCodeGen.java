@@ -4,6 +4,7 @@ import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.Ast.*;
 
+import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,10 +12,12 @@ import java.util.Map;
 
 import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
+import com.example.minilang.codegen.ArrayValue;
 
 public class ExpressionCodeGen extends Helper {
     private static Map<String, String> stringRegisterToGlobal = new HashMap<>();
     private static Map<String, Integer> stringGlobalToLength = new HashMap<>();
+    private static Map<String, ArrayValue> arrayNameToValue = new HashMap<>();
     private StringBuilder sb;
     private StringBuilder globals;
     private StringBuilder globalStrings;
@@ -50,6 +53,7 @@ public class ExpressionCodeGen extends Helper {
             if (exp instanceof EUnary unaryExp) return generateUnary(unaryExp);
             if (exp instanceof EDInt dIntExp) return generateDInt(dIntExp);
             if (exp instanceof EStringCast sStringCast) return generateStringCast(sStringCast);
+            if (exp instanceof EAppend appendExp) return generateAppend(appendExp);
             return "0";
     }
 
@@ -320,7 +324,7 @@ public class ExpressionCodeGen extends Helper {
         String arrayType = convertType(arrayExp.type());
 		String basePointer = generateRegister();
 		String spacePointer = generateRegister();
-        int allocatedSpace = (arrayType.equals("double")) ? numElements * 8 : numElements * 4;
+        int allocatedSpace = (arrayType.equals("double")) ? numElements * 8 * 2 : numElements * 4 * 2; 
         sb.append(spacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
         sb.append(basePointer).append(" = bitcast i8* ").append(spacePointer).append(" to i32*\n");
         String arrayGlobal = generateLabel("array");
@@ -379,11 +383,13 @@ public class ExpressionCodeGen extends Helper {
         sb.append("store i32 ").append(nextIndex).append(", i32* ").append(counter).append("\n");
         sb.append("br label %").append(loop).append("\n");
         sb.append(loopEnd).append(":\n");
+
+       arrayNameToValue.put(basePointer, new ArrayValue(basePointer, numElements, numElements * 2, arrayType));
         return basePointer;
     }
 
 
-    private String generateArrayIndex(EArrayIndex arrayIndexExp) {
+    private String generateArrayIndex(EArrayIndex arrayIndexExp) { // THIS WILL NOT WORK IF ARRAY DOES NOT HAVE A NAME, I.E. IF IT'S NOT STORED IN A VARIABLE, BUT INSTEAD IS AN INLINE ARRAY LITERAL. THIS IS BECAUSE WE NEED THE NAME TO LOOK UP THE BASE POINTER OF THE ARRAY IN THE ENVIRONMENT. THIS CAN BE FIXED BY FIRST GENERATING THE ARRAY AS USUAL, STORING THE BASE POINTER IN A REGISTER, AND THEN USING THAT REGISTER AS THE BASE POINTER FOR THE GETELEMENTPTR IN THIS METHOD. CURRENTLY, THIS METHOD ASSUMES THAT ALL ARRAYS ARE STORED IN VARIABLES WITH NAMES, AND THAT THE BASE POINTERS OF THESE ARRAYS ARE STORED IN THE ENVIRONMENT UNDER THEIR NAMES.
     
 		String register = generateRegister();
 		String returnRegister = generateRegister();
@@ -410,6 +416,21 @@ public class ExpressionCodeGen extends Helper {
         sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(register).append("\n");
         
 		return returnRegister;
+    }
+
+    private String generateAppend(EAppend appendExp) {
+        String value = generateExpression(appendExp.element());
+        String arrayType = convertType(appendExp.array().type());
+        String basePointer = generateExpression(appendExp.array());
+        ArrayValue arrayValue = arrayNameToValue.get(basePointer);
+        if (arrayValue.size < arrayValue.capacity){
+            String elemPointer = generateRegister();
+            sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(basePointer).append(", i32 ").append(arrayValue.size).append("\n");
+            sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(elemPointer).append("\n");
+            arrayValue.size++;
+        } 
+        
+        return basePointer;
     }
 
 
