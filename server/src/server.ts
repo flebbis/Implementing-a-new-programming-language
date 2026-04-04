@@ -102,7 +102,6 @@ connection.onInitialize((params: InitializeParams) => {
 // settings stuff
 enum TypeInferenceSetting {
   Nill = "nill",
-  Hint = "hint",
   OnSave = "onSave",
   InsertOnChange = "insertOnChange",
 }
@@ -111,12 +110,14 @@ enum TypeInferenceSetting {
 interface ServerSettings {
   maxNumberOfProblems: number;
   insertionIntensity: TypeInferenceSetting;
-
+  inlineTypeHint: boolean;
 }
 
+// default settings if client does not support 
 const defaultSettings: ServerSettings = {
   maxNumberOfProblems: 1000,
-  insertionIntensity: TypeInferenceSetting.Nill
+  insertionIntensity: TypeInferenceSetting.Nill,
+  inlineTypeHint: false,
 }
 
 let globalSettings: ServerSettings = defaultSettings;
@@ -129,7 +130,7 @@ function getDocumentSettings(recource: string): Thenable<ServerSettings> {
   if (!hasConfigurationCabability) {
     return Promise.resolve(globalSettings);
   }
-  let result /* Thenable<ServerSettings> */ = documentSettings.get(recource);
+  let result = documentSettings.get(recource);
   if (!result) {
     result = connection.workspace.getConfiguration({
       scopeUri: recource,
@@ -371,7 +372,7 @@ function runJavaAnalysis(text: string): Promise<any> {
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
-    connection.console.log(jarPath)
+    // connection.console.log(jarPath)
     const java = spawn("java", ["-jar", jarPath, text]);
 
     // Capture stdout and stderr from the Java process
@@ -454,7 +455,7 @@ documents.onDidChangeContent(async change => {
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
   // Type check & inference phase
-  if (isLatest(uri, version) && (settings.insertionIntensity == TypeInferenceSetting.Hint
+  if (isLatest(uri, version) && (settings.inlineTypeHint
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange)) {
     await inferenceAnalysis(uri, text, version);
   }
@@ -464,7 +465,7 @@ documents.onDidChangeContent(async change => {
     insertInfered(uri);
   }
   // Refresh inlay hints
-  if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.Hint) {
+  if (isLatest(uri, version) && settings.inlineTypeHint) {
     connection.languages.inlayHint.refresh();
   }
 });
@@ -476,8 +477,7 @@ documents.onDidChangeContent(async change => {
 connection.languages.inlayHint.on(async (params) => {
   const uri = params.textDocument.uri;
   const settings = await getDocumentSettings(uri)
-  if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-
+  if (settings.inlineTypeHint) {
     const suggestions = inferenceSuggestionMap.get(uri) ?? [];
     return suggestions.map((s) => ({
       position: {
@@ -510,6 +510,9 @@ documents.onWillSaveWaitUntil(async (params) => {
     if (isLatest(uri, version)) {
       changes = inferedInserts(uri);
     }
+  }
+  if (settings.inlineTypeHint) {
+    connection.languages.inlayHint.refresh();
   }
   return changes
 })
