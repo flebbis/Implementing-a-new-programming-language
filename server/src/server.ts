@@ -269,8 +269,8 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
 // -------------------------------------------------------------------------------------------------
 // Hover
 const wordChar: RegExp = /[A-z0-9\_]/
+const excluded: RegExp = /[0-9]+(.[0-9]+)?|\b(true|false|do|while|if|else|return|func|int|bool|string|double)\b/
 const opChar: RegExp = /\-|\<|\>|\=|\!|\+|\*|\%/
-const typeWord: RegExp = /int|bool|string|double/
 
 function inc(pos: Position): Position {
   return { line: pos.line, character: pos.character + 1 }
@@ -280,57 +280,47 @@ function dec(pos: Position): Position {
   return { line: pos.line, character: pos.character - 1 }
 }
 
-connection.onHover((params: HoverParams) => {
+/**
+ * get entire line (up to ``endAt`` characters) 
+ */
+function lineRange(line: number, endAt: number): Range {
+  return {
+    start: { line, character: 0 },
+    end: { line, character: endAt }
+  }
+}
 
+connection.onHover((params: HoverParams) => {
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
-
   let pos = params.position;
   if (doc != undefined) {
-    //Don't begin a hover over whitespace
-    if (!/ /.test(doc.getText(charRange(pos)))) {
-      const { word, range } = findSymbolAt(pos, doc)
+    if (!inComment(pos, doc) //don't match inside comments
+      && !inString(pos, doc) // don't match inside strings
+      && wordChar.test(doc.getText(charRange(pos)))) { //only match if word
+      const { word, range } = findWordAt(pos, doc)
       let m: RegExpMatchArray | null = doc.getText().match(word)
-      let description = "" 
-      if (m&&m.index) {//ensures there is at least one match
+      let description = ""
+      if (!excluded.test(word) //exclude numerics, litterals and types
+        && m && m.index) { //ensures there is at least one match
         const mPos = doc.positionAt(m.index)
-        let r:Range = {
-          start: {line: mPos.line, character:0},
-          end:   {line: mPos.line, character:80}
+        let r: Range = lineRange(mPos.line, 150)
+        description = doc.getText(r).trim() //remove trailing and leading whitespace 
+        let contents: MarkupContent = {
+          kind: MarkupKind.Markdown,
+          value: [
+            `### ${word}`,
+            '```',
+            `${description}`,
+            '```'
+          ].join('\n')
+        }
+        res = { contents, range }
       }
-      description = doc.getText(r).trim()
-    }
-      let contents: MarkupContent = {
-        kind: MarkupKind.Markdown,
-        value: [
-          `### ${word}`,
-          '```',
-          `${description}`,
-          '```'
-        ].join('\n')
-      }
-      res = { contents, range }
     }
   }
   return res
 })
-
-
-// Symbol is either an operator or a word string
-function findSymbolAt(pos: Position, doc: TextDocument): { word: string; range: Range; } {
-  let cRange: Range = charRange(pos)
-  let regex: RegExp = /[]/
-  let char = doc.getText(cRange)
-  if (wordChar.test(char)) {
-    regex = wordChar;
-    connection.console.log(">>>>>>>> HOVER: word")
-  }
-  if (opChar.test(char)) { // maybe scrap this? No hover on operators?
-    regex = opChar;
-    connection.console.log(">>>>>>>> HOVER: operator")
-  }
-  return symSearch(regex, doc, pos);
-}
 
 
 function charRange(pos: Position): Range {
@@ -338,24 +328,70 @@ function charRange(pos: Position): Range {
 }
 
 
-function symSearch(reg: RegExp, doc: TextDocument, pos: Position): { word: string; range: Range; } {
+function findWordAt(pos: Position, doc: TextDocument): { word: string; range: Range; } {
   const range = {
-    start:   lim(reg, pos, dec, doc),
-    end: inc(lim(reg, pos, inc, doc))
+    start: lim(wordChar, pos, dec, doc),
+    end: inc(lim(wordChar, pos, inc, doc))
   }
-  return { word: doc.getText(range), range};
+  return { word: doc.getText(range), range };
 }
 
-function lim(reg : RegExp, start: Position, step: (p: Position) => Position, doc : TextDocument) : Position {
-  let pos : Position = start
-  let next : Position = step(start)
-  while(reg.test(doc.getText(charRange(next)))) {
+function lim(reg: RegExp, start: Position, step: (p: Position) => Position, doc: TextDocument): Position {
+  let pos: Position = start
+  let next: Position = step(start)
+  while (reg.test(doc.getText(charRange(next)))) {
     pos = next
     next = step(next)
   }
   return pos
 }
 
+function inComment(pos: Position, doc: TextDocument): boolean {
+  return inLineComment(pos, doc) || inBlockComment(pos.line, doc)
+}
+
+function inLineComment(pos: Position, doc: TextDocument): boolean{
+  const lineRangeBefore: Range = lineRange(pos.line, pos.character)
+  const lineText: string = doc.getText(lineRangeBefore)
+  const lineComment: RegExp = /.*\/\/.*/
+  return lineComment.test(lineText)
+}
+
+
+function inBlockComment(line: number, doc: TextDocument): boolean{
+  //TODO:
+  // on same line:
+  // check if /* before
+  //  /\/\*(?!.*\*\/)/
+  // or */ after point 
+  //  /(?<!\/\*.*)\*\//
+  
+  let res = false
+  if (line < doc.lineCount/2) {
+    // step up, /\/\*(?!.*\*\/)/ => true, /\*\// => false
+    res = findBlockLim(line-1, doc, (n => {return n-1}), 0, /\/\*(?!.*\*\/)/, /\*\//)
+  } else {
+    // step down, /(?<!\/\*.*)\*\// => true, /\/\*/ => false
+    res = findBlockLim(line+1, doc, (n => {return n+1}), doc.lineCount, /(?<!\/\*.*)\*\//, /\/\*/)
+  }
+  return res
+}
+
+function findBlockLim(line:number, doc: TextDocument, step: (p: number) => number, end: number, accept: RegExp, reject: RegExp): boolean{
+  if (line < 0) { //reached end (start) of file without finding block
+    return false
+  }
+  return findBlockLim(step(line), doc, step, end, accept, reject)
+}
+
+function inString(pos: Position, doc: TextDocument): boolean{
+//TODO
+// idea: count number of ``"`` characters to left or right of hover position,
+// odd -> true
+// even -> false
+  let count = 0
+  return count % 2 == 1
+}
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
