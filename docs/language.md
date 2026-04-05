@@ -37,7 +37,8 @@ In the following sections, we will explore the syntax and features of FIKA in mo
   - [Functions](#functions)
     - [Function Definitions](#function-definitions)
     - [Function Calls](#function-calls)
-  -  [Comments](#comments)
+  - [Arrays](#arrays)
+  - [Comments](#comments)
   - [More on inference](#more-on-inference)
     - [Simple inference example](#simple-inference-example)
     - [int to double promotion](#int-to-double-promotion)
@@ -191,8 +192,19 @@ will output:
 15
 ```
 
-### Arrays 
-//TDOD: add array syntax and examples
+### Arrays
+The syntax for declaring and using arrays is defined using square brackets `[]` and the type of array. You can declare an array of a specific type, and then initialize it with values. All arrays are dynamic, so you do not need to specify the size of the array when declaring it.
+
+Example of declaring and initializing an array of integers:
+```
+[int] numbers = [1, 2, 3, 4, 5]
+```
+
+Appending to an array can be done using the `append` function:
+```
+numbers.append(6)
+```
+will result in `numbers` being `[1, 2, 3, 4, 5, 6]`.
 
 ### Comments
 Comments in FIKA are denoted by `//` for single-line comments and `/* ... */` for multi-line comments.
