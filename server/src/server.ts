@@ -280,26 +280,35 @@ function dec(pos: Position): Position {
   return { line: pos.line, character: pos.character - 1 }
 }
 
+function lineFromTo(line: number, from: number, to: number): Range {
+  return {
+    start: { line, character: from },
+    end: { line, character: to }
+  }
+}
+
 /**
  * get entire line (up to ``endAt`` characters) 
  */
 function lineRange(line: number, endAt: number): Range {
-  return {
-    start: { line, character: 0 },
-    end: { line, character: endAt }
-  }
+  return lineFromTo(line, 0, endAt)
 }
 
 connection.onHover((params: HoverParams) => {
+  connection.console.log("onHover:")
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
   let pos = params.position;
   if (doc != undefined) {
+  connection.console.log("onHover: DOC EXISTS")
     if (!inComment(pos, doc) //don't match inside comments
       && !inString(pos, doc) // don't match inside strings
       && wordChar.test(doc.getText(charRange(pos)))) { //only match if word
+  connection.console.log("onHover: WORD DETECTED")
       const { word, range } = findWordAt(pos, doc)
+  connection.console.log("onHover: " + word)
       let m: RegExpMatchArray | null = doc.getText().match(word)
+  connection.console.log("onHover: " + m?.toString())
       let description = ""
       if (!excluded.test(word) //exclude numerics, litterals and types
         && m && m.index) { //ensures there is at least one match
@@ -347,50 +356,78 @@ function lim(reg: RegExp, start: Position, step: (p: Position) => Position, doc:
 }
 
 function inComment(pos: Position, doc: TextDocument): boolean {
-  return inLineComment(pos, doc) || inBlockComment(pos.line, doc)
+  connection.console.log("onHover: ? IN COMMENT ?")
+  return inLineComment(pos, doc) || inBlockComment(pos, doc)
 }
 
+const lineComment: RegExp = /.*\/\/.*/
 function inLineComment(pos: Position, doc: TextDocument): boolean{
+  connection.console.log("onHover: ? lINE COMMENT ?")
   const lineRangeBefore: Range = lineRange(pos.line, pos.character)
   const lineText: string = doc.getText(lineRangeBefore)
-  const lineComment: RegExp = /.*\/\/.*/
   return lineComment.test(lineText)
 }
 
+const unclosedOpeningBlockComment: RegExp = /\/\*(?!.*\*\/)/;
+const unopenedClosingBlockComment: RegExp = /(?<!\/\*.*)\*\//;
+const openingBlockComment: RegExp = /\/\*/;
+const closingBlockComment: RegExp = /\*\//;
 
-function inBlockComment(line: number, doc: TextDocument): boolean{
-  //TODO:
-  // on same line:
+function inBlockComment(pos: Position, doc: TextDocument): boolean{
   // check if /* before
   //  /\/\*(?!.*\*\/)/
   // or */ after point 
   //  /(?<!\/\*.*)\*\//
-  
-  let res = false
-  if (line < doc.lineCount/2) {
+  connection.console.log("onHover: ? BLOCK COMMENT ?")
+  let res: boolean
+  const lineNr = pos.line
+  const lineBefore = doc.getText(lineFromTo(lineNr, 0, pos.character))
+  const lineAfter  = doc.getText(lineFromTo(lineNr, pos.character, 999))
+  if ( unclosedOpeningBlockComment.test(lineBefore)
+    // there is an unclosed block-comment opening on the same line before hover position
+    || unopenedClosingBlockComment.test(lineAfter)) { 
+    // there is an unopened block-comment closing on the same line after  hover position
+    res = true
+  } else if (closingBlockComment.test(lineBefore) 
+    // there is a  closing block-comment on same line before hover position
+          || openingBlockComment.test(lineAfter)) {
+    // there is an opening block-comment on same line after  hover position
+    res = false
+  }else if (lineNr < doc.lineCount/2) { //check if unclosed block-comment opening above
     // step up, /\/\*(?!.*\*\/)/ => true, /\*\// => false
-    res = findBlockLim(line-1, doc, (n => {return n-1}), 0, /\/\*(?!.*\*\/)/, /\*\//)
-  } else {
+    res = findBlockLim(lineNr-1, doc, (n => {return n-1}), 0, unclosedOpeningBlockComment, closingBlockComment)
+  } else { // check if unopened block-comment closes below
     // step down, /(?<!\/\*.*)\*\// => true, /\/\*/ => false
-    res = findBlockLim(line+1, doc, (n => {return n+1}), doc.lineCount, /(?<!\/\*.*)\*\//, /\/\*/)
+    res = findBlockLim(lineNr+1, doc, (n => {return n+1}), doc.lineCount, unopenedClosingBlockComment, openingBlockComment)
   }
   return res
 }
 
-function findBlockLim(line:number, doc: TextDocument, step: (p: number) => number, end: number, accept: RegExp, reject: RegExp): boolean{
-  if (line < 0) { //reached end (start) of file without finding block
-    return false
+function findBlockLim(lineNr:number, doc: TextDocument, step: (p: number) => number, end: number, accept: RegExp, reject: RegExp): boolean{
+  connection.console.log("onHover: LINE = " + lineNr)
+  let res:boolean
+  const line = doc.getText(lineRange(lineNr, 999))
+  if (accept.test(line)) {
+    res = true
+  } else if ( reject.test(line) //rejection criteria met
+    || lineNr - end == 0) { //reached end (or start) of file without accepting
+      res = false
+  } else {
+    res = findBlockLim(step(lineNr), doc, step, end, accept, reject)
   }
-  return findBlockLim(step(line), doc, step, end, accept, reject)
+  return res
 }
 
 function inString(pos: Position, doc: TextDocument): boolean{
+  connection.console.log("onHover: ? IN STRING ?")
 //TODO
 // idea: count number of ``"`` characters to left or right of hover position,
 // odd -> true
 // even -> false
   let count = 0
-  return count % 2 == 1
+  let res = (count % 2) == 1
+  connection.console.log("onHover: " + res)
+  return res
 }
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
