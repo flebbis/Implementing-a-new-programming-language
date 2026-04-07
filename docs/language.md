@@ -212,6 +212,8 @@ Note that the same array can also be declared without an explicit type, and the 
 numbers = [1, 2, 3, 4, 5]
 ```
 
+Elements are accessed using index notation with square brackets. For example, `numbers[0]` will access the first element of the array, which is `1`.
+
 
 ### Comments
 Comments in FIKA are denoted by `//` for single-line comments and `/* ... */` for multi-line comments. Comments are ignored by the compiler and are used to provide explanations or annotations within the code.
@@ -235,7 +237,7 @@ x = 5
 ```
 In this example, we declare a variable `x` without specifying its type. When we assign the value `5` to `x`, the language automatically infers that `x` is of type `int`. This means that we can use `x` in any context where an integer is expected, and the language will treat it as an integer.
 
-If x is later on assigned a value of a different type, such as a string, the language will raise a type error, since `x` has already been inferred to be of type `int`. This is one of the key features of FIKA's type system, which combines the benefits of static typing with the flexibility of dynamic typing.
+It is important to note that once a variable as been assigned a type, it cannot change type automatically. If x is later on assigned a value of a different type, such as a string, the language will raise a static type error inside the IDE, since `x` has already been inferred to be of type `int`. This is one of the key features of FIKA's type system, which combines the benefits of static typing with the flexibility of dynamic typing.
 
 #### int to double promotion
 Although the language is statically typed, it provides a lot of flexibility. For instance, ints are automatically promoted to doubles when used in an expression with a double, and the result will be inferred as a double. This allows for seamless integration of different types without the need for explicit type conversions.
