@@ -189,14 +189,14 @@ export async function activate(context: ExtensionContext) {
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
       lineMap = buildLineMap(asm.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
-      console.log('srcMapAsm entries:');
-      for (const [src, asms] of lineMap.srcMapAsm) {
-        console.log(`  src line ${src} -> asm lines [${asms}]`);
-      }
-      console.log('asmMapSrc entries:');
-      for (const [asm2, src] of lineMap.asmMapSrc) {
-        console.log(`  asm line ${asm2} -> src line ${src}`);
-      }
+      console.log('=== RAW .s lines with indices ===');
+      asm.split('\n').forEach((line: string, i: number) => console.log(`raw[${i}]: "${line}"`));
+
+      console.log('=== FILTERED display lines with indices ===');
+      filtered.split('\n').forEach((line: string, i: number) => console.log(`display[${i}]: "${line}"`));
+
+      console.log('=== asmMapSrc ===');
+      for (const [a, s] of lineMap.asmMapSrc) console.log(`  asm[${a}] → src line ${s}`);
       if(!lineMap){
         console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")
@@ -206,7 +206,7 @@ export async function activate(context: ExtensionContext) {
       const varMap = buildVarMap(llContent);
       console.log('funcVarMap:', JSON.stringify([...varMap.funcVarMap]));
       console.log('funcVarMap:', varMap.funcVarMap);
-      const stackMap = buildStackMap(asm.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
+      const stackMap = buildStackMap(filtered.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
       console.log('funcStackMap:', JSON.stringify([...stackMap.funcStackMap]));
       console.log('funcStackMap:', stackMap.funcStackMap);
       zippVarMap = zippedVarMap(varMap.funcVarMap, stackMap.funcStackMap);

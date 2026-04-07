@@ -44,15 +44,16 @@ public class CodeGenerator {
         sb.append("declare i8* @array_string_to_string(i8*, i32)\n");
 
         DebugMetaData debugMetaData = new DebugMetaData(fileName);
-        sb.append("define void @main() {\n");
+        int mainId = debugMetaData.createSubProgram("main", 1);
+        sb.append("define void @main() !dbg !").append(mainId).append(" {\n");
         sb.append("entry:\n");
         StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables, debugMetaData);
         for (Ast.Stmt statement : program.stmts()) {
             stmtGen.generateStatement(statement);
         }
 
-        sb.append("  ret void\n");
-        //sb.append("  ret i32 0\n");
+        sb.append("  ret void")
+        .append(", !dbg !").append(debugMetaData.getLineId(1)).append("\n");
         sb.append("}\n\n");
 
         for (Ast.Func function : program.functions()) {

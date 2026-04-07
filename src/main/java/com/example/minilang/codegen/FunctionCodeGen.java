@@ -45,8 +45,8 @@ public class FunctionCodeGen {
             if (i < function.params().size()-1){
                 sb.append(helper.convertType(arg.type()) + " %" + arg.name() + ", ");
             } else {
-                sb.append(helper.convertType(arg.type()) + " %" + arg.name() + ") {\nentry:")
-                .append(") !dbg !").append(funcId).append(" {\nentry:\n");
+                sb.append(helper.convertType(arg.type()) + " %" + arg.name()
+                + ") !dbg !" + funcId + " {\nentry:\n");
             }
             functionVariables.add(arg.name());
             i++;
@@ -55,7 +55,8 @@ public class FunctionCodeGen {
 
         stmtGen.generateStatement(function.body());
         if(function.returnType() instanceof Ast.TUnknown) {
-            sb.append("  ret void\n");
+            sb.append("  ret void")
+            .append(", !dbg !").append(debugMetaData.getLineId(function.pos().line)).append("\n");
         }
         sb.append("\n}\n");
     }

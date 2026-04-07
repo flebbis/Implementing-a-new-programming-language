@@ -55,7 +55,8 @@ public class StatementCodeGen extends Helper {
         String endLabel = labelGenerator.generateLabel("while_end");
 
         // Jump to condition check
-        sb.append("  br label %").append(condLabel).append("\n");
+        sb.append("  br label %").append(condLabel)
+        .append(", !dbg !").append(debugMetaData.getLineId(whileStmt.pos().line)).append("\n");
 
         // Condition check
         sb.append(condLabel).append(":\n");
@@ -81,48 +82,41 @@ public class StatementCodeGen extends Helper {
         String bodyLabel = labelGenerator.generateLabel("do_body");
         String endLabel = labelGenerator.generateLabel("do_end");
 
-        String times = expressionCodeGen.generateExpression(doStmt.times()); // Should be an integer value (i32 in LLVM)
+        String dbg = ", !dbg !" + debugMetaData.getLineId(doStmt.pos().line);
+
+        String times = expressionCodeGen.generateExpression(doStmt.times());
 
         String counterPtr = generateRegister();
         String limitPtr = generateRegister();
 
-        // Initialize counter & limit (gets value of times)
-        sb.append(counterPtr).append(" = alloca i32\n");
-        sb.append(limitPtr).append(" = alloca i32\n");
-        sb.append("store i32 0, i32* ").append(counterPtr).append("\n");
-        sb.append("store i32 ").append(times).append(", i32* ").append(limitPtr).append("\n");
+        sb.append(counterPtr).append(" = alloca i32").append(dbg).append("\n");
+        sb.append(limitPtr).append(" = alloca i32").append(dbg).append("\n");
+        sb.append("store i32 0, i32* ").append(counterPtr).append(dbg).append("\n");
+        sb.append("store i32 ").append(times).append(", i32* ").append(limitPtr).append(dbg).append("\n");
 
-        // Condition
-        sb.append("br label %").append(condLabel)
-        .append(", !dbg !").append(debugMetaData.getLineId(doStmt.pos().line)).append("\n");
+        sb.append("br label %").append(condLabel).append(dbg).append("\n");
         sb.append(condLabel).append(":\n");
 
         String currentCounter = generateRegister();
         String currentLimit = generateRegister();
         String cmpReg = generateRegister();
 
-        sb.append(" ").append(currentCounter).append(" = load i32, i32* ").append(counterPtr).append("\n"); // Load current counter value
-        sb.append(" ").append(currentLimit).append(" = load i32, i32* ").append(limitPtr).append("\n"); // Load current counter value
-        sb.append(" ").append(cmpReg).append(" = icmp slt i32 ").append(currentCounter).append(", ").append(currentLimit).append("\n"); // Compare counter with limit
-        sb.append(" ").append("br i1 ").append(cmpReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel)
-        .append(", !dbg !").append(debugMetaData.getLineId(doStmt.pos().line)).append("\n"); // jump to body if counter < limit
+        sb.append(" ").append(currentCounter).append(" = load i32, i32* ").append(counterPtr).append(dbg).append("\n");
+        sb.append(" ").append(currentLimit).append(" = load i32, i32* ").append(limitPtr).append(dbg).append("\n");
+        sb.append(" ").append(cmpReg).append(" = icmp slt i32 ").append(currentCounter).append(", ").append(currentLimit).append(dbg).append("\n");
+        sb.append(" ").append("br i1 ").append(cmpReg).append(", label %").append(bodyLabel).append(", label %").append(endLabel).append(dbg).append("\n");
 
-        // Body
         sb.append(bodyLabel).append(":\n");
         generateStatement(doStmt.body());
-        // Increment counter
+
         String old = generateRegister();
         String next = generateRegister();
-        sb.append(old).append(" = load i32, i32* ").append(counterPtr).append("\n");
-        sb.append(next).append(" = add i32 ").append(old).append(", 1\n");
-        sb.append("store i32 ").append(next).append(", i32* ").append(counterPtr).append("\n");
-        // After body, jump back to condition
-        sb.append("  br label %").append(condLabel)
-        .append(", !dbg !").append(debugMetaData.getLineId(doStmt.pos().line)).append("\n");
+        sb.append(old).append(" = load i32, i32* ").append(counterPtr).append(dbg).append("\n");
+        sb.append(next).append(" = add i32 ").append(old).append(", 1").append(dbg).append("\n");
+        sb.append("store i32 ").append(next).append(", i32* ").append(counterPtr).append(dbg).append("\n");
+        sb.append("  br label %").append(condLabel).append(dbg).append("\n");
 
-        // End of loop
         sb.append(endLabel).append(":\n");
-
     }
 
     private void generateIf(SIf ifStmt) {

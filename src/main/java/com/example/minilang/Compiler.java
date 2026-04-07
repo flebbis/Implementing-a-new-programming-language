@@ -113,7 +113,12 @@ public class Compiler {
             stmtCodegen.generateStatement(stmt);
         }
 
-        sb.append("  ret void\n");
+       int lastLine = program.stmts().isEmpty()
+        ? 1
+        : program.stmts().get(program.stmts().size() - 1).pos().line;
+
+        sb.append("  ret void")
+        .append(", !dbg !").append(debugMetaData.getLineId(lastLine)).append("\n");
         sb.append("}\n\n");
 
         // ===== Generate Code for Each Function =====
