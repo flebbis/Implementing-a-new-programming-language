@@ -105,6 +105,7 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
     let srcMapAsm: Map<number, number[]> = new Map();
     let currentSrcLine: number = 0;
     let currentAsmLine: number = 0;
+    let isFunction = false; // check if its a function or not
 
     for(let i = 0; i < asmLines.length; i++) {
         const line = asmLines[i];
@@ -135,7 +136,7 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
  
         const filtered = isDirective || isComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
         const newFunction = trimmed.startsWith("_") && trimmed.includes(":");
-        let isFunction = false; // check if its a function or not
+
 
         if(filtered) continue;
         // peek ahead to find the next .loc line number
