@@ -5,28 +5,28 @@ FIKA is a modern programming language designed to make low-level concepts more a
 The language is particularly focused on education, allowing users to understand how high-level code maps to lower-level representations.
 
 ## Basic Code Example
+The following example demonstrates the basic syntax of FIKA, including variable declaration, function definition, and the use of a `do` loop to repeat an action multiple times. The types of variables and expressions are inferred automatically by the language, providing immediate feedback on the types being used.
 ```
 x = 5
-y = 10
 
-do 3 {
-    print(x + y)
+func printThreeTimes(value) {
+  do 3 {
+      print(value)
+  }
 }
+
+printThreeTimes(x + 10)
 ```
 
 Output:
 ```
-15 
 15
+15 
 15
 ```
 
-In this example, we declare two variables `x` and `y`, and then use a special `do` loop to print their sum three times. 
-The types are inferred automatically, and the language provides immediate feedback on the types of `x` and `y` as well as the result of the expression `x + y`.
-
-
 ## Table of Contents
-In the following sections, we will explore the syntax and features of FIKA in more detail, including its type system, control flow constructs, and function definitions.
+In the following sections, we will explore the syntax and features of FIKA in more detail, including its type system, control flow constructs, functions, arrays, comments, and more on type inference. The limited standard library will also be covered.
 - [Types](#types)
 - [Basic Syntax](#basic-syntax)
   - [Variables](#variables)
@@ -49,12 +49,12 @@ In the following sections, we will explore the syntax and features of FIKA in mo
 ## Types
 FIKA has four primitive types: `int`, `double`, `bool`, and `string`. 
 
-Dynamic arrays are also supported, and can be declared using the `[]` syntax. For example, `[int]` represents an array of integers, and `[string]` represents an array of strings.
-You do not need to specify the size of the array when declaring it, as FIKA will automatically manage the memory for you.
+Dynamic arrays are also supported, and can be declared putting a primitive type inside of squared brackets. For example, `[int]` represents an array of integers, and `[string]` represents an array of strings.
+The size of the array does not need to be specified when declaring the array, as FIKA will automatically manage the memory for you.
 
 
 ## Basic Syntax
-In the following section, the basic syntax of FIKA is explained, including variable declarations, control flow, and function definitions.
+In the following section, the basic syntax of FIKA is explained, including variable declarations, control flow constructs, function definitions and calls, array usage, and comments. Additionally, the powerful type inference system of FIKA is discussed in more detail.
 
 ### Variables
 Variables in FIKA are declared using a simple assignment syntax. The type of the variable is inferred from the assigned value, 
@@ -88,7 +88,7 @@ If statements are used for conditional execution of code blocks. The syntax is s
 Example:
 ```
 x = 5
-if x > 0 {
+if (x > 0) {
     print("x is positive")
 } else {
     print("x is non-positive")
@@ -104,9 +104,9 @@ x is positive
 Example:
 ```
 x = -1
-if x > 0 {
+if (x > 0) {
     print("x is positive")
-} else if x < 0 {
+} else if (x < 0) {
     print("x is negative")
 } else {
     print("x is zero")
@@ -136,7 +136,7 @@ will output:
 ```
 
 #### Do Loops
-The `do` loop is a unique control flow construct in FIKA that allows you to execute a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block.
+The `do` loop is a unique control flow construct in FIKA that allows for executing a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block.
 
 Example:
 ```
@@ -157,6 +157,7 @@ Hello, FIKA!
 #### Function Definitions
 Functions are defined by using the `func` keyword, followed by the function name, a list of comma-separated parameters in parentheses, and the function body enclosed in curly braces. 
 The return type can be specified before the func keyword, but is optional if it can be inferred.
+
 Example:
 ```
 func add(a, b) {
@@ -193,7 +194,7 @@ will output:
 ```
 
 ### Arrays
-The syntax for declaring and using arrays is defined using square brackets `[]` and the type of array. You can declare an array of a specific type, and then initialize it with values. All arrays are dynamic, so you do not need to specify the size of the array when declaring it.
+The syntax for declaring and using arrays is defined by enclosing the type of the array inside square brackets, eg `[double]`. All arrays are dynamic, so it is not needed to specify the size of the array when declaring it.
 
 Example of declaring and initializing an array of integers:
 ```
@@ -206,8 +207,14 @@ numbers.append(6)
 ```
 will result in `numbers` being `[1, 2, 3, 4, 5, 6]`.
 
+Note that the same array can also be declared without an explicit type, and the type will be inferred from the assigned value:
+```
+numbers = [1, 2, 3, 4, 5]
+```
+
+
 ### Comments
-Comments in FIKA are denoted by `//` for single-line comments and `/* ... */` for multi-line comments.
+Comments in FIKA are denoted by `//` for single-line comments and `/* ... */` for multi-line comments. Comments are ignored by the compiler and are used to provide explanations or annotations within the code.
 ```
 // This is a single-line comment
 
@@ -216,8 +223,8 @@ This is a multi-line comment
 */
 ```
 
-### More on inference
-FIKA has a powerful type inference system that can deduce the types of variables and expressions based on the context in which they are used. This allows for a more concise and readable code, while still maintaining the benefits of a strongly typed language. 
+### Type system and inference
+The following section explains the type system of FIKA in more detail, with a focus on its powerful type inference capabilities. The language is a statically typed language, which means that the types of variables and expressions are determined at compile time. However, FIKA also has a powerful type inference system that allows for a more concise and readable code, while still maintaining the benefits of a strongly typed language.
 
 
 #### Simple inference example
@@ -246,7 +253,7 @@ will output:
 Where result will automatically be inferred as a double, since it is the result of adding an int and a double.
 
 #### String concatenation
-Similarly to int to double promotion, when using the `+` operator with strings, the language will automatically concatenate them. For example:
+Similarly to int to double promotion, when using the `+` operator with strings, the language will automatically concatenate them into a result of type `string`. For example:
 ```
 greeting = "Hello, "
 name = "FIKA"
