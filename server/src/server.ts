@@ -160,6 +160,10 @@ documents.onDidClose(e => {
 
 // Map to store which version was changed latest
 const latestDocumentVersions: Map<string, number> = new Map();
+const autoAcceptCascade = new Map<string, boolean>();
+const cascadePassCount = new Map<string, number>();
+const MAX_CASCADE_PASSES = 10;
+
 
 documents.onDidChangeContent(change => {
   
@@ -179,74 +183,90 @@ documents.onDidChangeContent(change => {
 async function inferenceAnalysis(uri: string, text: string, version: number) {
     try {
         const result = (await runJavaAnalysis(text)) as AnalysisResult;
+        const suggestions = result?.inferenceSuggestions ?? [];
+        const replacements = result?.typeReplacementSuggestions ?? [];
 
-        // Java returns a single object with two arrays
-        const suggestions: InferenceSuggestion[] = result?.inferenceSuggestions ?? [];
-        const replacements: TypeReplacementSuggestion[] = result?.typeReplacementSuggestions ?? [];
         const applyAction: MessageActionItem = { title: "Apply" };
         const ignoreAction: MessageActionItem = { title: "Ignore" };
 
-        console.error("RESULT " + JSON.stringify(result));
+        let autoMode = autoAcceptCascade.get(uri) === true;
+        let appliedAnyEdit = false;
 
-        // Keep if you still use it elsewhere
-        inferenceSuggestionMap.set(uri, suggestions);
-
-        // Prevent applying edits from outdated analysis
-        const latestVersion = latestDocumentVersions.get(uri);
-        if (latestVersion !== version) {
-            connection.console.warn(
-                `Outdated analysis result for ${uri} (version ${version}), latest version is ${latestVersion}`
-            );
-            return;
+        // Safety guard against accidental infinite edit loops
+        const passes = cascadePassCount.get(uri) ?? 0;
+        if (autoMode && passes >= MAX_CASCADE_PASSES) {
+            autoAcceptCascade.delete(uri);
+            cascadePassCount.delete(uri);
+            autoMode = false;
         }
 
-        // 1) Ask before replacing declared types
         for (const r of replacements) {
-            const action = await connection.window.showWarningMessage(
-                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Apply change?`,
-                applyAction,
-                ignoreAction
-            );
+            let shouldApply = false;
 
-            if (action?.title === "Apply") {
-                await connection.workspace.applyEdit({
-                    changes: {
-                        [uri]: [
-                            TextEdit.replace(
-                                {
-                                    start: { line: r.line - 1, character: r.column },
-                                    end: { line: r.endLine - 1, character: r.endColumn }
-                                },
-                                r.newType
-                            )
-                        ]
-                    }
-                });
+            if (autoMode) {
+                shouldApply = true;
+            } else {
+                const action = await connection.window.showWarningMessage(
+                    `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Apply change?`,
+                    applyAction,
+                    ignoreAction
+                );
+                shouldApply = action?.title === "Apply";
+            }
+
+            if (!shouldApply) continue;
+
+            const editResult = await connection.workspace.applyEdit({
+                changes: {
+                    [uri]: [
+                        TextEdit.replace(
+                            {
+                                start: { line: r.line - 1, character: r.column },
+                                end: { line: r.endLine - 1, character: r.endColumn }
+                            },
+                            r.newType
+                        )
+                    ]
+                }
+            });
+
+            if (editResult.applied) {
+                appliedAnyEdit = true;
+                autoAcceptCascade.set(uri, true); // turn on cascade after first successful apply
             }
         }
 
-        // 2) Apply normal inference inserts
+        // Keep your inference inserts; optionally also gate them with autoMode if needed
         for (const s of suggestions) {
-            await connection.workspace.applyEdit({
+            const editResult = await connection.workspace.applyEdit({
                 changes: {
                     [uri]: [
                         TextEdit.insert(
-                            {
-                                line: s.line - 1,
-                                character: s.column
-                            },
+                            { line: s.line - 1, character: s.column },
                             `${s.inferredType} `
                         )
                     ]
                 }
             });
+
+            if (editResult.applied) {
+                appliedAnyEdit = true;
+            }
         }
 
-        inferenceSuggestionMap.delete(uri);
+        if (appliedAnyEdit) {
+            cascadePassCount.set(uri, (cascadePassCount.get(uri) ?? 0) + 1);
+        } else {
+            // no more edits => done cascading
+            autoAcceptCascade.delete(uri);
+            cascadePassCount.delete(uri);
+        }
+
     } catch (error) {
         connection.console.error("Error running Java analysis: " + error);
     }
 }
+
 
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
