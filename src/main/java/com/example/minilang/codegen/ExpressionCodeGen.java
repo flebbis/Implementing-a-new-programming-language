@@ -374,8 +374,8 @@ public class ExpressionCodeGen extends Helper {
         sb.append(globalValue).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(globalElemPointer).append("\n");
 
         String elemPointer = generateRegister();
-        sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(basePointer).append(", i32 ").append(currentIndex).append("\n");
-        sb.append("store ").append(arrayType).append(" ").append(globalValue).append(", ").append("i32* ").append(elemPointer).append("\n");
+        sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(basePointer).append(", i32 ").append(currentIndex).append("\n");
+        sb.append("store ").append(arrayType).append(" ").append(globalValue).append(", ").append(arrayType).append("* ").append(elemPointer).append("\n");
         String nextIndex = generateRegister();
 
 
@@ -425,12 +425,54 @@ public class ExpressionCodeGen extends Helper {
         ArrayValue arrayValue = arrayNameToValue.get(basePointer);
         if (arrayValue.size < arrayValue.capacity){
             String elemPointer = generateRegister();
-            sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(basePointer).append(", i32 ").append(arrayValue.size).append("\n");
+            sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(basePointer).append(", i32 ").append(arrayValue.size).append("\n");
             sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(elemPointer).append("\n");
             arrayValue.size++;
+            return basePointer;
         } 
         
-        return basePointer;
+            arrayValue.capacity *= 2;
+            int allocatedSpace = (arrayType.equals("double")) ? arrayValue.capacity * 8 : arrayValue.capacity * 4; 
+            String newSpacePointer = generateRegister();
+            String newBasePointer = generateRegister();
+
+            sb.append(newSpacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
+            sb.append(newBasePointer).append(" = bitcast i8* ").append(newSpacePointer).append(" to i32*\n");
+            
+            String counter = generateRegister();
+            sb.append(counter).append(" = alloca i32\n");
+            sb.append("store i32 ").append(0).append(", i32* ").append(counter).append("\n");
+            String loop = generateLabel("loop");
+            sb.append("br label %").append(loop).append("\n");
+            sb.append(loop).append(":\n");
+            String currentIndex = generateRegister();
+            String check = generateRegister();
+            String loop_end = generateLabel("loopEnd");
+            sb.append(currentIndex).append(" = load i32, i32* ").append(counter).append("\n");
+            sb.append(check).append(" = icmp sge i32 ").append(currentIndex).append(", ").append(arrayValue.size).append("\n");
+            String loop_main = generateLabel("loopMain");
+            sb.append("br i1 ").append(check).append(", label %").append(loop_end).append(", label %").append(loop_main).append("\n");
+            sb.append(loop_main).append(":\n");
+            String old_ptr = generateRegister();
+            sb.append(old_ptr).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(basePointer).append(", i32 ").append(currentIndex).append("\n");
+            String valueAtOld = generateRegister();
+            sb.append(valueAtOld).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(old_ptr).append("\n");
+            String new_ptr = generateRegister();
+            sb.append(new_ptr).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(newBasePointer).append(", i32 ").append(currentIndex).append("\n");
+            sb.append("store ").append(arrayType).append(" ").append(valueAtOld).append(", ").append(arrayType).append("* ").append(new_ptr).append("\n");
+            String nextIndex = generateRegister();
+            sb.append(nextIndex).append(" = add i32 ").append(currentIndex).append(", 1\n");
+            sb.append("store i32 ").append(nextIndex).append(", i32* ").append(counter).append("\n");
+            sb.append("br label %").append(loop).append("\n");
+            sb.append(loop_end).append(":\n");
+
+            String appent_ptr = generateRegister();
+            sb.append(appent_ptr).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(newBasePointer).append(", i32 ").append(arrayValue.size).append("\n");
+            sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(appent_ptr).append("\n");
+            arrayValue.size++;
+            arrayValue.pointer = newBasePointer;
+            return newBasePointer;
+        
     }
 
 
