@@ -186,32 +186,39 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
         const suggestions = result?.inferenceSuggestions ?? [];
         const replacements = result?.typeReplacementSuggestions ?? [];
 
-        const applyAction: MessageActionItem = { title: "Apply" };
+        const applyOnceAction: MessageActionItem = { title: "Apply once" };
+        const applyAllAction: MessageActionItem = { title: "Apply & fix all" };
         const ignoreAction: MessageActionItem = { title: "Ignore" };
 
         let autoMode = autoAcceptCascade.get(uri) === true;
         let appliedAnyEdit = false;
 
-        // Safety guard against accidental infinite edit loops
-        const passes = cascadePassCount.get(uri) ?? 0;
-        if (autoMode && passes >= MAX_CASCADE_PASSES) {
-            autoAcceptCascade.delete(uri);
-            cascadePassCount.delete(uri);
-            autoMode = false;
-        }
-
         for (const r of replacements) {
             let shouldApply = false;
+            let enableCascade = false;
 
             if (autoMode) {
+                // Already in "fix all" mode from a previous user choice
                 shouldApply = true;
+                enableCascade = true;
             } else {
                 const action = await connection.window.showWarningMessage(
-                    `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Apply change?`,
-                    applyAction,
+                    `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}.`,
+                    applyOnceAction,
+                    applyAllAction,
                     ignoreAction
                 );
-                shouldApply = action?.title === "Apply";
+
+                if (action?.title === applyOnceAction.title) {
+                    shouldApply = true;
+                    enableCascade = false;
+                } else if (action?.title === applyAllAction.title) {
+                    shouldApply = true;
+                    enableCascade = true;
+                } else {
+                    // Ignore or dismiss => decline
+                    shouldApply = false;
+                }
             }
 
             if (!shouldApply) continue;
@@ -232,9 +239,14 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
 
             if (editResult.applied) {
                 appliedAnyEdit = true;
-                autoAcceptCascade.set(uri, true); // turn on cascade after first successful apply
+
+                if (enableCascade) {
+                    autoAcceptCascade.set(uri, true);
+                    autoMode = true; // important: remaining replacements in this same run auto-apply
+                }
             }
         }
+
 
         // Keep your inference inserts; optionally also gate them with autoMode if needed
         for (const s of suggestions) {
