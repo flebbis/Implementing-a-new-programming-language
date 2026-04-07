@@ -471,6 +471,7 @@ public class ExpressionCodeGen extends Helper {
             sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(appent_ptr).append("\n");
             arrayValue.size++;
             arrayValue.pointer = newBasePointer;
+            arrayNameToValue.put(newBasePointer, arrayValue);
             return newBasePointer;
         
     }
