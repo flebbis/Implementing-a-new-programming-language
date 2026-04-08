@@ -28,10 +28,14 @@ export const PROFILES = {
     },
 
     "arm": {name: "arm", patterns: [
-        /^\s*sub\s+sp,\s+sp,/,
+        /^\s*sub\s+sp,\s+sp,/,     // ARM: sub sp, sp, #N
+        /^\s*sub\s+sp,\s+#/,       // Thumb: sub sp, #N
         /^\s*add\s+sp,\s+sp,/,
-        /^\s*mov\s+pc,\s+lr/
+        /^\s*push\s+\{/,            // prologue push
+        /^\s*pop\s+\{[^}]*pc/,     // epilogue pop restoring pc
+        /^\s*bx\s+lr/,             // ARM/Thumb return via bx lr
+        /^\s*mov\s+pc,\s+lr/       // old ARM return
     ],
-    stackSlot: /str\s+(?:r\d+),\s*(\[(?:r7|fp|sp|r\d+),\s*#?-?\d+\])/
+    stackSlot: /str\s+(?:r\d+),\s*(\[(?:r7|r11|fp|sp|r\d+),\s*#?-?\d+\])/
 }
 }

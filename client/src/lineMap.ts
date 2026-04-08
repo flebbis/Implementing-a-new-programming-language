@@ -55,14 +55,8 @@
 //                 if(linePeek.startsWith(".loc") && lineNumber != 0) {
 //                     currentSrcLine = lineNumber;
 //                     const funcDeclLine = lineNumber - 1;
-                    
-//                     console.log(`Function found: ${trimmed}, funcDeclLine: ${funcDeclLine}`);
-//                     console.log(`Scanning from i=${i} to k=${k}`);
-                    
-//                     let asmOffset = currentAsmLine;
-//                     for (let j = i + 1; j < k; j++) {
-//                         const between = asmLines[j].trim();
-//                         console.log(`  j=${j} asmOffset=${asmOffset} line: "${between}"`);
+//                     if (isFunction) {
+//                         recordMap(asmMapSrc, srcMapAsm, currentAsmLine, funcDeclLine);
 //                     }
 //                     break;
 //                 }
@@ -126,6 +120,7 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         // Filter the same as the assembly file filter out
         const isDirective = trimmed.startsWith('.') && !trimmed.startsWith('.LBB');
         const isComment   = trimmed.startsWith(';');
+        const isArmComment = trimmed.startsWith('@'); // ARM uses @ for comments (e.g. @ %bb.0:)
         const isLSymbol   = trimmed.startsWith('l_');
         const isHash      = trimmed.startsWith('#');
         const isBlankSpace = trimmed === '';
@@ -133,8 +128,8 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         const isNonLBBLabel = (trimmed.startsWith('L') || trimmed.endsWith(':'))
                             && !trimmed.startsWith('LBB')
                             && !trimmed.startsWith('_');
- 
-        const filtered = isDirective || isComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
+
+        const filtered = isDirective || isComment || isArmComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
         const newFunction = trimmed.startsWith("_") && trimmed.includes(":");
 
 
@@ -152,8 +147,13 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
                 const linePeek = asmLines[k].trim();
                 const lineNumberPeek = linePeek.split(/\s+/);
                 const lineNumber = Number(lineNumberPeek[2]);
-                if(linePeek.startsWith(".loc" ) && lineNumber != 0) {
-                    currentSrcLine = lineNumber;
+                if(linePeek.startsWith(".loc") && lineNumber != 0) {
+                    // Use lineNumber-1 so that prologue instructions (before the first
+                    // real .loc in the function body) also map to the function declaration line.
+                    currentSrcLine = lineNumber - 1;
+                    if (isFunction) {
+                        recordMap(asmMapSrc, srcMapAsm, currentAsmLine, lineNumber - 1);
+                    }
                     break;
                 }
             }
