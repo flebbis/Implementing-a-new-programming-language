@@ -24,12 +24,14 @@ public class ExpressionCodeGen extends Helper {
     private int stringCounter = 0;
     private HashSet<String> functionVariables;
     private Environment environment;
+    private ArrayCodeGenHelper arrayCodeGenHelper;
     public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment) {
         this.sb = sb;
         this.globals = globals;
         this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.environment = environment;
+        this.arrayCodeGenHelper = new ArrayCodeGenHelper(sb);
     }
 
 
@@ -150,49 +152,56 @@ public class ExpressionCodeGen extends Helper {
 
     }
     private String generateCall(ECall callExp) {
-
-        if (callExp.name().equals("print")){
+        if (callExp.name().equals("print")) {
             String register = generatePrintCall(callExp);
             if (register != null) return register;
-        } else {
-            if(callExp.type() instanceof Ast.TUnknown) {
-                // Should not return anything, so we can just call the function without storing the result in a register
-                sb.append("call void @").append(callExp.name()).append("(");
-                for (int i = 0; i < callExp.args().size(); i++) {
-                    Exp arg = callExp.args().get(i);
-                    String argValue = generateExpression(arg);
-                    sb.append(convertType(arg.type())).append(" ").append(argValue);
-                    if (i < callExp.args().size() - 1) {
-                        sb.append(", ");
-                    }
-                }
-                sb.append(")\n");
-                return "";
-            }
+        }
 
-            String register = generateRegister();
+        String[] argValues = new String[callExp.args().size()];
+        String[] argTypes = new String[callExp.args().size()];
 
-            sb.append(register).append(" = call ").append(convertType(callExp.type())).append(" @").append(callExp.name()).append("(");
+        // Generate all argument expressions first
+        for (int i = 0; i < callExp.args().size(); i++) {
+            Exp arg = callExp.args().get(i);
+            argValues[i] = generateExpression(arg);
+            argTypes[i] = convertType(arg.type());
+        }
+
+        // Void function call
+        if (callExp.type() instanceof Ast.TUnknown) {
+            sb.append("call void @").append(callExp.name()).append("(");
             for (int i = 0; i < callExp.args().size(); i++) {
-                Exp arg = callExp.args().get(i);
-                String argValue = generateExpression(arg);
-                sb.append(convertType(arg.type())).append(" ").append(argValue);
+                sb.append(argTypes[i]).append(" ").append(argValues[i]);
                 if (i < callExp.args().size() - 1) {
                     sb.append(", ");
                 }
             }
             sb.append(")\n");
-
-
-            return register;
+            return "";
         }
-        return "Something went wrong with function call generation";
 
+        // Function call with return value
+        String register = generateRegister();
+        sb.append(register)
+                .append(" = call ")
+                .append(convertType(callExp.type()))
+                .append(" @")
+                .append(callExp.name())
+                .append("(");
+
+        for (int i = 0; i < callExp.args().size(); i++) {
+            sb.append(argTypes[i]).append(" ").append(argValues[i]);
+            if (i < callExp.args().size() - 1) {
+                sb.append(", ");
+            }
+        }
+
+        sb.append(")\n");
+        return register;
     }
 
     private String generatePrintCall(ECall callExp) {
         Exp arg = callExp.args().get(0);
-        System.out.println(callExp);
         String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
 		String register = generateRegister();
         
@@ -310,170 +319,347 @@ public class ExpressionCodeGen extends Helper {
         sb.append(returnRegister).append(" = ").append(operation).append(" ").append(convertType(assExp.value().type())).append(" ").append(register).append(", ").append(value).append("\n");
         sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(returnRegister).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
         return returnRegister;    
-    }   
-        
-    // private String Eappend(Eappend array){
+    }
 
+    private String generateArray(Ast.EArray arrayExp) {
+        Ast.TArray arrayTypeAst = (Ast.TArray) arrayExp.type();
 
-
-    // }
-    
-    private String generateArray(EArray arrayExp) {
+        String structType = getArrayStructType(arrayExp.type());          // e.g. %array_i32
+        String elementType = getArrayElementType(arrayExp.type());        // e.g. i32
+        String dataPointerType = getArrayDataPointerType(arrayExp.type()); // e.g. i32* or i8**
+        int elementSize = getTypeSizeBytes(arrayTypeAst.elementType());
 
         int numElements = arrayExp.elements().size();
-        String arrayType = convertType(arrayExp.type());
-		String basePointer = generateRegister();
-		String spacePointer = generateRegister();
-        int allocatedSpace = (arrayType.equals("double")) ? numElements * 8 * 2 : numElements * 4 * 2; 
-        sb.append(spacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
-        sb.append(basePointer).append(" = bitcast i8* ").append(spacePointer).append(" to i32*\n");
-        String arrayGlobal = generateLabel("array");
+        int capacity = Math.max(1, numElements * 2);
 
-        globals.append("@").append(arrayGlobal).append(" = private constant [").append(numElements).append(" x ").append(arrayType).append("] [");
-        if (arrayType.equals("i8*")){
-            for (int i = 0; i < numElements; i++){
-                Exp elementExp = arrayExp.elements().get(i);
-                String value = generateExpression(elementExp);
-                String globalName = stringRegisterToGlobal.get(value);
-                int length = stringGlobalToLength.get(globalName);
-                globals.append("i8* getelementptr inbounds ([").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0)");
-                if (i < numElements - 1) {
-                    globals.append(", ");
-                }
-            }
-        } else {
-            for (int i = 0; i < numElements; i++) {
-            Exp elementExp = arrayExp.elements().get(i);
-            String value = generateExpression(elementExp);
-            globals.append(arrayType).append(" ").append(value);
-            if (i < numElements - 1) {
-                globals.append(", ");
-            }
+        String rawStructPtr = generateRegister();
+        String arrPtr = generateRegister();
+        String rawDataPtr = generateRegister();
+        String dataPtr = generateRegister();
+
+        // Allocate struct
+        // We hardcode 16 bytes for { i32, i32, ptr } on 64-bit
+        sb.append(rawStructPtr)
+                .append(" = call i8* @malloc(i64 16)\n");
+        sb.append(arrPtr)
+                .append(" = bitcast i8* ")
+                .append(rawStructPtr)
+                .append(" to ")
+                .append(structType)
+                .append("*\n");
+
+        // Allocate data buffer
+        long totalBytes = (long) capacity * elementSize;
+        sb.append(rawDataPtr)
+                .append(" = call i8* @malloc(i64 ")
+                .append(totalBytes)
+                .append(")\n");
+        sb.append(dataPtr)
+                .append(" = bitcast i8* ")
+                .append(rawDataPtr)
+                .append(" to ")
+                .append(dataPointerType)
+                .append("\n");
+
+        // Store size
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 0\n");
+        sb.append("store i32 ")
+                .append(numElements)
+                .append(", i32* ")
+                .append(sizePtr)
+                .append("\n");
+
+        // Store capacity
+        String capPtr = generateRegister();
+        sb.append(capPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 1\n");
+        sb.append("store i32 ")
+                .append(capacity)
+                .append(", i32* ")
+                .append(capPtr)
+                .append("\n");
+
+        // Store data pointer
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 2\n");
+        sb.append("store ")
+                .append(dataPointerType)
+                .append(" ")
+                .append(dataPtr)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append("\n");
+
+        // Store initial elements
+        for (int i = 0; i < numElements; i++) {
+            String value = generateExpression(arrayExp.elements().get(i));
+
+            String elemPtr = generateRegister();
+            sb.append(elemPtr)
+                    .append(" = getelementptr inbounds ")
+                    .append(elementType)
+                    .append(", ")
+                    .append(dataPointerType)
+                    .append(" ")
+                    .append(dataPtr)
+                    .append(", i32 ")
+                    .append(i)
+                    .append("\n");
+
+            sb.append("store ")
+                    .append(elementType)
+                    .append(" ")
+                    .append(value)
+                    .append(", ")
+                    .append(elementType)
+                    .append("* ")
+                    .append(elemPtr)
+                    .append("\n");
         }
-        }
 
-        globals.append("]\n");
+        return arrPtr;
+    }
 
-        String counter = generateRegister();
-        sb.append(counter).append(" = alloca i32\n");
-        sb.append("store i32 ").append(0).append(", i32* ").append(counter).append("\n");
-        String loop = generateLabel("loop");
-        sb.append("br label %").append(loop).append("\n");
-        sb.append(loop).append(":\n");
-        String currentIndex = generateRegister();
-        sb.append(currentIndex).append(" = load i32, i32* ").append(counter).append("\n");
-        String condition = generateRegister();
-        sb.append(condition).append(" = icmp slt i32 ").append(currentIndex).append(", ").append(numElements).append("\n");
-        String loopMain = generateLabel("loopMain");
-        String loopEnd = generateLabel("loopEnd");
-        sb.append("br i1 ").append(condition).append(", label %").append(loopMain).append(", label %").append(loopEnd).append("\n");
-        sb.append(loopMain).append(":\n");
-        String globalElemPointer = generateRegister();
-        sb.append(globalElemPointer).append(" = getelementptr inbounds [").append(numElements).append(" x ").append(arrayType).append("], [").append(numElements).append(" x ").append(arrayType).append("]* @").append(arrayGlobal).append(", i32 0, i32 ").append(currentIndex).append("\n");
-        String globalValue = generateRegister();
-        sb.append(globalValue).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(globalElemPointer).append("\n");
+    private String generateArrayIndex(Ast.EArrayIndex arrayIndexExp) {
 
-        String elemPointer = generateRegister();
-        sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(basePointer).append(", i32 ").append(currentIndex).append("\n");
-        sb.append("store ").append(arrayType).append(" ").append(globalValue).append(", ").append(arrayType).append("* ").append(elemPointer).append("\n");
-        String nextIndex = generateRegister();
+        String arrayRegister = generateExpression(arrayIndexExp.array()); // %array_i32*
+        String indexRegister = generateExpression(arrayIndexExp.index()); // i32 (index:int to value)
+        String structType = getArrayStructType(arrayIndexExp.array().type()); // e.g. %array_i32
+        String elementType = getArrayElementType(arrayIndexExp.array().type()); // e.g. i32
+        String dataPointerType = getArrayDataPointerType(arrayIndexExp.array().type()); // e.g. i32* or i8**
 
+        arrayCodeGenHelper.generateArrayBoundsCheck(arrayRegister, indexRegister);
 
-        sb.append(nextIndex).append(" = add i32 ").append(currentIndex).append(", 1\n");
-        sb.append("store i32 ").append(nextIndex).append(", i32* ").append(counter).append("\n");
-        sb.append("br label %").append(loop).append("\n");
-        sb.append(loopEnd).append(":\n");
+        // Get pointer to data field: &arr->data
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrayRegister)
+                .append(", i32 0, i32 2\n");
 
-       arrayNameToValue.put(basePointer, new ArrayValue(basePointer, numElements, numElements * 2, arrayType));
-        return basePointer;
+        // Load actual data pointer: arr->data
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ")
+                .append(dataPointerType)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append("\n");
+
+        // Get pointer to the indexed element: &data[index]
+        String elemPtr = generateRegister();
+        sb.append(elemPtr)
+                .append(" = getelementptr inbounds ")
+                .append(elementType)
+                .append(", ")
+                .append(dataPointerType)
+                .append(" ")
+                .append(dataPtr)
+                .append(", i32 ")
+                .append(indexRegister)
+                .append("\n");
+
+        // Load the value
+        String valueRegister = generateRegister();
+
+        sb.append(valueRegister)
+                .append(" = load ")
+                .append(elementType)
+                .append(", ")
+                .append(elementType)
+                .append("* ")
+                .append(elemPtr)
+                .append("\n");
+
+        return valueRegister;
+    }
+
+    private String generateArrayIndexAssign(Ast.EArrayIndexAssign arrayIndexAssignExp) {
+
+        String arrPtr = generateExpression(arrayIndexAssignExp.array()); // %array_i32*
+        String indexRegister = generateExpression(arrayIndexAssignExp.index()); // i32 (index:int to value)
+        String structType = getArrayStructType(arrayIndexAssignExp.array().type()); // e.g. %array_i32
+        String elementType = getArrayElementType(arrayIndexAssignExp.array().type()); // e.g. i32
+        String dataPointerType = getArrayDataPointerType(arrayIndexAssignExp.array().type()); // e.g. i32* or i8**
+
+        arrayCodeGenHelper.generateArrayBoundsCheck(arrPtr, indexRegister);
+
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 2\n");
+
+        // load actual data pointer: arr->data
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ")
+                .append(dataPointerType)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append("\n");
+
+        // Get pointer to the indexed element: &data[index]
+        String elemPtr = generateRegister();
+        sb.append(elemPtr)
+                .append(" = getelementptr inbounds ")
+                .append(elementType)
+                .append(", ")
+                .append(dataPointerType)
+                .append(" ")
+                .append(dataPtr)
+                .append(", i32 ")
+                .append(indexRegister)
+                .append("\n");
+
+        String value = generateExpression(arrayIndexAssignExp.value()); // i32 (value:int to value)
+        sb.append("store ")
+                .append(elementType)
+                .append(" ")
+                .append(value)
+                .append(", ")
+                .append(elementType)
+                .append("* ")
+                .append(elemPtr)
+                .append("\n");
+
+        return value;
     }
 
 
-    private String generateArrayIndex(EArrayIndex arrayIndexExp) { // THIS WILL NOT WORK IF ARRAY DOES NOT HAVE A NAME, I.E. IF IT'S NOT STORED IN A VARIABLE, BUT INSTEAD IS AN INLINE ARRAY LITERAL. THIS IS BECAUSE WE NEED THE NAME TO LOOK UP THE BASE POINTER OF THE ARRAY IN THE ENVIRONMENT. THIS CAN BE FIXED BY FIRST GENERATING THE ARRAY AS USUAL, STORING THE BASE POINTER IN A REGISTER, AND THEN USING THAT REGISTER AS THE BASE POINTER FOR THE GETELEMENTPTR IN THIS METHOD. CURRENTLY, THIS METHOD ASSUMES THAT ALL ARRAYS ARE STORED IN VARIABLES WITH NAMES, AND THAT THE BASE POINTERS OF THESE ARRAYS ARE STORED IN THE ENVIRONMENT UNDER THEIR NAMES.
-    
-		String register = generateRegister();
-		String returnRegister = generateRegister();
-		String arrayType = convertType(arrayIndexExp.array().type());
-        String index = generateExpression(arrayIndexExp.index());
-		String arrayName = ((EId) arrayIndexExp.array()).name();
+    private String generateAppend(Ast.EAppend appendExp) {
+        String arrPtr = generateExpression(appendExp.array());   // %array_i32*
+        String value = generateExpression(appendExp.element());  // i32
+        String structType = getArrayStructType(appendExp.array().type()); // e.g. %array_i32
+        String elementType = getArrayElementType(appendExp.array().type()); // e.g. i32
+        String dataPointerType = getArrayDataPointerType(appendExp.array().type()); // e.g. i32* or i8**
+        int elementSize = getTypeSizeBytes(appendExp.type());
 
-		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
-        sb.append(returnRegister).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(register).append("\n");
-        
-		return returnRegister;
-    }
+        // &arr->size
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 0\n");
 
-    private String generateArrayIndexAssign(EArrayIndexAssign arrayIndexAssignExp) {
+        // size
+        String sizeValue = generateRegister();
+        sb.append(sizeValue)
+                .append(" = load i32, i32* ")
+                .append(sizePtr)
+                .append("\n");
 
-		String register = generateRegister();
-		String returnRegister = generateRegister();
-		String arrayType = convertType(arrayIndexAssignExp.array().type());
-        String index = generateExpression(arrayIndexAssignExp.index());
-		String arrayName = ((EId) arrayIndexAssignExp.array()).name();
-        String value = generateExpression(arrayIndexAssignExp.value());
+        // &arr->capacity
+        String capPtr = generateRegister();
+        sb.append(capPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 1\n");
 
-		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
-        sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(register).append("\n");
-        
-		return returnRegister;
-    }
+        // capacity
+        String capValue = generateRegister();
+        sb.append(capValue)
+                .append(" = load i32, i32* ")
+                .append(capPtr)
+                .append("\n");
 
-    private String generateAppend(EAppend appendExp) {
-        String value = generateExpression(appendExp.element());
-        String arrayType = convertType(appendExp.array().type());
-        String basePointer = generateExpression(appendExp.array());
-        ArrayValue arrayValue = arrayNameToValue.get(basePointer);
-        if (arrayValue.size < arrayValue.capacity){
-            String elemPointer = generateRegister();
-            sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(basePointer).append(", i32 ").append(arrayValue.size).append("\n");
-            sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(elemPointer).append("\n");
-            arrayValue.size++;
-            return basePointer;
-        } 
-        
-            arrayValue.capacity *= 2;
-            int allocatedSpace = (arrayType.equals("double")) ? arrayValue.capacity * 8 : arrayValue.capacity * 4; 
-            String newSpacePointer = generateRegister();
-            String newBasePointer = generateRegister();
+        // &arr->data
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 2\n");
 
-            sb.append(newSpacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
-            sb.append(newBasePointer).append(" = bitcast i8* ").append(newSpacePointer).append(" to i32*\n");
-            
-            String counter = generateRegister();
-            sb.append(counter).append(" = alloca i32\n");
-            sb.append("store i32 ").append(0).append(", i32* ").append(counter).append("\n");
-            String loop = generateLabel("loop");
-            sb.append("br label %").append(loop).append("\n");
-            sb.append(loop).append(":\n");
-            String currentIndex = generateRegister();
-            String check = generateRegister();
-            String loop_end = generateLabel("loopEnd");
-            sb.append(currentIndex).append(" = load i32, i32* ").append(counter).append("\n");
-            sb.append(check).append(" = icmp sge i32 ").append(currentIndex).append(", ").append(arrayValue.size).append("\n");
-            String loop_main = generateLabel("loopMain");
-            sb.append("br i1 ").append(check).append(", label %").append(loop_end).append(", label %").append(loop_main).append("\n");
-            sb.append(loop_main).append(":\n");
-            String old_ptr = generateRegister();
-            sb.append(old_ptr).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(basePointer).append(", i32 ").append(currentIndex).append("\n");
-            String valueAtOld = generateRegister();
-            sb.append(valueAtOld).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(old_ptr).append("\n");
-            String new_ptr = generateRegister();
-            sb.append(new_ptr).append(" = getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(newBasePointer).append(", i32 ").append(currentIndex).append("\n");
-            sb.append("store ").append(arrayType).append(" ").append(valueAtOld).append(", ").append(arrayType).append("* ").append(new_ptr).append("\n");
-            String nextIndex = generateRegister();
-            sb.append(nextIndex).append(" = add i32 ").append(currentIndex).append(", 1\n");
-            sb.append("store i32 ").append(nextIndex).append(", i32* ").append(counter).append("\n");
-            sb.append("br label %").append(loop).append("\n");
-            sb.append(loop_end).append(":\n");
+        // arr->data
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ")
+                .append(dataPointerType)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append("\n");
 
-            String appent_ptr = generateRegister();
-            sb.append(appent_ptr).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append(arrayType).append("* ").append(newBasePointer).append(", i32 ").append(arrayValue.size).append("\n");
-            sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append(arrayType).append("* ").append(appent_ptr).append("\n");
-            arrayValue.size++;
-            arrayValue.pointer = newBasePointer;
-            arrayNameToValue.put(newBasePointer, arrayValue);
-            return newBasePointer;
-        
+        // size < capacity ?
+        String hasRoom = generateRegister();
+        sb.append(hasRoom)
+                .append(" = icmp slt i32 ")
+                .append(sizeValue)
+                .append(", ")
+                .append(capValue)
+                .append("\n");
+
+        String appendOk = generateLabel("append_ok");
+        String appendGrow = generateLabel("append_grow");
+        String appendEnd = generateLabel("append_end");
+
+        // jump to append_ok if there is room, otherwise jump to append_grow
+        sb.append("br i1 ")
+                .append(hasRoom)
+                .append(", label %")
+                .append(appendOk)
+                .append(", label %")
+                .append(appendGrow)
+                .append("\n");
+
+        arrayCodeGenHelper.appendNotGrow(appendOk, dataPtr, sizeValue, value, sizePtr, appendEnd, structType, elementType, dataPointerType);
+
+        arrayCodeGenHelper.appendGrow(appendGrow, capValue, sizeValue, dataPtr, value, sizePtr, dataFieldPtr, capPtr, elementType, dataPointerType, elementSize,appendEnd);
+
+
+        sb.append("br label %").append(appendEnd).append("\n");
+
+        sb.append(appendEnd).append(":\n");
+
+        return arrPtr;
     }
 
 
@@ -525,11 +711,38 @@ public class ExpressionCodeGen extends Helper {
     }
 
     private void generateArrayString(EStringCast sStringCast, String register) {
-        String arrayRegister = generateExpression(sStringCast.exp()); // generate pointer to register
-        Ast.TArray type = (Ast.TArray) sStringCast.exp().type(); // cast to tarray
-        int size = type.arraySize();
-        Ast.Type elementType = type.elementType();
-        String elementTypeStr = convertType(elementType); // Get LLVM IR type string for the array element type
+
+        String arrayRegister = generateExpression(sStringCast.exp());
+        Ast.TArray arrayType = (Ast.TArray) sStringCast.exp().type();
+        Ast.Type elementType = arrayType.elementType();
+        String structPointer = convertType(arrayType); // e.g. %array_i32*, array_double*, etc.
+        String structType = getArrayStructType(arrayType); // e.g. %array_i32, %array_double, etc.
+        String arrayDataPointerType = getArrayDataPointerType(arrayType); // e.g. i32* for int arrays, double* for double arrays, etc.
+
+        // Load size from struct field 0
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ").append(structType).append(", ").append(structPointer)
+                .append(arrayRegister)
+                .append(", i32 0, i32 0\n");
+
+        String sizeValue = generateRegister();
+        sb.append(sizeValue)
+                .append(" = load i32, i32* ")
+                .append(sizePtr)
+                .append("\n");
+
+        // Load data pointer from struct field 2
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr).append(" = getelementptr inbounds ").append(structType).append(", ").append(structPointer)
+                .append(arrayRegister)
+                .append(", i32 0, i32 2\n");
+
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ").append(arrayDataPointerType).append(", ").append(arrayDataPointerType + "*")
+                .append(dataFieldPtr)
+                .append("\n");
 
         String funcName;
         if(elementType instanceof Ast.TInt) {
@@ -547,9 +760,8 @@ public class ExpressionCodeGen extends Helper {
         // call runtime function to convert it to string
         sb.append("  ").append(register)
                 .append(" = call i8* ").append(funcName)
-                .append("(").append(elementTypeStr).append("* ").append(arrayRegister)
-                .append(", i32 ").append(size).append(")\n");
-
+                .append("(").append(arrayDataPointerType).append(dataPtr)
+                .append(", i32 ").append(sizeValue).append(")\n");
     }
 
     private void generateStringCastInt(String value, String register) {

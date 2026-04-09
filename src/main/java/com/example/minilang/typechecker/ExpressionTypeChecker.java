@@ -423,7 +423,7 @@ public class ExpressionTypeChecker {
                     }
                     elements = tArray.arraySize() + 1; // New size after append
                     arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
-                    context.update(arrayId.name(), arrayType);
+                    //context.update(arrayId.name(), arrayType);
 
                 } else {
                     throw new TypeException("Attempting to append to a non-array variable: " + arrayId.name() + " of type " + TypeConverter.typeToString(arrayType), arrayId.pos());

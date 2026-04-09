@@ -43,6 +43,16 @@ public class Environment {
         return null;
     }
 
+    public void update(String id, String newRegister) {
+        for(int i = 0; i < scope.size(); i++) {
+            if (scope.get(i).containsKey(id)) {
+                scope.get(i).put(id, newRegister);
+                return;
+            }
+        }
+        throw new RuntimeException("Variable not found for update: " + id);
+    }
+
 
     public boolean existsInCurrentScope(String id) {
         return scope.getFirst().containsKey(id);

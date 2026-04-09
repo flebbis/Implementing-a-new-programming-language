@@ -26,6 +26,13 @@ static void runtime_init(void) {
     runtime_set_utf8();
 }
 
+// out of bounds for array
+void array_index_out_of_bounds(int index, int size) {
+    fprintf(stderr, "\033[31mERROR:\033[0m Index %d out of bounds for array of size %d\n", index, size);
+    fflush(stderr);
+    exit(1);
+}
+
 // for EStringCast int to string
 char* int_to_string(int x) {
     char* buf = malloc(32);

@@ -1,9 +1,12 @@
-x = ["hej", "hå"]
+x = [0]
+x.append(1).append(2).append(3).append(4).append(5).append(6)
 
-func test(x) {
-    return x
-}
+print(x)
 
-y = test(x)
 
-print(y + " test")
+
+
+
+
+
+
