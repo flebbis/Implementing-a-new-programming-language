@@ -124,33 +124,12 @@ public class ExpressionCodeGen extends Helper {
     }
 
     private String generateId(EId idExp) {
-        if (!functionVariables.contains(idExp.name())){
-            if(idExp.type() instanceof Ast.TArray) {
-                return environment.lookup(idExp.name());
-            }
-
-            String variableRegister = environment.lookup(idExp.name());
-            String register = generateRegister();
-            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
-            return register;
-
-        } else {
-            // If we are not currently in the base scope,
-            // we need to check if the variable exists in the current scope and load it if it does.
-            if(!environment.isInBaseScope()) {
-                // Check if the variable exists in the current scope
-                if(environment.existsInCurrentScope(idExp.name())) {
-                    // If it does, we need to load it from memory
-                    String variableRegister = environment.lookup(idExp.name());
-                    String register = generateRegister();
-                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
-                    return register;
-                }
-            }
-            return "%" + idExp.name();
-        }
-
+        String variableRegister = environment.lookup(idExp.name());
+        String register = generateRegister();
+        sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
+        return register;
     }
+
     private String generateCall(ECall callExp) {
         if (callExp.name().equals("print")) {
             String register = generatePrintCall(callExp);
@@ -655,7 +634,7 @@ public class ExpressionCodeGen extends Helper {
         arrayCodeGenHelper.appendGrow(appendGrow, capValue, sizeValue, dataPtr, value, sizePtr, dataFieldPtr, capPtr, elementType, dataPointerType, elementSize,appendEnd);
 
 
-        sb.append("br label %").append(appendEnd).append("\n");
+        //sb.append("br label %").append(appendEnd).append("\n");
 
         sb.append(appendEnd).append(":\n");
 

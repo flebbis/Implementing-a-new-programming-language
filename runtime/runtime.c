@@ -182,3 +182,103 @@ char* array_string_to_string(char** arr, int len) {
     *p = '\0';
     return buf;
 }
+
+// FOR COPYING ARRAYS
+
+typedef struct {
+    int size;
+    int capacity;
+    int* data;
+} array_i32;
+
+array_i32* array_int_copy(array_i32* arr) {
+    if (arr == NULL) {
+        return NULL;
+    }
+
+    array_i32* copy = malloc(sizeof(array_i32));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(int) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}
+
+typedef struct {
+    int size;
+    int capacity;
+    double* data;
+} array_double;
+
+array_double* array_double_copy(array_double* arr) {
+    if (arr == NULL) return NULL;
+
+    array_double* copy = malloc(sizeof(array_double));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(double) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}
+
+typedef struct {
+    int size;
+    int capacity;
+    bool* data;
+} array_i1;
+
+array_i1* array_bool_copy(array_i1* arr) {
+    if (arr == NULL) return NULL;
+
+    array_i1* copy = malloc(sizeof(array_i1));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(bool) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}
+
+typedef struct {
+    int size;
+    int capacity;
+    char** data;
+} array_i8ptr;
+
+array_i8ptr* array_string_copy(array_i8ptr* arr) {
+    if (arr == NULL) return NULL;
+
+    array_i8ptr* copy = malloc(sizeof(array_i8ptr));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(char*) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}

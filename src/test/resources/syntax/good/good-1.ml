@@ -1,12 +1,18 @@
-x = [0]
-x.append(1).append(2).append(3).append(4).append(5).append(6)
 
-print(x)
+func test2(x) {
+    x.append(1)
+    print(x)
+}
 
+func test(x) {
+    x.append(100)
+    print(x)
+}
 
+y = [1,2,3]
+print(y)
+test2(y)
+test(y)
 
-
-
-
-
-
+y.append(5)
+print(y)

@@ -43,6 +43,11 @@ public class CodeGenerator {
         sb.append("%array_double = type { i32, i32, double* }\n");
         sb.append("%array_i1 = type { i32, i32, i1* }\n");
         sb.append("%array_i8ptr = type { i32, i32, i8** }\n");
+        sb.append("declare %array_i32* @array_int_copy(%array_i32*)\n");
+        sb.append("declare %array_double* @array_double_copy(%array_double*)\n");
+        sb.append("declare %array_i1* @array_bool_copy(%array_i1*)\n");
+        sb.append("declare %array_i8ptr* @array_string_copy(%array_i8ptr*)\n");
+        sb.append("\n");
 
         sb.append("define void @main() {\n");
         sb.append("entry:\n");

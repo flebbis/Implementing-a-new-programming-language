@@ -6,5 +6,5 @@
 y = [2, 3]
 
 test(y)
-
+y.append(5)
 print(y)
