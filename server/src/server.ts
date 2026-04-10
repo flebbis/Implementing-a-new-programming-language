@@ -15,14 +15,13 @@ import {
   MarkupContent,
   Range,
   MarkupKind,
-  TextEdit
+  TextEdit,
 } from "vscode-languageserver/node";
 
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
 
 import { spawn } from 'child_process';
 import * as path from 'path';
-// import { URI } from "vscode-uri";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -92,7 +91,6 @@ connection.onInitialize((params: InitializeParams) => {
       }
     };
   }
-
   return result;
 });
 
@@ -371,7 +369,6 @@ function runJavaAnalysis(text: string): Promise<any> {
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
-    connection.console.log(jarPath)
     const java = spawn("java", ["-jar", jarPath, text]);
 
     // Capture stdout and stderr from the Java process
@@ -406,11 +403,12 @@ function runJavaAnalysis(text: string): Promise<any> {
 }
 
 
-function insertInfered(uri: string) {
+async function insertInfered(uri: string) {
   const suggestions = inferenceSuggestionMap.get(uri) ?? [];
   // Apply edit in document for each inference suggestion
+  let allSucceed: Boolean = true
   for (const s of suggestions) {
-    connection.workspace.applyEdit({
+    let res = await connection.workspace.applyEdit({
       changes: {
         [uri]: [
           TextEdit.insert(
@@ -424,6 +422,7 @@ function insertInfered(uri: string) {
         ]
       }
     });
+    allSucceed = allSucceed && res.applied
   }
   // clear suggestions after insertion
   inferenceSuggestionMap.clear();
@@ -505,7 +504,7 @@ documents.onWillSaveWaitUntil(async (params) => {
     latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
     // Type check & inference phase
-    await inferenceAnalysis(uri, text, version);
+    let inferDone = await inferenceAnalysis(uri, text, version);
 
     if (isLatest(uri, version)) {
       changes = inferedInserts(uri);
