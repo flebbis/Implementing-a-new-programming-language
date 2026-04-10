@@ -20,7 +20,7 @@ public class Ast {
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
             ECall, ENot, EPower, EOpp, ECmp, ELogic,
-            EAss, EArray, EArrayIndex, EUnary, EDInt, EStringCast {}
+            EAss, EArray, EArrayIndex, EUnary, EDInt, EStringCast, EAppend, EArrayIndexAssign {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
@@ -42,9 +42,11 @@ public class Ast {
     public record EAss(String name, Exp value, AssOp op, Type type, Pos pos) implements Exp {}
     public record EArray(List<Exp> elements, Type type, Pos pos) implements Exp {}
     public record EArrayIndex(Exp array, Exp index, Type type, Pos pos) implements Exp {}
+    public record EArrayIndexAssign(Exp array, Exp index, Exp value, Type type, Pos pos) implements Exp {}
     public record EUnary(Exp exp, UnaryOp op, Type type, Pos pos) implements Exp {}
     public record EDInt(Exp exp, Type type, Pos pos) implements Exp {}
     public record EStringCast(Exp exp, Type type, Pos pos) implements Exp {}
+    public record EAppend(Exp array, Exp element, Type type, Pos pos) implements Exp {}
 
     public enum UnaryOp { INC, DEC }
 
@@ -69,7 +71,7 @@ public class Ast {
     public record TString() implements Type {}
     public record TBool() implements Type {}
     public record TUnknown() implements Type {}
-    public record TArray(Type elementType) implements Type {}
+    public record TArray(Type elementType, int arraySize) implements Type {}
 
     public interface HasPos { Pos pos(); }
     public interface HasType { Type type(); }

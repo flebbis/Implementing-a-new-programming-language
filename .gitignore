@@ -36,7 +36,7 @@ node_modules
 client/server
 .vscode-test
 tsconfig.tsbuildinfo
-*.code-workspace
+
 
 ### General ###
 /target
@@ -49,3 +49,6 @@ target/
 /.idea/
 *.iml
 *.ll
+*.s
+**/test.ml
+*/test.ml
