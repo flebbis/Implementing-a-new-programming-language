@@ -356,13 +356,13 @@ function lim(reg: RegExp, start: Position, step: (p: Position) => Position, doc:
 }
 
 function inComment(pos: Position, doc: TextDocument): boolean {
-  connection.console.log("onHover: ? IN COMMENT ?")
+  // connection.console.log("onHover: ? IN COMMENT ?")
   return inLineComment(pos, doc) || inBlockComment(pos, doc)
 }
 
 const lineComment: RegExp = /.*\/\/.*/
 function inLineComment(pos: Position, doc: TextDocument): boolean{
-  connection.console.log("onHover: ? lINE COMMENT ?")
+  // connection.console.log("onHover: ? lINE COMMENT ?")
   const lineRangeBefore: Range = lineRange(pos.line, pos.character)
   const lineText: string = doc.getText(lineRangeBefore)
   return lineComment.test(lineText)
@@ -378,7 +378,7 @@ function inBlockComment(pos: Position, doc: TextDocument): boolean{
   //  /\/\*(?!.*\*\/)/
   // or */ after point 
   //  /(?<!\/\*.*)\*\//
-  connection.console.log("onHover: ? BLOCK COMMENT ?")
+  // connection.console.log("onHover: ? BLOCK COMMENT ?")
   let res: boolean
   const lineNr = pos.line
   const lineBefore = doc.getText(lineFromTo(lineNr, 0, pos.character))
@@ -404,7 +404,7 @@ function inBlockComment(pos: Position, doc: TextDocument): boolean{
 }
 
 function findBlockLim(lineNr:number, doc: TextDocument, step: (p: number) => number, end: number, accept: RegExp, reject: RegExp): boolean{
-  connection.console.log("onHover: LINE = " + lineNr)
+  // connection.console.log("onHover: LINE = " + lineNr)
   let res:boolean
   const line = doc.getText(lineRange(lineNr, 999))
   if (accept.test(line)) {
@@ -419,15 +419,16 @@ function findBlockLim(lineNr:number, doc: TextDocument, step: (p: number) => num
 }
 
 function inString(pos: Position, doc: TextDocument): boolean{
-  connection.console.log("onHover: ? IN STRING ?")
+  // connection.console.log("onHover: ? IN STRING ?")
 //TODO
 // idea: count number of ``"`` characters to left or right of hover position,
 // odd -> true
 // even -> false
-  let count = 0
-  let res = (count % 2) == 1
-  connection.console.log("onHover: " + res)
-  return res
+  const left  = lineFromTo(pos.line, 0, pos.character)
+  const count = /\"/.exec(doc.getText(left))?.length || 0
+  // let res = (count % 2) == 1
+  // connection.console.log("onHover: " + res)
+  return (count % 2) == 1
 }
 // -------------------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------------------
