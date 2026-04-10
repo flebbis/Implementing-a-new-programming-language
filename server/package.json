@@ -1,4 +1,5 @@
 {
+  "type": "commonjs",
   "name": "mylang-server",
   "description": "language server server for unnamed language",
   "version": "0.0.1",
@@ -11,12 +12,18 @@
     "type": "git",
     "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
   },
+  "scripts": {
+    "compile": "tsc",
+    "watch": "tsc --watch",
+    "start": "node ./out/server.js"
+  },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",
     "vscode-languageserver": "^8.1.0",
-    "vscode-languageserver-textdocument": "^1.0.8"
+    "vscode-languageserver-textdocument": "^1.0.12"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "@types/node": "^18.5.0",
+    "typescript": "^4.9.5"
   }
 }
