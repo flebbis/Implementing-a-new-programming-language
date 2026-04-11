@@ -300,21 +300,21 @@ connection.onHover((params: HoverParams) => {
   let res: Hover | null = null
   let pos = params.position;
   if (doc != undefined) {
-  connection.console.log("onHover: DOC EXISTS")
     if (!inComment(pos, doc) //don't match inside comments
       && !inString(pos, doc) // don't match inside strings
       && wordChar.test(doc.getText(charRange(pos)))) { //only match if word
-  connection.console.log("onHover: WORD DETECTED")
+      // connection.console.log("onHover: WORD DETECTED")
       const { word, range } = findWordAt(pos, doc)
-  connection.console.log("onHover: " + word)
-      let m: RegExpMatchArray | null = doc.getText().match(word)
-  connection.console.log("onHover: " + m?.toString())
+      // connection.console.log("onHover: " + word)
+      let m: RegExpMatchArray | null = doc.getText().match("\\b" + word + "\\b");
+      // firstDefInScope(doc, word, range) //find first occurences 
       let description = ""
+      // connection.console.log("onHover: length = " + m?.length)
+      // connection.console.log("onHover: index = " + m?.index)
       if (!excluded.test(word) //exclude numerics, litterals and types
-        && m && m.index) { //ensures there is at least one match
-        const mPos = doc.positionAt(m.index)
-        let r: Range = lineRange(mPos.line, 150)
-        description = doc.getText(r).trim() //remove trailing and leading whitespace 
+        && m && m.index) { //ensures there is only one match (always true)
+        const mPos = doc.positionAt(m.index);
+        let description = firstDefInScope(doc, word, mPos, pos); //remove trailing and leading whitespace 
         let contents: MarkupContent = {
           kind: MarkupKind.Markdown,
           value: [
@@ -330,6 +330,40 @@ connection.onHover((params: HoverParams) => {
   }
   return res
 })
+
+function firstDefInScope(doc: TextDocument, word: string, mPos: Position, hoverPos: Position): string {
+  const start = shiftChar(mPos, word.length)
+  if (inSameScope(doc, start, hoverPos)) {
+    // also handles function
+    let r: Range = lineRange(mPos.line, 150);
+    return doc.getText(r).trim(); //remove trailing and leading whitespace ;
+  } else {
+    // not in same scope
+
+    let m: RegExpMatchArray | null = doc.getText({ start, end: hoverPos }).match("\\b" + word + "\\b");
+
+    if (m && m.index) {
+      return firstDefInScope(doc, word, doc.positionAt(m.index), hoverPos)
+    }
+    return ""
+  }
+}
+
+function shiftChar(pos: Position, by: number): Position {
+  return { line: pos.line, character: pos.character + by }
+}
+
+function inSameScope(doc: TextDocument, start: Position, end: Position): boolean {
+  // Same scope if number of `{` equal `}` or have one more `{` and in function definition
+  const textBetween = doc.getText({ start, end })
+  const nrOpen = textBetween.match(/\{/g)?.length || 0
+  const nrClose = textBetween.match(/\}/g)?.length || 0
+  const diff = nrOpen - nrClose
+  if (diff == 0) {
+    return true
+  }
+  return (diff == -1 && /\bfunc\b/.test(doc.getText(lineFromTo(start.line, 0, start.character))))
+}
 
 
 function charRange(pos: Position): Range {
@@ -361,7 +395,7 @@ function inComment(pos: Position, doc: TextDocument): boolean {
 }
 
 const lineComment: RegExp = /.*\/\/.*/
-function inLineComment(pos: Position, doc: TextDocument): boolean{
+function inLineComment(pos: Position, doc: TextDocument): boolean {
   // connection.console.log("onHover: ? lINE COMMENT ?")
   const lineRangeBefore: Range = lineRange(pos.line, pos.character)
   const lineText: string = doc.getText(lineRangeBefore)
@@ -373,7 +407,7 @@ const unopenedClosingBlockComment: RegExp = /(?<!\/\*.*)\*\//;
 const openingBlockComment: RegExp = /\/\*/;
 const closingBlockComment: RegExp = /\*\//;
 
-function inBlockComment(pos: Position, doc: TextDocument): boolean{
+function inBlockComment(pos: Position, doc: TextDocument): boolean {
   // check if /* before
   //  /\/\*(?!.*\*\/)/
   // or */ after point 
@@ -381,53 +415,61 @@ function inBlockComment(pos: Position, doc: TextDocument): boolean{
   // connection.console.log("onHover: ? BLOCK COMMENT ?")
   let res: boolean
   const lineNr = pos.line
+  // connection.console.log("onHover: LINE_start = " + lineNr)
+
   const lineBefore = doc.getText(lineFromTo(lineNr, 0, pos.character))
-  const lineAfter  = doc.getText(lineFromTo(lineNr, pos.character, 999))
-  if ( unclosedOpeningBlockComment.test(lineBefore)
+  const lineAfter = doc.getText(lineFromTo(lineNr, pos.character, 999))
+  if (unclosedOpeningBlockComment.test(lineBefore)
     // there is an unclosed block-comment opening on the same line before hover position
-    || unopenedClosingBlockComment.test(lineAfter)) { 
+    || unopenedClosingBlockComment.test(lineAfter)) {
     // there is an unopened block-comment closing on the same line after  hover position
     res = true
-  } else if (closingBlockComment.test(lineBefore) 
+  } else if (closingBlockComment.test(lineBefore)
     // there is a  closing block-comment on same line before hover position
-          || openingBlockComment.test(lineAfter)) {
+    || openingBlockComment.test(lineAfter)
     // there is an opening block-comment on same line after  hover position
+    || lineNr == 0) {
+    // nothin on same line and on first line of document
     res = false
-  }else if (lineNr < doc.lineCount/2) { //check if unclosed block-comment opening above
+  } else if (lineNr < doc.lineCount / 2) { //check if unclosed block-comment opening above
     // step up, /\/\*(?!.*\*\/)/ => true, /\*\// => false
-    res = findBlockLim(lineNr-1, doc, (n => {return n-1}), 0, unclosedOpeningBlockComment, closingBlockComment)
+    res = findBlockLim(lineNr - 1, doc, (n => { return n - 1 }), 0, unclosedOpeningBlockComment, closingBlockComment)
   } else { // check if unopened block-comment closes below
     // step down, /(?<!\/\*.*)\*\// => true, /\/\*/ => false
-    res = findBlockLim(lineNr+1, doc, (n => {return n+1}), doc.lineCount, unopenedClosingBlockComment, openingBlockComment)
+    res = findBlockLim(lineNr + 1, doc, (n => { return n + 1 }), doc.lineCount, unopenedClosingBlockComment, openingBlockComment)
   }
   return res
 }
 
-function findBlockLim(lineNr:number, doc: TextDocument, step: (p: number) => number, end: number, accept: RegExp, reject: RegExp): boolean{
+function findBlockLim(lineNr: number, doc: TextDocument, step: (p: number) => number, end: number, accept: RegExp, reject: RegExp): boolean {
   // connection.console.log("onHover: LINE = " + lineNr)
-  let res:boolean
+  let res: boolean
   const line = doc.getText(lineRange(lineNr, 999))
   if (accept.test(line)) {
     res = true
-  } else if ( reject.test(line) //rejection criteria met
+  } else if (reject.test(line) //rejection criteria met
     || lineNr - end == 0) { //reached end (or start) of file without accepting
-      res = false
+    res = false
   } else {
     res = findBlockLim(step(lineNr), doc, step, end, accept, reject)
   }
   return res
 }
 
-function inString(pos: Position, doc: TextDocument): boolean{
-  // connection.console.log("onHover: ? IN STRING ?")
-//TODO
-// idea: count number of ``"`` characters to left or right of hover position,
-// odd -> true
-// even -> false
-  const left  = lineFromTo(pos.line, 0, pos.character)
-  const count = /\"/.exec(doc.getText(left))?.length || 0
-  // let res = (count % 2) == 1
-  // connection.console.log("onHover: " + res)
+function inString(pos: Position, doc: TextDocument): boolean {
+  connection.console.log("onHover: ? IN STRING ?")
+  // idea: count number of ``"`` characters to left or right of hover position,
+  // odd -> true
+  // even -> false
+  const left = lineFromTo(pos.line, 0, pos.character)
+  const leftLine = doc.getText(left)
+  connection.console.log("onHover: LINE = " + leftLine)
+  const m = leftLine.match(/\"/g)
+  connection.console.log("onHover: matches = " + m?.toString())
+  const count = m?.length || 0
+  connection.console.log("onHover: stringlims = " + count)
+  let res = (count % 2) == 1
+  connection.console.log("onHover: " + res)
   return (count % 2) == 1
 }
 // -------------------------------------------------------------------------------------------------
