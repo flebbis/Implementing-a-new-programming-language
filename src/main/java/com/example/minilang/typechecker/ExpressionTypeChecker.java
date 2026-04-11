@@ -122,12 +122,15 @@ public class ExpressionTypeChecker {
         Ast.Type rightType = right.type();
 
         // Int and double can be compared
-        if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
-                && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
-            return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
-        } else {
-            throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
+        if(!TypeUtils.equalTypes(leftType, rightType)) {
+            if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
+                    && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
+                return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
+            } else {
+                throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
+            }
         }
+        return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
     }
 
     public Ast.Exp typeCheck(Ast.ELogic eLogic) {
