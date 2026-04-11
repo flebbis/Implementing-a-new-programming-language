@@ -18,13 +18,15 @@ public class StatementTypeChecker {
     private Context inferenceContext;
     private List<InferenceSuggestion> inferenceSuggestions;
     private List<TypeReplacementSuggestion> typeReplacementSuggestions;
+    private HashMap<String, List<String>> functionBindings;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
                                 Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions,
-                                List<TypeReplacementSuggestion> typeReplacementSuggestions) {
+                                List<TypeReplacementSuggestion> typeReplacementSuggestions, HashMap<String, List<String>> functionBindings) {
         this.context = context;
         this.functionSignatures = functionSignatures;
-        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
+        this.functionBindings = functionBindings;
+        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures, functionBindings);
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
         this.typeReplacementSuggestions = typeReplacementSuggestions;

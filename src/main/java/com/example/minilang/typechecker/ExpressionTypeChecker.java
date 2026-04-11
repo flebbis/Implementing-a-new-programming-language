@@ -11,10 +11,12 @@ public class ExpressionTypeChecker {
 
     private Context context = new Context();
     private HashMap<String, Signature> functionSignatures;
+    private  HashMap<String, List<String>> functionBindings;
 
-    public ExpressionTypeChecker(Context context, HashMap<String, Signature> signature) {
+    public ExpressionTypeChecker(Context context, HashMap<String, Signature> signature,  HashMap<String, List<String> > functionBindings) {
         this.context = context;
         this.functionSignatures = signature;
+        this.functionBindings = functionBindings;
     }
 
     public Ast.Exp typeCheck(Ast.Exp exp) {
@@ -256,13 +258,26 @@ public class ExpressionTypeChecker {
 
         // Type check the arguments first
         List<Ast.Exp> args = new ArrayList<>();
+        int i = 0;
         for (Ast.Exp arg : eCall.args()) {
             args.add(typeCheck(arg));
+            List<String> paramIds = functionBindings.get(eCall.name());
+            if (paramIds != null && i < paramIds.size()) {
+                String paramBindingId = paramIds.get(i);
+
+                // collect variable bindings used in this arg expression
+                List<String> argBindingIds = extractVariableBindingIds(args.get(i)); // or original arg
+
+                for (String argBindingId : argBindingIds) {
+                    context.addDependency(paramBindingId, argBindingId);
+                }
+        }
+            i++;
         }
 
         // Then look up the function signature
         if (functionSignatures.containsKey(eCall.name())) {
-            int i = 0;
+            i = 0;
             if(functionSignatures.get(eCall.name()).paramTypes.size() != eCall.args().size()) {
                 throw new TypeException("Function " + eCall.name() + " expects " + functionSignatures.get(eCall.name()).paramTypes.size() + " arguments but got " + eCall.args().size(), eCall.pos());
             }
@@ -271,6 +286,7 @@ public class ExpressionTypeChecker {
                 if (!args.get(i).type().equals(paramType)) {
                     // Inference: If param is TUnknown, infer from arg
                     if ((paramType instanceof Ast.TUnknown) && !(args.get(i).type() instanceof Ast.TUnknown)) {
+                        // TODO: also set the ith type we are overwriting to a binding (I think)
                         functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
                         paramType = args.get(i).type();
                     }
@@ -337,4 +353,33 @@ public class ExpressionTypeChecker {
         Ast.Type resultType = (array.type() instanceof Ast.TArray arr) ? arr.elementType() : new Ast.TUnknown();
         return new Ast.EArrayIndex(array, index, resultType, eArrayIndex.pos());
     }
+
+    private List<String> extractVariableBindingIds(Ast.Exp exp) {
+        List<String> ids = new ArrayList<>();
+        collectBindingIds(exp, ids);
+        return ids;
+    }
+
+    private void collectBindingIds(Ast.Exp exp, List<String> out) {
+        switch (exp) {
+            case Ast.EId id -> {
+                String bid = context.lookupLatestBindingId(id.name());
+                if (bid != null && !out.contains(bid)) out.add(bid);
+            }
+            case Ast.EOpp op -> { collectBindingIds(op.left(), out); collectBindingIds(op.right(), out); }
+            case Ast.EPower p -> { collectBindingIds(p.base(), out); collectBindingIds(p.exponent(), out); }
+            case Ast.ECmp c -> { collectBindingIds(c.left(), out); collectBindingIds(c.right(), out); }
+            case Ast.ELogic l -> { collectBindingIds(l.left(), out); collectBindingIds(l.right(), out); }
+            case Ast.EUnary u -> collectBindingIds(u.exp(), out);
+            case Ast.ENot n -> collectBindingIds(n.exp(), out);
+            case Ast.EDInt d -> collectBindingIds(d.exp(), out);
+            case Ast.EStringCast s -> collectBindingIds(s.exp(), out);
+            case Ast.EArray a -> { for (Ast.Exp el : a.elements()) collectBindingIds(el, out); }
+            case Ast.EArrayIndex ai -> { collectBindingIds(ai.array(), out); collectBindingIds(ai.index(), out); }
+            case Ast.ECall c -> { for (Ast.Exp arg : c.args()) collectBindingIds(arg, out); }
+            case Ast.EAss a -> collectBindingIds(a.value(), out);
+            default -> { } // literals etc.
+        }
+    }
+
 }
