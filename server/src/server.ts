@@ -361,7 +361,7 @@ function firstDefInScope(doc: TextDocument, word: string, mPos: Position, hoverP
       return firstDefInScope(doc, word, doc.positionAt(doc.offsetAt(start) + m.index), hoverPos)
     } else {
       // Only hovered word in scope
-      return doc.getText(lineRange(hoverPos.line, 999))
+      return doc.getText(lineRange(hoverPos.line, 999)).trim();
     }
   }
 }
@@ -373,7 +373,7 @@ function shiftChar(pos: Position, by: number): Position {
 function shiftLine(pos: Position, by: number): Position {
   return {line: pos.line + by, character: pos.character}
 }
-
+/* ignore functions for now */
 function inSameScope(doc: TextDocument, start: Position, end: Position): boolean {
   // Same scope if number of `{` equal `}` or have one more `{` and in function definition
   const textBetween = doc.getText({ start, end })
@@ -384,10 +384,11 @@ function inSameScope(doc: TextDocument, start: Position, end: Position): boolean
   // connection.console.log("#} = " + nrClose)
   const diff = nrOpen - nrClose
   // connection.console.log("diff = " + diff)
-  if (diff == 0) {
+  if (diff >= 0) {
     return true
   }
-  return (diff == 1 && /\bfunc\b/.test(doc.getText(lineFromTo(start.line, 0, start.character))))
+  return false
+  // return (diff == 1 && /\bfunc\b/.test(doc.getText(lineFromTo(start.line, 0, start.character))))
 }
 
 
