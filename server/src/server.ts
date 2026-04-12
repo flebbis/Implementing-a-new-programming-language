@@ -272,6 +272,10 @@ const wordChar: RegExp = /[A-z0-9\_]/
 const excluded: RegExp = /[0-9]+(.[0-9]+)?|\b(true|false|do|while|if|else|return|func|int|bool|string|double)\b/
 const opChar: RegExp = /\-|\<|\>|\=|\!|\+|\*|\%/
 
+function positionString(pos: Position): string {
+  return `{${pos.line}, ${pos.character}}`
+}
+
 function inc(pos: Position): Position {
   return { line: pos.line, character: pos.character + 1 }
 }
@@ -295,7 +299,7 @@ function lineRange(line: number, endAt: number): Range {
 }
 
 connection.onHover((params: HoverParams) => {
-  connection.console.log("onHover:")
+  // connection.console.log("onHover:")
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
   let pos = params.position;
@@ -312,8 +316,9 @@ connection.onHover((params: HoverParams) => {
       // connection.console.log("onHover: length = " + m?.length)
       // connection.console.log("onHover: index = " + m?.index)
       if (!excluded.test(word) //exclude numerics, litterals and types
-        && m && m.index) { //ensures there is only one match (always true)
+        && m && (m.index || m.index == 0)) { //ensures there is only one match (always true), 0 = false :/
         const mPos = doc.positionAt(m.index);
+        // connection.console.log(positionString(mPos))
         let description = firstDefInScope(doc, word, mPos, pos); //remove trailing and leading whitespace 
         let contents: MarkupContent = {
           kind: MarkupKind.Markdown,
@@ -333,19 +338,31 @@ connection.onHover((params: HoverParams) => {
 
 function firstDefInScope(doc: TextDocument, word: string, mPos: Position, hoverPos: Position): string {
   const start = shiftChar(mPos, word.length)
+  // connection.console.log("finding scope: " + positionString(mPos) + " - " + positionString(hoverPos))
   if (inSameScope(doc, start, hoverPos)) {
+    // connection.console.log("Same scope")
     // also handles function
     let r: Range = lineRange(mPos.line, 150);
     return doc.getText(r).trim(); //remove trailing and leading whitespace ;
   } else {
+    // connection.console.log("Not same scope")
     // not in same scope
 
+    // connection.console.log("" + positionString(start) + " | " + positionString(hoverPos))
+    // connection.console.log("new search text:")
+    // connection.console.log(doc.getText({ start, end: hoverPos }))
     let m: RegExpMatchArray | null = doc.getText({ start, end: hoverPos }).match("\\b" + word + "\\b");
+    // connection.console.log("" + m)
 
     if (m && m.index) {
-      return firstDefInScope(doc, word, doc.positionAt(m.index), hoverPos)
+      // Exists another occurence in lower scope
+      // connection.console.log("Recursion call")
+      // connection.console.log("found position: " + positionString(doc.positionAt(doc.offsetAt(start) + m.index)))
+      return firstDefInScope(doc, word, doc.positionAt(doc.offsetAt(start) + m.index), hoverPos)
+    } else {
+      // Only hovered word in scope
+      return doc.getText(lineRange(hoverPos.line, 999))
     }
-    return ""
   }
 }
 
@@ -353,16 +370,24 @@ function shiftChar(pos: Position, by: number): Position {
   return { line: pos.line, character: pos.character + by }
 }
 
+function shiftLine(pos: Position, by: number): Position {
+  return {line: pos.line + by, character: pos.character}
+}
+
 function inSameScope(doc: TextDocument, start: Position, end: Position): boolean {
   // Same scope if number of `{` equal `}` or have one more `{` and in function definition
   const textBetween = doc.getText({ start, end })
+  // connection.console.log("Text: " + textBetween)
   const nrOpen = textBetween.match(/\{/g)?.length || 0
   const nrClose = textBetween.match(/\}/g)?.length || 0
+  // connection.console.log("#{ = " + nrOpen)
+  // connection.console.log("#} = " + nrClose)
   const diff = nrOpen - nrClose
+  // connection.console.log("diff = " + diff)
   if (diff == 0) {
     return true
   }
-  return (diff == -1 && /\bfunc\b/.test(doc.getText(lineFromTo(start.line, 0, start.character))))
+  return (diff == 1 && /\bfunc\b/.test(doc.getText(lineFromTo(start.line, 0, start.character))))
 }
 
 
@@ -457,19 +482,19 @@ function findBlockLim(lineNr: number, doc: TextDocument, step: (p: number) => nu
 }
 
 function inString(pos: Position, doc: TextDocument): boolean {
-  connection.console.log("onHover: ? IN STRING ?")
+  // connection.console.log("onHover: ? IN STRING ?")
   // idea: count number of ``"`` characters to left or right of hover position,
   // odd -> true
   // even -> false
   const left = lineFromTo(pos.line, 0, pos.character)
   const leftLine = doc.getText(left)
-  connection.console.log("onHover: LINE = " + leftLine)
+  // connection.console.log("onHover: LINE = " + leftLine)
   const m = leftLine.match(/\"/g)
-  connection.console.log("onHover: matches = " + m?.toString())
+  // connection.console.log("onHover: matches = " + m?.toString())
   const count = m?.length || 0
-  connection.console.log("onHover: stringlims = " + count)
+  // connection.console.log("onHover: stringlims = " + count)
   let res = (count % 2) == 1
-  connection.console.log("onHover: " + res)
+  // connection.console.log("onHover: " + res)
   return (count % 2) == 1
 }
 // -------------------------------------------------------------------------------------------------
