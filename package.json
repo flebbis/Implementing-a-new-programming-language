@@ -61,11 +61,20 @@
           "languageServer.insertionIntensity" :{
             "scope": "resource",
             "type": "string",
-            "enum": ["nill", "hint","onSave", "insertOnChange"],
-            "enumItemLabels": ["None", "Shadow hint", "On save", "Immediate"],
-            "markdownEnumDescriptions": ["No insertion", "Shadowed inline hints", "Whenever the document is saved", "Immediately when valid syntax allows inference"],
-            "default": "hint",
+            "enum": ["nill", "onSave", "insertOnChange"],
+            "enumItemLabels": ["None", "On save", "Immediate"],
+            "markdownEnumDescriptions": [
+              "No insertion", 
+              "Whenever the document is saved", 
+              "Immediately when valid syntax allows inference"],
+            "default": "nill",
             "description": "The currently avaliabe type inference insertion options"
+          },
+          "languageServer.inlineTypeHint" :{
+            "scope": "resource",
+            "type": "boolean",
+            "default": "true",
+            "description": "Display inline hint for infered types"
           }
         }
       }

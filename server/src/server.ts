@@ -16,9 +16,10 @@ import {
   Range,
   MarkupKind,
   TextEdit,
+  Position
 } from "vscode-languageserver/node";
 
-import { Position, TextDocument } from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { spawn } from 'child_process';
 import * as path from 'path';
@@ -100,7 +101,6 @@ connection.onInitialize((params: InitializeParams) => {
 // settings stuff
 enum TypeInferenceSetting {
   Nill = "nill",
-  Hint = "hint",
   OnSave = "onSave",
   InsertOnChange = "insertOnChange",
 }
@@ -109,12 +109,14 @@ enum TypeInferenceSetting {
 interface ServerSettings {
   maxNumberOfProblems: number;
   insertionIntensity: TypeInferenceSetting;
-
+  inlineTypeHint: boolean;
 }
 
+// default settings if client does not support 
 const defaultSettings: ServerSettings = {
   maxNumberOfProblems: 1000,
-  insertionIntensity: TypeInferenceSetting.Nill
+  insertionIntensity: TypeInferenceSetting.Nill,
+  inlineTypeHint: false,
 }
 
 let globalSettings: ServerSettings = defaultSettings;
@@ -127,7 +129,7 @@ function getDocumentSettings(recource: string): Thenable<ServerSettings> {
   if (!hasConfigurationCabability) {
     return Promise.resolve(globalSettings);
   }
-  let result /* Thenable<ServerSettings> */ = documentSettings.get(recource);
+  let result = documentSettings.get(recource);
   if (!result) {
     result = connection.workspace.getConfiguration({
       scopeUri: recource,
@@ -453,7 +455,7 @@ documents.onDidChangeContent(async change => {
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
   // Type check & inference phase
-  if (isLatest(uri, version) && (settings.insertionIntensity == TypeInferenceSetting.Hint
+  if (isLatest(uri, version) && (settings.inlineTypeHint
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange)) {
     await inferenceAnalysis(uri, text, version);
   }
@@ -463,7 +465,7 @@ documents.onDidChangeContent(async change => {
     insertInfered(uri);
   }
   // Refresh inlay hints
-  if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.Hint) {
+  if (isLatest(uri, version) && settings.inlineTypeHint) {
     connection.languages.inlayHint.refresh();
   }
 });
@@ -475,16 +477,22 @@ documents.onDidChangeContent(async change => {
 connection.languages.inlayHint.on(async (params) => {
   const uri = params.textDocument.uri;
   const settings = await getDocumentSettings(uri)
-  if (settings.insertionIntensity == TypeInferenceSetting.Hint) {
-
+  if (settings.inlineTypeHint) {
     const suggestions = inferenceSuggestionMap.get(uri) ?? [];
     return suggestions.map((s) => ({
       position: {
         line: s.line - 1,
-        character: s.column,
+        character: s.column
       },
       label: `${s.inferredType} `,
       kind: 1,
+      textEdits: [{
+        range: {
+          start: { line: s.line - 1, character: s.column },
+          end: { line: s.line - 1, character: s.column }
+        },
+        newText: `${s.inferredType} `
+      }],
       paddingRight: true,
     }));
   }
@@ -509,6 +517,9 @@ documents.onWillSaveWaitUntil(async (params) => {
     if (isLatest(uri, version)) {
       changes = inferedInserts(uri);
     }
+  }
+  if (settings.inlineTypeHint) {
+    connection.languages.inlayHint.refresh();
   }
   return changes
 })
