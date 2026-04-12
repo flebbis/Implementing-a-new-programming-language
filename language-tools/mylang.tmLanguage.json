@@ -143,7 +143,7 @@
       "name": "constant.litteral",
       "patterns": [
         { "name": "constant.numeric.expression.litteral.double",
-          "match": "\\b[1-9][0-9]*\\.[0-9]*\\b"},
+          "match": "\\b[1-9][0-9]*\\.[0-9]*|[0-9]*\\.[0-9]*\\b"},
         { "name": "constant.numeric.expression.litteral.integer",
           "match": "\\b[1-9][0-9]*\\b"},
         { "name": "constant.language.expression.litteral.boolean",
