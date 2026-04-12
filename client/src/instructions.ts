@@ -1,37 +1,83 @@
 type arguments = (arg1?: string, arg2?: string, arg3?: string, arg4?: string) => string;
+// registers %eax, x0, w8 etc
+const isReg   = (a?: string) => !!a && (a.startsWith('%') || /^[xwbsdqv]\d+$/.test(a) || /^r\d+$/.test(a) || ['wzr','xzr','sp','lr','fp'].includes(a));
+// contansts %5, 5
+const isConst = (a?: string) => !!a && (a.startsWith('$') || /^\d+$/.test(a));
+// variable x, i, counter
+const isVar   = (a?: string) => !!a && !isReg(a) && !isConst(a) && !a.startsWith('_') && !a.startsWith('L') && !a.startsWith('[');
+// value 5
+const val     = (a: string)  => a.startsWith('$') ? a.slice(1) : a;
+
 
 // Describtion for assembly this deals with arm64, arm and x86, x86-64
 export const instructions: Record<string, arguments> = {
 
-    mov: (arg1, arg2) => arg1?.endsWith(')') ? `Load value from addr into reg` :
-                     arg2?.endsWith(')') ? `Store value from reg into addr` :
-                     arg2?.startsWith('#') ? `Copy value into register` :
-                     arg2?.startsWith('sp') ? `Copy stack pointer addr into reg` :
-                     `Copy reg ${arg2} into reg ${arg1}`,
-    ldr: (arg1, arg2, arg3)  => arg3 ? `Load value ${arg3} from stack into return slot` :
-                                `Load ${arg1} from addr ${arg2}`, 
-    str: (arg1, arg2, arg3)  => arg3 ? `Store the value ${arg3} onto stack` :
-                                `Store ${arg1} at addr ${arg2}`, 
+    // x86/64 movl $30, -4(%rsp)
+    // x86/64 movl -4(%rsp), %eax   
+    // x86/64 movl %eax, -4(%rsp)  
+    // arm/arm64  mov x0, #30  
+    mov: (arg1, arg2) => 
+        isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+        isVar(arg1) && isReg(arg2)   ? `Load ${arg1} into register`    :
+        isReg(arg1) && isVar(arg2)   ? `${arg2} = register` :
+        isReg(arg1) && isConst(arg2) ? `Load ${val(arg2!)} into register`:
+        `Copy register into register`,
 
-    add:  (arg1, arg2, arg3) => arg3
-        ? `Add ${arg3} to a reg, store in a reg`
-        : `Add two regs, store in a reg`,
+    // arm/arm64: ldr r0, [sp, #4]  →  Load from address into register
+    // arm/arm64: ldr r0, x        →  Load x into register   (slot resolved)
+    ldr: (_arg1, arg2) =>
+        isVar(arg2) ? `Load ${arg2} into register` :
+        `Load from address into register`,
+    
+    // arm64 str wzr, [sp, #4]                           
+    // arm/arm64 w8|r0, [sp, #4]
+    str: (arg1, arg2) => 
+        (arg1 === 'wzr' || arg1 === 'xzr') ? `${arg2} = 0` :
+        isVar(arg2)                        ? `${arg2} = register` :
+        `Store register to address`,
 
-    sub:  (arg1, arg2, arg3) => arg3
-        ? `Subtract ${arg3} from a reg, store in a reg`
-        : `Subtract two regs, store in a reg`,
+    // ------------ ARITHMETIC ------------        
 
-    mul:  (arg1, arg2, arg3) => arg3
-        ? `Multiply a reg by ${arg3}, store in a reg`
-        : `Multiply two regs, store in a reg`,
+    // arm/arm64 add w8, x0, #2 
+    // arm/arm64 add x0, x1, #2 
+    // arm/arm64 add x0, x1, x2
+    // x86/64 addl $2, -20(%rsp)
+    // x86/64 addl %eax, -20(%rsp)
+    add:  (arg1, arg2, arg3) => 
+        arg3 && isVar(arg1) && isConst(arg3) ? `${arg1} += ${val(arg3!)}` :
+        arg3 && isConst(arg3)                ? `Add ${val(arg3!)} to register` :
+        arg3                                 ? `Add register to register` :
+        isVar(arg2) && isConst(arg1)         ? `${arg2} += ${val(arg1!)}` :
+        isVar(arg2)                          ? `Add register to ${arg2}` :
+        `Add to register`,
+    
+    // arm/arm64 sub x, x0, #1     
+    // arm/arm64 sub x0, x1, #1    
+    // arm/arm64 sub x0, x1, x2    
+    // x86/64 subl $1, -20(%rsp)   
+    // x86/64 subl %eax, -20(%rsp) 
+    sub: (arg1, arg2, arg3) => 
+        arg3 && isVar(arg1) && isConst(arg3) ? `${arg1} -= ${val(arg3!)}` :
+        arg3 && isConst(arg3)                ? `Subtract ${val(arg3!)} from register` :
+        arg3                                 ? `Subtract register from register` :
+        isVar(arg2) && isConst(arg1)         ? `${arg2} -= ${val(arg1!)}` :
+        isVar(arg2)                          ? `Subtract register from ${arg2}` :
+        `Subtract from register`,
 
-    subs: () =>
-        `Subtract a value from a reg, store in a reg, set flags`,
+        // arm/arm64 mul x, x0, #2
+        // arm/arm64 mul x0, x0, #2
+    mul: (arg1, _arg2, arg3) =>
+        arg3 && isVar(arg1) && isConst(arg3) ? `${arg1} *= ${val(arg3)}` :  
+        arg3 && isConst(arg3)                ? `Multiply register by ${val(arg3)}` : 
+        `Multiply registers`,                                                       
 
-    sdiv: () =>
-        `Divide a reg by a value, store in a reg (signed)`,
+        // arm64: subs x0, x0, #1
+        // arm64: subs x0, x1, x2
+    subs: (_arg1, _arg2, arg3) =>
+        arg3 && isConst(arg3) ? `Subtract ${val(arg3)} from register, set flags` :
+        `Subtract registers, set flags`,                                            
 
-    idiv: (arg1, arg2)       => `Divide ${arg2} / ${arg1}`,
+    // ----- JUMPS ----
     'b.eq': (arg1)           => `Jump if equal == to ${arg1}`,
     'b.ne': (arg1)           => `Jump if not equal != ${arg1}`,
     'b.ge': (arg1)           => `Jump if greater equal than >= ${arg1}`,
@@ -48,14 +94,19 @@ export const instructions: Record<string, arguments> = {
     pop: (arg1)              => `Pop from stack into ${arg1}`,
     stp: (arg1, arg2, arg3, arg4) => `Save ${arg1} and ${arg2} to stack at (${arg3} + ${arg4})`,
 
-    //arm64
-    stur: (arg1, arg2, arg3) => arg3
-        ? `Store reg ${arg1} at offset ${arg3} of reg ${arg2}`
-        : `Store reg ${arg1} to reg ${arg2}`,
+    // --- arm64 ---
 
-    ldur: (arg1, arg2, arg3) => arg3
-        ? `Load offset ${arg3} of reg ${arg2} into reg ${arg1}`
-        : `Load reg ${arg2} into reg ${arg1}`,
+    // stur wzr, [sp, #-4]
+    // arm64 stur w0, [sp, #-4]
+    stur: (arg1, arg2) => 
+        (arg1 === 'wzr' || arg1 === 'xzr') && isVar(arg2) ? `${arg2} = 0` :
+        isVar(arg2)                                       ? `${arg2} = register` :
+        `Store register to address`,
+
+    // ldur w0, [sp, #-4] 
+    ldur: (arg1, arg2) => 
+        isVar(arg2) ? `Load ${arg2} into register` :
+        `Load from address into register`,
 
     ldp:  (arg1, arg2, arg3, arg4) => arg4
         ? `Load offset ${arg4} into reg ${arg1} and reg ${arg2}`
@@ -67,7 +118,9 @@ export const instructions: Record<string, arguments> = {
     lsr:  (arg1, arg2, arg3) =>
         `Shift reg ${arg2} right by ${arg3}, store in reg ${arg1}`,
 
-    // x86, x86-64
+    sdiv: () => `Divide registers (signed)`,
+
+    // ---- x86, x86-64------
     jmp:   (arg1)            => `Jump to ${arg1}`, 
     call:  (arg1)            => `Call ${arg1}`,
     je: (arg1)               => `Jump if equal == to ${arg1}`,
@@ -76,55 +129,6 @@ export const instructions: Record<string, arguments> = {
     jle: (arg1)              => `Jump if lesser equal than <= ${arg1}`,
     jl: (arg1)               => `Jump if lesser than < ${arg1}`,
     jg: (arg1)               => `Jump if greater than > ${arg1}`,
+    idiv: (arg1)             => `Divide by ${arg1}`,
 
-
-
-
-
-
-    /*
-    mov: (arg1, arg2)        => arg1?.endsWith(')') ? `Load ${arg2} from adress ${arg1}` :
-                                arg2?.endsWith(')') ? `Store ${arg1} at adress ${arg2}` :
-                                (arg1?.startsWith('%') || arg2?.startsWith('%')) ?
-                                `Move ${arg1} into ${arg2}` : `Move ${arg2} into ${arg1}`, 
-    ldr: (arg1, arg2, arg3)  => arg3 ? `Load ${arg1} from adress ${arg2} + ${arg3}` :
-                                `Load ${arg1} from adress ${arg2}`, 
-    str: (arg1, arg2, arg3)  => arg3 ? `Store ${arg1} at adress ${arg2} +${arg3}` :
-                                `Store ${arg1} at adress ${arg2}`, 
-
-    add: (arg1, arg2, arg3)  => arg3 ? `Add ${arg3} to ${arg2}, store in ${arg1}` :
-                                `Add ${arg1} to ${arg2}, store in ${arg2}`,
-    sub: (arg1, arg2, arg3)  => arg3 ? `Subtract ${arg3} from ${arg2}, store in ${arg1}`:
-                                `Subtract ${arg1} from ${arg2}, store in ${arg2}`, 
-    mul: (arg1, arg2, arg3)  => `Multiply ${arg3} with ${arg2}, store in ${arg1}`,
-    imul: (arg1, arg2)       => `Multiply ${arg1} with ${arg2}, store in ${arg2}`,
-    subs: (arg1, arg2, arg3) => `${arg1} = ${arg2} - ${arg3} (set flags)`,
-    sdiv: (arg1, arg2, arg3) => `Divide ${arg2} / ${arg3}, store in ${arg1}`,
-    idiv: (arg1, arg2)       => `Divide ${arg2} / ${arg1}`,
-    'b.eq': (arg1)           => `Jump if equal == to ${arg1}`,
-    'b.ne': (arg1)           => `Jump if not equal != ${arg1}`,
-    'b.ge': (arg1)           => `Jump if greater equal than >= ${arg1}`,
-    'b.le': (arg1)           => `Jump if lesser equal than <= ${arg1}`,
-    'b.lt': (arg1)           => `Jump if lesser than < ${arg1}`,
-    'b.gt': (arg1)           => `Jump if greater than > ${arg1}`,
-
-    // arm
-    cmp: (arg1, arg2)        => `Compare ${arg1} and ${arg2}`,
-    b:   (arg1)              => `Jump to ${arg1}`, 
-    bl:  (arg1)              => `Call ${arg1}`,
-    ret: ()                  => `Return`,
-    push: (arg1)             => `Push ${arg1} onto stack`,
-    pop: (arg1)              => `Pop from stack into ${arg1}`,
-    stp: (arg1, arg2, arg3, arg4) => `Save ${arg1} and ${arg2} to stack at (${arg3} + ${arg4})`,
-
-    // x86, x86-64
-    jmp:   (arg1)            => `Jump to ${arg1}`, 
-    call:  (arg1)            => `Call ${arg1}`,
-    je: (arg1)               => `Jump if equal == to ${arg1}`,
-    jne: (arg1)              => `Jump if not equal != ${arg1}`,
-    jge: (arg1)              => `Jump if greater equal than >= ${arg1}`,
-    jle: (arg1)              => `Jump if lesser equal than <= ${arg1}`,
-    jl: (arg1)               => `Jump if lesser than < ${arg1}`,
-    jg: (arg1)               => `Jump if greater than > ${arg1}`,
-*/
 }

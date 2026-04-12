@@ -189,32 +189,20 @@ export async function activate(context: ExtensionContext) {
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
       lineMap = buildLineMap(asm.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
-      console.log('=== RAW .s lines with indices ===');
       asm.split('\n').forEach((line: string, i: number) => console.log(`raw[${i}]: "${line}"`));
 
-      console.log('=== FILTERED display lines with indices ===');
-      filtered.split('\n').forEach((line: string, i: number) => console.log(`display[${i}]: "${line}"`));
-
-      console.log('=== asmMapSrc ===');
-      for (const [a, s] of lineMap.asmMapSrc) console.log(`  asm[${a}] → src line ${s}`);
       if(!lineMap){
-        console.log("buildlinemap not active")
         vscode.window.showErrorMessage("buildLineMap not active")
       }
-      console.log('llContent first 200 chars:', llContent.substring(0, 200));
-      console.log('asm first 200 chars:', asm.substring(0, 200));
+
       const varMap = buildVarMap(llContent);
-      console.log('funcVarMap:', JSON.stringify([...varMap.funcVarMap]));
-      console.log('funcVarMap:', varMap.funcVarMap);
       const stackMap = buildStackMap(filtered.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
-      console.log('funcStackMap:', JSON.stringify([...stackMap.funcStackMap]));
-      console.log('funcStackMap:', stackMap.funcStackMap);
       zippVarMap = zippedVarMap(varMap.funcVarMap, stackMap.funcStackMap);
-      console.log('zippVarMap:', zippVarMap);
+      console.log("funcVarMap:", [...varMap.funcVarMap.entries()]);
+      console.log("funcStackMap:", [...stackMap.funcStackMap.entries()]);
+      console.log("zippVarMap:", [...zippVarMap.entries()].map(([k,v]) => [k, [...v.entries()]]));
 
-      
       // add padding for inlayHints
-
       let maxLength: number = 0;
       for (let i = 0; i < lines.length; i++) {
         if(lines[i].length > maxLength) {
@@ -223,7 +211,8 @@ export async function activate(context: ExtensionContext) {
       }
 
       for (let i = 0; i < lines.length; i++) {
-        lines[i] = lines[i].padEnd(maxLength + 3);
+        if(lines[i].startsWith("_")) {continue}
+        lines[i] = lines[i].padEnd(maxLength + 1);
       }
 
       const padding = lines.join('\n');
@@ -247,7 +236,7 @@ export async function activate(context: ExtensionContext) {
     vscode.languages.registerInlayHintsProvider({scheme: 'asm-preview'}, new class implements vscode.InlayHintsProvider {
       provideInlayHints(document: vscode.TextDocument, range: vscode.Range): vscode.InlayHint[] {
         const hints: vscode.InlayHint[] = [];
-        
+        let slotMap: Map<string,string> = new Map();
         // loop through the lines, reetrieve the arguments and trim away l q to match x86 and x86-64
         // If there is matching operand Then apply the inylayhints for the given line
         for (let i = 0; i < document.lineCount; i++) {
@@ -257,24 +246,37 @@ export async function activate(context: ExtensionContext) {
             if (!funcName) continue;
             const varStackMap = zippVarMap?.get(funcName);
             if (!varStackMap) continue;
-            let sb = "Variables: ";
-            for (const [k,v] of varStackMap) {
-              sb += `${k} → ${v}   `; 
-            }
-            const il = new vscode.InlayHint(new vscode.Position(i,0), sb);
+            slotMap = new Map([...varStackMap].map(([k, v]) => [v, k]));
+            const entries = [...varStackMap.entries()];
+            const label = `  Variables(${entries.length}): ` + entries.map(([k]) => k).join(', ');
+            const tooltip = new vscode.MarkdownString(entries.map(([k,v]) => `**${k}** → \`${v}\``).join('\n\n'));
+            const il = new vscode.InlayHint(new vscode.Position(i, document.lineAt(i).text.length), label);
+            il.tooltip = tooltip;
             hints.push(il);
           }
-          const tokens = trimmed.split(/\s+/).map((t: string) => t.replace(",", ""))
-          .map((t: string) => t.replace("#", ""));
-          const [op, arg1, arg2, arg3, arg4] = tokens;
-          const clearOp = op.replace(/[lq]$/, '')
+          let resolved = trimmed;
+          for (const [slot, varName] of slotMap) {
+            if (slot.startsWith('[')) {
+              resolved = resolved.replace(slot, varName);
+            }
+          }
+          // rejoin {r7, lr} style register lists that got split by whitespace
+          resolved = resolved.replace(/\{[^}]*\}/g, m => m.replace(/\s+/g, ''));
+          const tokens = resolved.split(/\s+/)
+            .map((t: string) => t.replace(",", ""))
+            .map((t: string) => t.replace("#", ""));
+          const clearOp = tokens[0].replace(/[lq]$/, '');
           const operand = instructions[clearOp];
           if (operand) {
-          const text = operand(arg1, arg2, arg3, arg4);
-          const pos = new vscode.Position(i, document.lineAt(i).text.length);
-          const il = new vscode.InlayHint(pos, text);
-          hints.push(il);
-          } 
+            for (let k = 1; k < tokens.length; k++) {
+              const value = slotMap.get(tokens[k]);
+              if (value) tokens[k] = value;
+            }
+            const text = operand(tokens[1], tokens[2], tokens[3], tokens[4]);
+            console.log("tokens:", tokens, "→", text);
+            const pos = new vscode.Position(i, document.lineAt(i).text.length);
+            hints.push(new vscode.InlayHint(pos, text));
+          }
         }
         return hints;
       }

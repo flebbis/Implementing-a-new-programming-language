@@ -1,6 +1,8 @@
 package com.example.minilang;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 /*
 Overview on how it conncets, ish
@@ -34,6 +36,12 @@ public class DebugMetaData {
     //function name -> (sourceLine -> IdCounter)
     Map<String, Map<Integer, Integer>> locationIds = new HashMap<>();
     String currentFunction;
+    //varId, funcId, line, typeId
+    List<int[]> localVarEntries = new ArrayList<>();
+    // varId -> name
+    Map<Integer, String> localVarNames = new HashMap<>();
+    // llvmtype -> metadata ID 
+    Map<String, Integer> typeIds = new HashMap<>();
 
     public DebugMetaData(String fileName) {
         this.fileName = fileName;
@@ -72,18 +80,47 @@ public class DebugMetaData {
             innerMap.put(line, id);
             return id;
         } else 
-            return id;
+        return id;
+    }
+    
+    // emit it once, if it has a metadata ID, return otherwise allocate a new one
+    // "i32" -> !IDCounter = !n
+    private int getOrCreateTypeId(String llvmtype) {
+        return typeIds.computeIfAbsent(llvmtype, k -> IdCounter++);
+    }
+
+    // Maps LLVM type string to a DWARF DIType definition string
+    // If not it deferences null, it crash. With the string it emits the right dwarf .debuginfo
+    private String llvmTypeToDIType(String llvmtype) {
+        return switch (llvmtype) {
+            case "i32"    -> "!DIBasicType(name: \"int\", size: 32, encoding: DW_ATE_signed)";
+            case "double" -> "!DIBasicType(name: \"double\", size: 64, encoding: DW_ATE_float)";
+            case "i1"     -> "!DIBasicType(name: \"bool\", size: 8, encoding: DW_ATE_boolean)";
+            default       -> "!DIBasicType(name: \"string\", size: 64, encoding: DW_ATE_address)"; 
+        };
+    }
+
+    public String declareVariable(String name, String llvmtype, String register, int line) {
+        int funcId = funcNameIds.get(currentFunction);
+        int typeId = getOrCreateTypeId(llvmtype);
+        int varId = IdCounter++;
+        int lineId = getLineId(line);
+        localVarEntries.add(new int[]{varId, funcId, line, typeId});
+        localVarNames.put(varId, name);
+        // Use LLVM 17+ #dbg_declare format (ptr = opaque pointer, avoids upgrade crash in LLVM 21)
+        return "  #dbg_declare(ptr " + register
+          + ", !" + varId
+          + ", !DIExpression(), !" + lineId + ")\n";
     }
 
     // It runs end of code generation. It takes what the maps have 
     // collected and turns into metaData text so LLVM understands
     public String emit() {
+        int moduleFlagsId = IdCounter++;
         StringBuilder sb = new StringBuilder();
         sb.append("!llvm.dbg.cu = !{!0}\n");
-        sb.append("!llvm.module.flags = !{!10}\n");
-        sb.append("!10 = !{i32 2, !\"Debug Info Version\", i32 3}\n");
-        // This is the first 2 lines, file and sourceFile
-        sb.append("!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)\n");
+        sb.append("!llvm.module.flags = !{!").append(moduleFlagsId).append("}\n");
+        sb.append("!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)\n");
         sb.append("!1 = !DIFile(filename: \"")
         .append(fileName)
         .append("\", directory: \".\")\n");
@@ -94,11 +131,11 @@ public class DebugMetaData {
             // !2 = distinct !DISubprogram(name: "helloWorld", scope: !1, 
             // file: !1, line: 3, type: !DISubroutineType(types: !{}), unit: !0)
             sb.append("!").append(entry.getValue())
-            .append("  = distinct !DISubprogram(name: \"")
+            .append(" = distinct !DISubprogram(name: \"")
             .append(entry.getKey())
             .append("\", scope: !1, file: !1, line: ")
             .append(funcLine)
-            .append(", type: !DISubroutineType(types: !{}), unit: !0) \n");
+            .append(", type: !DISubroutineType(types: !{}), spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !{})\n");
 
             Map<Integer, Integer> innerMap = locationIds.get(entry.getKey());
             for (Map.Entry<Integer, Integer> innerEntry : innerMap.entrySet()) {
@@ -110,6 +147,24 @@ public class DebugMetaData {
                 .append(funcId).append(")\n");
             }
         }
+        // Go trough each variable and print out, the name or var, funciton id, file, line number, typeID -> IDCounter 
+        // !7 = !DILocalVariable(name: "x", scope: !2, file: !1, line: 5, type: !9)
+        for (int[] entry1 : localVarEntries) {
+            int varId = entry1[0], funcId = entry1[1], line = entry1[2], typeId = entry1[3];
+            sb.append("!").append(varId)
+            .append(" = !DILocalVariable(name: \"").append(localVarNames.get(varId))
+            .append("\", scope: !").append(funcId)
+            .append(", file: !1, line: ").append(line)
+            .append(", type: !").append(typeId).append(")\n");
+        }
+        // for each type convert type to string 
+        // 9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+        for (Map.Entry<String, Integer> typeEntry : typeIds.entrySet()) {
+            sb.append("!").append(typeEntry.getValue())
+            .append(" = ").append(llvmTypeToDIType(typeEntry.getKey())).append("\n");
+        }
+        sb.append("!").append(moduleFlagsId).append(" = !{i32 2, !\"Debug Info Version\", i32 3}\n");
         return sb.toString();
     }
+
 }

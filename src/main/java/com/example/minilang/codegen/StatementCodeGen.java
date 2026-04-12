@@ -162,6 +162,7 @@ public class StatementCodeGen extends Helper {
 
         sb.append(register).append(" = alloca ").append(convertType(declStmt.type()))
         .append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
+        sb.append(debugMetaData.declareVariable(declStmt.name(), convertType(declStmt.type()), register, declStmt.pos().line));
         environment.pushToCurrentScope(declStmt.name(), register);
         // }
     }
@@ -173,6 +174,7 @@ public class StatementCodeGen extends Helper {
 
             sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type()))
             .append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
+            sb.append(debugMetaData.declareVariable(initStmt.name(), convertType(initStmt.type()), register, initStmt.pos().line));
             environment.pushToCurrentScope(initStmt.name(), register);
         }
         
