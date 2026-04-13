@@ -18,14 +18,17 @@ public class StatementTypeChecker {
     private Context inferenceContext; // For tracking variable types during inference phase
     private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
     private List<String> calledFunctions = new ArrayList<>(); // For tracking called functions during inference phase
+    private UnresolvedTypeHelper unresolvedTypeHelper;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
             Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
-        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
+        this.unresolvedTypeHelper = new UnresolvedTypeHelper(context, currentFunction, functionSignatures);
+        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures, unresolvedTypeHelper);
+
     }
 
     public List<String> getCalledFunctions() {
@@ -291,7 +294,8 @@ public class StatementTypeChecker {
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
 
-        if (!(condition.type() instanceof Ast.TBool)) {
+
+        if (!TypeUtils.equalTypes(condition.type(), new Ast.TBool())) {
             throw new TypeException("Condition of if statement must be of type bool", stmt.condition().pos());
         }
 

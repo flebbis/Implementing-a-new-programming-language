@@ -13,10 +13,13 @@ public class ExpressionTypeChecker {
     private HashMap<String, Signature> functionSignatures;
     private String currentFunction;
     private List<String> calledFunctions = new ArrayList<>();
+    private UnresolvedTypeHelper unresolvedTypeHelper;
 
-    public ExpressionTypeChecker(Context context, HashMap<String, Signature> signature) {
+
+    public ExpressionTypeChecker(Context context, HashMap<String, Signature> signature, UnresolvedTypeHelper unresolvedTypeHelper) {
         this.context = context;
         this.functionSignatures = signature;
+        this.unresolvedTypeHelper = unresolvedTypeHelper;
     }
 
     public void setCurrentFunction(String currentFunction) {
@@ -94,7 +97,7 @@ public class ExpressionTypeChecker {
         if (exp.type() instanceof Ast.TBool) {
             return new Ast.ENot(exp, new Ast.TBool(), enot.pos());
         } else if(exp.type() instanceof Ast.TUnresolved) {
-            Ast.Exp newExp = unresolvedTypeCheck(exp, new Ast.TBool());
+            Ast.Exp newExp = unresolvedTypeHelper.unresolvedTypeCheck(exp, new Ast.TBool());
             return newExp;
         }else {
             throw new TypeException("Logical NOT operator requires boolean operand", enot.pos());
@@ -109,15 +112,23 @@ public class ExpressionTypeChecker {
         if (base.type() instanceof Ast.TUnknown || exponent.type() instanceof Ast.TUnknown) {
             return new Ast.EPower(base, exponent, new Ast.TUnknown(), ePower.pos());
         }
+        System.out.println("Base type: " + base.type() + ", Exponent type: " + exponent.type());
 
         if (base.type() instanceof Ast.TInt || base.type() instanceof Ast.TDouble) {
             if (exponent.type() instanceof Ast.TInt || exponent.type() instanceof Ast.TDouble) {
                 // If either is double, the result is double
                 Ast.Type resultType = (base.type() instanceof Ast.TDouble || exponent.type() instanceof Ast.TDouble) ? new Ast.TDouble() : new Ast.TInt();
                 return new Ast.EPower(base, exponent, resultType, ePower.pos());
+
+            } else if(exponent.type() instanceof Ast.TUnresolved) {
+                exponent = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(exponent);
+                return new Ast.EPower(base, exponent, new Ast.TDouble(), ePower.pos());
             } else {
                 throw new TypeException("Exponent must be of type int or double", ePower.pos());
             }
+        } else if(base.type() instanceof Ast.TUnresolved) {
+            base = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(base);
+            return new Ast.EPower(base, exponent, new Ast.TDouble(), ePower.pos());
         }
         throw new TypeException("Power base must be of type int or double", ePower.pos());
     }
@@ -140,49 +151,14 @@ public class ExpressionTypeChecker {
                     && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
                 return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
             } else if(leftType instanceof Ast.TUnresolved) {
-                left = addNumericConditionToUnresolvedExp(left);
+                left = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(left);
             } else if(rightType instanceof Ast.TUnresolved) {
-                right = addNumericConditionToUnresolvedExp(right);
+                right = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(right);
             } else {
                 throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
             }
         }
         return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
-    }
-
-    private Ast.Exp addNumericConditionToUnresolvedExp(Ast.Exp unresolved) {
-        Ast.Exp addedInt = unresolvedTypeCheck(unresolved, new Ast.TInt());
-        return unresolvedTypeCheck(addedInt, new Ast.TDouble());
-    }
-
-    private Ast.Exp unresolvedTypeCheck(Ast.Exp unresolved, Ast.Type resolved) {
-        if (unresolved.type() instanceof Ast.TUnresolved unresolvedType) {
-
-            if(!checkUnresolvedConditions(unresolvedType, resolved)) {
-                throw new TypeException(unresolvedType.id() + " must be of type " + TypeConverter.typeToString(unresolvedType) + ", " + TypeConverter.typeToString(resolved) + " is not supported", unresolved.pos());
-            }
-
-            List<Ast.Type> conditions = new ArrayList<>(unresolvedType.conditions());
-            if(conditions.contains(resolved)) {
-                return unresolved; // Already satisfies the conditions, no need to update
-            }
-            conditions.add(resolved);
-
-            Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), conditions);
-            context.update(unresolvedType.id(), newType);
-            List<Ast.Type> paramTypes = functionSignatures.get(currentFunction).paramTypes;
-
-            // Update paramtypes in signatures
-            for(Ast.Type paramType : paramTypes) {
-                if(paramType instanceof Ast.TUnresolved paramUnresolved && paramUnresolved.id().equals(unresolvedType.id())) {
-                    int index = paramTypes.indexOf(paramType);
-                    functionSignatures.get(currentFunction).paramTypes.set(index, newType);
-                }
-            }
-
-            return new Ast.EId(unresolvedType.id(), newType, unresolved.pos());
-        }
-        return unresolved;
     }
 
     public Ast.Exp typeCheck(Ast.ELogic eLogic) {
@@ -291,7 +267,7 @@ public class ExpressionTypeChecker {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
                 if(varType instanceof Ast.TUnresolved) {
-                    value = unresolvedTypeCheck(eAss, value.type());
+                    value = unresolvedTypeHelper.unresolvedTypeCheck(eAss, value.type());
                     return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
                 }
                 throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to variable of type " + TypeConverter.typeToString(varType), eAss.pos());
@@ -343,7 +319,7 @@ public class ExpressionTypeChecker {
                     if (paramType instanceof Ast.TDouble && args.get(i).type() instanceof Ast.TInt) {
                         args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
                     } else if(paramType instanceof Ast.TUnresolved unresolvedParamType) {
-                        if(checkUnresolvedConditions(unresolvedParamType, args.get(i).type())) {
+                        if(unresolvedTypeHelper.checkUnresolvedConditionsMatch(unresolvedParamType, args.get(i).type())) {
                             functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type()); // update the signature with the resolved type for future calls
                         } else {
                             throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " does not satisfy the conditions for " + ((Ast.TUnresolved) paramType).id() + ": " + ((Ast.TUnresolved) paramType).conditions(), eCall.pos());
@@ -360,24 +336,6 @@ public class ExpressionTypeChecker {
         }
 
         return new Ast.ECall(eCall.name(), args, functionSignatures.get(eCall.name()).returnType, eCall.pos());
-    }
-
-    private boolean checkUnresolvedConditions(Ast.TUnresolved unresolved, Ast.Type resolved) {
-        if(unresolved.conditions().isEmpty()) {
-            return true; // No conditions to satisfy, return the resolved type
-        }
-
-        for (Ast.Type condition : unresolved.conditions()) {
-            if (TypeUtils.equalTypes(condition, resolved)) {
-                System.out.println("?? " + condition + " " + resolved);
-                return true; // Condition satisfied, return the resolved type, at least one match
-            }
-            if(condition instanceof Ast.TInt && resolved instanceof Ast.TDouble) {
-                return true; // Allow implicit conversion from int to double, every int is ok as double
-            }
-        }
-
-        return false; // Were conditions, but the called type did not satisfy any of them
     }
 
     public Ast.Exp typeCheck(Ast.EArray eArray) {
