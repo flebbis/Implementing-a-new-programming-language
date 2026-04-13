@@ -1,9 +1,9 @@
 {
-  "name": "mylang",
-  "description": "language server following lsp for this unnamed language",
+  "name": "fika",
+  "description": "language server following lsp for the fika programming language",
   "author": "Cole",
   "license": "MIT",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "Grupp17A",
   "repository": {
     "type": "git",
@@ -20,29 +20,28 @@
   "contributes": {
     "languages": [
       {
-        "id": "mylang",
+        "id": "fika",
         "extensions": [
-          ".ml"
+          ".fika"
         ],
         "aliases": [
-          "mylang",
-          "myLang",
-          "MyLang"
+          "Fika",
+          "FIKA"
         ],
         "configuration": "./language-tools/language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "mylang",
-        "scopeName": "source.mylang",
-        "path": "./language-tools/mylang.tmLanguage.json"
+        "language": "fika",
+        "scopeName": "source.fika",
+        "path": "./language-tools/fika.tmLanguage.json"
       }
     ],
     "configuration":[
       {
         "type": "object",
-        "title": "myLang language server and language tools",
+        "title": "fika language server and language tools",
         "properties": {
           "languageServer.maxNumberOfProblems" : {
             "scope": "resource",

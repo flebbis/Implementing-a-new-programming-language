@@ -1,5 +1,5 @@
 {
-  "scopeName": "source.mylang",
+  "scopeName": "source.fika",
   "patterns": [
     {"include": "#Comment"},
     {"include": "#FunctionDeclaration"},

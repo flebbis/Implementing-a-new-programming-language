@@ -61,7 +61,7 @@ export async function activate(context: ExtensionContext) {
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for all 'mylang' files defined in package.json as having ending .ml
-    documentSelector: [{ scheme: "file", language: "mylang" }],
+    documentSelector: [{ scheme: "file", language: "fiika" }],
     synchronize: {
       // Notify the server about file changes to '.clientrc files contained in the workspace
       fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
@@ -70,8 +70,8 @@ export async function activate(context: ExtensionContext) {
 
   // Create the language client and start the client.
   client = new LanguageClient(
-    "mylangLanguageServer",
-    "MyLang language server testing",
+    "fikaLanguageServer",
+    "fika language server",
     serverOptions,
     clientOptions
   );
@@ -111,7 +111,7 @@ export async function activate(context: ExtensionContext) {
       }
 
       if (!lastPath) {
-        vscode.window.showErrorMessage('No active .mylang file!');
+        vscode.window.showErrorMessage('No active .fika file!');
         return;
       }
 
@@ -195,7 +195,7 @@ export async function activate(context: ExtensionContext) {
   workspace.onDidSaveTextDocument((document: TextDocument) => {
     const conf: Boolean | undefined = vscode.workspace.getConfiguration('assemblyExtension', document.uri).get('showAssemblyOnSave')
     if (conf) {
-      if (document.languageId === "mylang" && document.uri.scheme === "file") {
+      if (document.languageId === "fika" && document.uri.scheme === "file") {
         showAssembly('-O0')
       }
     }

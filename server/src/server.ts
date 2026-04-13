@@ -155,7 +155,7 @@ connection.onInitialized(() => {
     });
   }
   connection.window.showInformationMessage(
-    "onInitialized: *mylang* Language server extension initialized successfully!"
+    "onInitialized: *fika* Language server extension initialized successfully!"
   );
 });
 
@@ -233,7 +233,7 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
   settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[]): Diagnostic[] {
   //Validator matching
   let text = document.getText();
-  let d = Array.from(diagnostics) // mutate-by-copy
+  let d = Array.from(diagnostics) 
   let m: RegExpExecArray | null
   let problems = 0;
   while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
@@ -245,7 +245,7 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
         end: document.positionAt(m.index + m[0].length)
       },
       message: `${m[0]} is detected!`,
-      source: 'mylang-diagnostics'
+      source: 'fika-diagnostics'
     };
     if (hasDiagnosticRelatedInformationCapability) {
       diagnostic.relatedInformation = [
