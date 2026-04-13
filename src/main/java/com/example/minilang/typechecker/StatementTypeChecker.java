@@ -17,6 +17,7 @@ public class StatementTypeChecker {
     private HashMap<String, Signature> functionSignatures;
     private Context inferenceContext; // For tracking variable types during inference phase
     private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
+    private List<String> calledFunctions = new ArrayList<>(); // For tracking called functions during inference phase
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
             Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
@@ -25,6 +26,10 @@ public class StatementTypeChecker {
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
+    }
+
+    public List<String> getCalledFunctions() {
+        return expressionTypeChecker.getCalledFunctions();
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -328,6 +333,7 @@ public class StatementTypeChecker {
 
     public void setCurrentFunction(String currentFunction) {
         this.currentFunction = currentFunction;
+        expressionTypeChecker.setCurrentFunction(currentFunction);
     }
 
     public void updateInferenceContext(Context context) {

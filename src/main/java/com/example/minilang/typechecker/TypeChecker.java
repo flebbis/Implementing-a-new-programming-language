@@ -86,6 +86,9 @@ public class TypeChecker {
 
             List<Ast.Type> paramTypes = new ArrayList<>();
             for(Ast.Arg arg : func.params()) {
+                if(arg.type() instanceof Ast.TUnknown) {
+                    arg = new Ast.Arg(arg.name(), new Ast.TUnresolved(arg.name(), new ArrayList<>()), arg.pos());
+                }
                 paramTypes.add(arg.type());
             }
 
@@ -114,20 +117,22 @@ public class TypeChecker {
             int offSet = 0;
 
             for (int i = 0; i < func.params().size(); i++) {
-                Ast.Type type = sig.paramTypes.get(i);
+                Ast.Type callType = sig.paramTypes.get(i);
+
+
+                Ast.Arg arg = func.params().get(i);
+                System.out.println(sig.paramTypes);
+
 
                 // Inference suggestion
-                if (!(func.params().get(i).type().equals(type))) {
-                    Ast.Arg arg = func.params().get(i);
+                if (!(arg.type().equals(callType))) {
                     Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
-                    addInferenceSuggestion(name, type, pos);
-                    offSet += TypeConverter.typeToString(type).length() + 1;
+                    addInferenceSuggestion(name, callType, pos);
+                    offSet += TypeConverter.typeToString(callType).length() + 1;
                 }
 
-                Ast.Arg oldArg = func.params().get(i);
-
-                context.pushToCurrentScope(oldArg.name(), type);
-                currentParams.add(new Ast.Arg(oldArg.name(), type, oldArg.pos()));
+                context.pushToCurrentScope(arg.name(), callType);
+                currentParams.add(new Ast.Arg(arg.name(), callType, arg.pos()));
             }
 
             if (!(func.body() instanceof Ast.SBlock)) {
@@ -139,8 +144,11 @@ public class TypeChecker {
                 bodyStmts.add(statementTypeChecker.typeCheck(stmt));
             }
 
+            boolean calledFunc = statementTypeChecker.getCalledFunctions().contains(name);
+            System.out.println(calledFunc);
+
             checkedFuncs.add(new Ast.Func(name, currentParams, sig.returnType,
-                    new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
+                    new Ast.SBlock(bodyStmts, func.body().pos()), calledFunc, func.pos()));
             context.popScope();
         }
         return checkedFuncs;

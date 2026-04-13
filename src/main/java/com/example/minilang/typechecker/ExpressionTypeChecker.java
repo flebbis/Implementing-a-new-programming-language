@@ -11,10 +11,20 @@ public class ExpressionTypeChecker {
 
     private Context context = new Context();
     private HashMap<String, Signature> functionSignatures;
+    private String currentFunction;
+    private List<String> calledFunctions = new ArrayList<>();
 
     public ExpressionTypeChecker(Context context, HashMap<String, Signature> signature) {
         this.context = context;
         this.functionSignatures = signature;
+    }
+
+    public void setCurrentFunction(String currentFunction) {
+        this.currentFunction = currentFunction;
+    }
+
+    public List<String> getCalledFunctions() {
+        return calledFunctions;
     }
 
     public Ast.Exp typeCheck(Ast.Exp exp) {
@@ -83,7 +93,10 @@ public class ExpressionTypeChecker {
         }
         if (exp.type() instanceof Ast.TBool) {
             return new Ast.ENot(exp, new Ast.TBool(), enot.pos());
-        } else {
+        } else if(exp.type() instanceof Ast.TUnresolved) {
+            Ast.Exp newExp = unresolvedTypeCheck(exp, new Ast.TBool());
+            return newExp;
+        }else {
             throw new TypeException("Logical NOT operator requires boolean operand", enot.pos());
         }
     }
@@ -126,11 +139,50 @@ public class ExpressionTypeChecker {
             if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
                     && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
                 return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
+            } else if(leftType instanceof Ast.TUnresolved) {
+                left = addNumericConditionToUnresolvedExp(left);
+            } else if(rightType instanceof Ast.TUnresolved) {
+                right = addNumericConditionToUnresolvedExp(right);
             } else {
                 throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
             }
         }
         return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
+    }
+
+    private Ast.Exp addNumericConditionToUnresolvedExp(Ast.Exp unresolved) {
+        Ast.Exp addedInt = unresolvedTypeCheck(unresolved, new Ast.TInt());
+        return unresolvedTypeCheck(addedInt, new Ast.TDouble());
+    }
+
+    private Ast.Exp unresolvedTypeCheck(Ast.Exp unresolved, Ast.Type resolved) {
+        if (unresolved.type() instanceof Ast.TUnresolved unresolvedType) {
+
+            if(!checkUnresolvedConditions(unresolvedType, resolved)) {
+                throw new TypeException(unresolvedType.id() + " must be of type " + TypeConverter.typeToString(unresolvedType) + ", " + TypeConverter.typeToString(resolved) + " is not supported", unresolved.pos());
+            }
+
+            List<Ast.Type> conditions = new ArrayList<>(unresolvedType.conditions());
+            if(conditions.contains(resolved)) {
+                return unresolved; // Already satisfies the conditions, no need to update
+            }
+            conditions.add(resolved);
+
+            Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), conditions);
+            context.update(unresolvedType.id(), newType);
+            List<Ast.Type> paramTypes = functionSignatures.get(currentFunction).paramTypes;
+
+            // Update paramtypes in signatures
+            for(Ast.Type paramType : paramTypes) {
+                if(paramType instanceof Ast.TUnresolved paramUnresolved && paramUnresolved.id().equals(unresolvedType.id())) {
+                    int index = paramTypes.indexOf(paramType);
+                    functionSignatures.get(currentFunction).paramTypes.set(index, newType);
+                }
+            }
+
+            return new Ast.EId(unresolvedType.id(), newType, unresolved.pos());
+        }
+        return unresolved;
     }
 
     public Ast.Exp typeCheck(Ast.ELogic eLogic) {
@@ -238,6 +290,10 @@ public class ExpressionTypeChecker {
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
+                if(varType instanceof Ast.TUnresolved) {
+                    value = unresolvedTypeCheck(eAss, value.type());
+                    return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
+                }
                 throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to variable of type " + TypeConverter.typeToString(varType), eAss.pos());
             }
         }
@@ -246,6 +302,8 @@ public class ExpressionTypeChecker {
 
     public Ast.ECall typeCheck(Ast.ECall eCall) {
         // PRINT special case
+        calledFunctions.add(eCall.name());
+
         if(eCall.name().equals("print")) {
             if(eCall.args().size() != 1) {
                 throw new TypeException("print function expects exactly one argument", eCall.pos());
@@ -284,6 +342,13 @@ public class ExpressionTypeChecker {
                     // Allow implicit conversion from int to double
                     if (paramType instanceof Ast.TDouble && args.get(i).type() instanceof Ast.TInt) {
                         args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
+                    } else if(paramType instanceof Ast.TUnresolved unresolvedParamType) {
+                        if(checkUnresolvedConditions(unresolvedParamType, args.get(i).type())) {
+                            functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type()); // update the signature with the resolved type for future calls
+                        } else {
+                            throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " does not satisfy the conditions for " + ((Ast.TUnresolved) paramType).id() + ": " + ((Ast.TUnresolved) paramType).conditions(), eCall.pos());
+                        }
+
                     } else if (!paramType.equals(args.get(i).type())) {
                         throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
                     }
@@ -295,6 +360,24 @@ public class ExpressionTypeChecker {
         }
 
         return new Ast.ECall(eCall.name(), args, functionSignatures.get(eCall.name()).returnType, eCall.pos());
+    }
+
+    private boolean checkUnresolvedConditions(Ast.TUnresolved unresolved, Ast.Type resolved) {
+        if(unresolved.conditions().isEmpty()) {
+            return true; // No conditions to satisfy, return the resolved type
+        }
+
+        for (Ast.Type condition : unresolved.conditions()) {
+            if (TypeUtils.equalTypes(condition, resolved)) {
+                System.out.println("?? " + condition + " " + resolved);
+                return true; // Condition satisfied, return the resolved type, at least one match
+            }
+            if(condition instanceof Ast.TInt && resolved instanceof Ast.TDouble) {
+                return true; // Allow implicit conversion from int to double, every int is ok as double
+            }
+        }
+
+        return false; // Were conditions, but the called type did not satisfy any of them
     }
 
     public Ast.Exp typeCheck(Ast.EArray eArray) {
@@ -320,7 +403,6 @@ public class ExpressionTypeChecker {
 
         for (Ast.Exp element : checkedElements) {
             if (!element.type().equals(type.elementType())) {
-                System.out.println(type.elementType() + " " + element.type());
                 if(type.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
 
                     // Allow implicit conversion from int to double

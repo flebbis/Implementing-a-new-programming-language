@@ -13,7 +13,7 @@ public class Helper {
             case Ast.TString() -> "i8*";
             case Ast.TDouble() -> "double";
             case Ast.TUnknown() -> "void"; // Default to pointer type for unknown types. UGLY! FIX LATER!
-
+            default -> throw new IllegalArgumentException("Unsupported type: " + TypeConverter.typeToString(type));
         };
     }
 
@@ -24,7 +24,7 @@ public class Helper {
             case Ast.TBool() -> "i1";
             case Ast.TString() -> "i8*";
             case Ast.TDouble() -> "double";
-            default -> throw new IllegalArgumentException("Unsupported scalar type: " + TypeConverter.typeToString(type));
+            default -> throw new IllegalArgumentException("Unsupported type: " + TypeConverter.typeToString(type));
         };
     }
 

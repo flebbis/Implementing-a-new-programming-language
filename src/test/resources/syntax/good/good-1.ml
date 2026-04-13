@@ -1,18 +1,9 @@
+int func test(n) {
 
-func test2(x) {
-    x.append(1)
-    print(x)
+
+    if not n {
+    print("test")
+    }
+
+
 }
-
-func test(x) {
-    x.append(100)
-    print(x)
-}
-
-y = [1,2,3]
-print(y)
-test2(y)
-test(y)
-
-y.append(5)
-print(y)

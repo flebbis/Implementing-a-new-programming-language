@@ -12,24 +12,20 @@ import java.util.Map;
 
 import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
-import com.example.minilang.codegen.ArrayValue;
 
 public class ExpressionCodeGen extends Helper {
     private static Map<String, String> stringRegisterToGlobal = new HashMap<>();
     private static Map<String, Integer> stringGlobalToLength = new HashMap<>();
-    private static Map<String, ArrayValue> arrayNameToValue = new HashMap<>();
     private StringBuilder sb;
     private StringBuilder globals;
     private StringBuilder globalStrings;
     private int stringCounter = 0;
-    private HashSet<String> functionVariables;
     private Environment environment;
     private ArrayCodeGenHelper arrayCodeGenHelper;
     public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment) {
         this.sb = sb;
         this.globals = globals;
         this.globalStrings = globalStrings;
-        this.functionVariables = functionVariables;
         this.environment = environment;
         this.arrayCodeGenHelper = new ArrayCodeGenHelper(sb);
     }

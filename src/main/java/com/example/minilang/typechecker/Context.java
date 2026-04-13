@@ -76,6 +76,7 @@ public class Context {
     public Ast.Type lookupFromScopeLevel(String id, int level) {
         // savedContextStack index: index 0 is the most recently pushed scope,
         // so scope level 'n' lives at index (savedContextStack.size() - n).
+        System.out.println("saved: " + savedContextStack);
         int index = savedContextStack.size() - level;
         if (index < 0 || index >= savedContextStack.size()) {
             return null;

@@ -13,22 +13,20 @@ public class FunctionCodeGen {
     private StringBuilder sb;
     private HashSet<String> declaredVariables;
     private Environment environment;
-    private StringBuilder globals;
-    private StringBuilder globalStrings;
-    private HashSet<String> functionVariables;
     private StatementCodeGen stmtGen;
 
     public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen) {
 
         this.sb = sb;
         this.environment = environment;
-        this.globals = globals;
-        this.globalStrings = globalStrings;
-        this.functionVariables = functionVariables;
         this.stmtGen = stmtGen;
     }
 
     public void generateFunction(Ast.Func function) {
+
+        if(!function.called()) {
+            return; // Skip code generation for functions that are never called
+        }
 
         environment.pushNewScope();
         Helper helper = new Helper();
