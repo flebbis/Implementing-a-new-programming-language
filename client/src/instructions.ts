@@ -8,7 +8,6 @@ const isVar   = (a?: string) => !!a && !isReg(a) && !isConst(a) && !a.startsWith
 // raw value
 const val     = (a: string)  => (a.startsWith('$') || a.startsWith('#')) ? a.slice(1) : a;
 
-const addHeader = `## add - Add values\n\n` + `Adds two values togheter and stores the result\n\n`
 // Describtion for assembly this deals with arm64, arm and x86, x86-64
 export const instructions: Record<string, arguments> = {
 
@@ -77,7 +76,7 @@ export const instructions: Record<string, arguments> = {
         arg3 && isConst(arg3) ? `Subtract ${val(arg3)} from register, set flags` :
         `Subtract registers, set flags`,                                            
 
-    // ----- JUMPS ----
+    // ----- JUMPS ---- dont think these are used
     'b.eq': (arg1)           => `Jump if equal == to ${arg1}`,
     'b.ne': (arg1)           => `Jump if not equal != ${arg1}`,
     'b.ge': (arg1)           => `Jump if greater equal than >= ${arg1}`,
@@ -109,11 +108,11 @@ export const instructions: Record<string, arguments> = {
     // --- arm64 ---
 
     // adrp x8, LCPI0_0@PAGE 
-    adrp: (_arg1, _arg2) => `Load page address into register`,
+    adrp: () => `Load page address into register`,
 
     // fmov d0, #2.0e+0  
     // fmov d0, x0   
-    fmov: (_arg1, arg2) =>
+    fmov: (arg1, arg2) =>
         isConst(arg2) ? `Load ${val(arg2!)} into float register` :
         isVar(arg2)   ? `Load ${arg2} into float register` :
         `Copy float register`,
@@ -219,11 +218,17 @@ export const extendedInstructions: Record<string, arguments> = {
             
     
     str: (arg1, arg2, arg3) =>
-        (arg1 === 'wzr' || arg1 === 'xzr') ?
+        (arg1 === 'wzr' || arg1 === 'xzr') && isVar(arg2) ?
             `## str — Store to memory\n\n` +
             `Stores the value zero into the variable **${arg2}**. The zero register always reads as 0\n\n` +
             `- **${arg1}** — the zero register, always contains the value 0\n` +
-            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack\n\n` :
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack` :
+        (arg1 === 'wzr' || arg1 === 'xzr') ?
+            `## str — Store to memory\n\n` +
+            `Stores the value zero to a memory address. The zero register always reads as 0\n\n` +
+            `- **${arg1}** — the zero register, always contains the value 0\n` +
+            `- **${arg2}** — base address register\n` +
+            (arg3 ? `- **${arg3}** — byte offset from the base address` : '') :
         isReg(arg1) && isVar(arg2) ? 
             `## str — Store to memory\n\n` +
             `Stores the value in the register into the variable **${arg2}** on the stack\n\n` + 
@@ -240,37 +245,317 @@ export const extendedInstructions: Record<string, arguments> = {
     // ------------ ARITHMETIC ------------ 
 
     add: (arg1, arg2, arg3) =>
-        arg3 && isVar(arg1) && isConst(arg3) ? 
-            addHeader +
+        arg3 && isVar(arg1) && isConst(arg3) ?
+            `## add — Add values\n\n` +
+            `Adds a constant to a variable\n\n` +
             `- **${arg1}** — variable \`${arg1}\`, the destination being updated\n` +
             `- **${arg2}** — source register\n` +
             `- **${arg3}** — the literal value being added\n\n` +
-            `This is the compiler performing **${arg1} += ${val(arg3!)}** in your source code.` :
-        arg3 && isConst(arg3) ? 
-            addHeader +
+            `This is the compiler performing **${arg1} += ${val(arg3!)}** in your source code` :
+        arg3 && isConst(arg3) ?
+            `## add — Add values\n\n` +
+            `Adds a constant to a register\n\n` +
             `- **${arg1}** — destination register, will hold the result\n` +
             `- **${arg2}** — source register\n` +
-            `- **${arg3}** — the literal value being added\n\n` +
-            `Adds a constant to a register value` :
-        arg3 ? 
-            addHeader +
+            `- **${arg3}** — the literal value being added` :
+        arg3 ?
+            `## add — Add values\n\n` +
+            `Adds two register values together\n\n` +
             `- **${arg1}** — destination register, will hold the result\n` +
-            `- **${arg2}** — source register\n` +
-            `- **${arg3}** — second source register\n\n` +
-            `Adds two register values togheter` :
-        isConst(arg1) && isVar(arg2) ? 
-            addHeader +
+            `- **${arg2}** — first source register\n` +
+            `- **${arg3}** — second source register` :
+        isConst(arg1) && isVar(arg2) ?
+            `## add — Add values\n\n` +
+            `Adds a constant to a variable\n\n` +
             `- **${arg1}** — the literal value being added\n` +
-            `- **${arg2}** — variable \`${arg2}\`, both the source and destination\n` +
+            `- **${arg2}** — variable \`${arg2}\`, both the source and destination\n\n` +
             `This is the compiler performing **${arg2} += ${val(arg1!)}** in your source code` :
-        isVar(arg2) ? 
-            addHeader +
+        isVar(arg2) ?
+            `## add — Add values\n\n` +
+            `Adds a register value into a variable\n\n` +
             `- **${arg1}** — register holding the value to add\n` +
-            `- **${arg2}** — variable \`${arg2}\`, both the source and destination\n` +
-            `Adds a register value into the variable **${arg2}**` :
+            `- **${arg2}** — variable \`${arg2}\`, both the source and destination` :
 
-            addHeader +
+            `## add — Add values\n\n` +
+            `Adds a value to a register\n\n` +
             `- **${arg1}** — first value\n` +
-            `- **${arg2}** — destination\n` +
-            `Adds a value to aregister`,
+            `- **${arg2}** — destination register`,
+
+    sub: (arg1, arg2, arg3) =>
+        arg3 && isVar(arg1) && isConst(arg3) ?
+            `## sub — Subtract values\n\n` +
+            `Subtracts a constant from a variable\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, the destination being updated\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value being subtracted\n\n` +
+            `This is the compiler performing **${arg1} -= ${val(arg3!)}** in your source code` :
+        arg3 && isConst(arg3) ?
+            `## sub — Subtract values\n\n` +
+            `Subtracts a constant from a register\n\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value ${val(arg3!)} being subtracted` :
+        arg3 ?
+            `## sub — Subtract values\n\n` +
+            `Subtracts two register values\n\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — first source register\n` +
+            `- **${arg3}** — second source register` :
+        isConst(arg1) && isVar(arg2) ?
+            `## sub — Subtract values\n\n` +
+            `Subtracts a constant from a variable\n\n` +
+            `- **${arg1}** — the literal value being subtracted\n` +
+            `- **${arg2}** — variable \`${arg2}\`, both the source and destination\n\n` +
+            `This is the compiler performing **${arg2} -= ${val(arg1!)}** in your source code` :
+        isVar(arg2) ?
+            `## sub — Subtract values\n\n` +
+            `Subtracts a register value from a variable\n\n` +
+            `- **${arg1}** — register holding the value to subtract\n` +
+            `- **${arg2}** — variable \`${arg2}\`, both the source and destination` :
+
+            `## sub — Subtract values\n\n` +
+            `Subtracts a value from a register\n\n` +
+            `- **${arg1}** — first value\n` +
+            `- **${arg2}** — destination register`,
+
+    mul: (arg1, arg2, arg3) =>
+        arg3 && isVar(arg1) && isConst(arg3) ?
+            `## mul — Multiply values\n\n` +
+            `Multiplies a variable by a constant\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, the destination being updated\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value being multiplied\n\n` +
+            `This is the compiler performing **${arg1} *= ${val(arg3!)}** in your source code` :
+        arg3 && isConst(arg3) ?
+            `## mul — Multiply values\n\n` +
+            `Multiplies a register by a constant\n\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value ${val(arg3!)} being multiplied` :
+
+            `## mul — Multiply values\n\n` +
+            `Multiplies two register values together\n\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — first source register\n` +
+            (arg3 ? `- **${arg3}** — second source register` : ''),
+
+    subs: (arg1, arg2, arg3) =>
+        arg3 && isConst(arg3) ?
+            `## subs — Subtract and set flags\n\n` +
+            `Subtracts a constant from a register and updates the condition flags\n\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value ${val(arg3!)} being subtracted\n\n` +
+            `The flags are used by a following branch instruction to decide if a loop or condition continues` :
+        arg3 ?
+            `## subs — Subtract and set flags\n\n` +
+            `Subtracts two registers and updates the condition flags\n\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — first source register\n` +
+            `- **${arg3}** — second source register\n\n` +
+            `The flags are used by a following branch instruction to decide if a loop or condition continues` :
+
+            `## subs — Subtract and set flags\n\n` +
+            `Subtracts a value and updates the condition flags\n\n` +
+            `- **${arg1}** — first value\n` +
+            `- **${arg2}** — destination register`,    
+        
+    //arm32,arm64 jumps
+    b: (arg1) => jump(arg1!),
+    beq: (arg1) => jumpEqual(arg1!),
+    bne: (arg1) => jumpNotEqual(arg1!),
+    bge: (arg1) => jumpGreaterThan(arg1!),
+    ble: (arg1) => jumpLesserThan(arg1!),
+    blt: (arg1) => jumpLesser(arg1!),
+    bgt: (arg1) => jumpGreater(arg1!),
+
+
+    //x86-64/86 jumps
+    jmp: (arg1)   => jump(arg1!),
+    je: (arg1)    => jumpEqual(arg1!),
+    jne: (arg1)   => jumpNotEqual(arg1!),
+    jge: (arg1)   => jumpGreaterThan(arg1!),
+    jle: (arg1)   => jumpLesserThan(arg1!),
+    jl: (arg1)    => jumpLesser(arg1!),
+    jg: (arg1)    => jumpGreater(arg1!),
+
+    cmp: (arg1, arg2) => 
+        isVar(arg1) && isConst(arg2) ?
+            `## cmp — Compare\n\n` +
+            `Compares a variable against a constant value without storing the result\n` +
+            `only the condition flags are updated. The following branch instruction reads those flags to decide whether to jump\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, the value being compared\n` +
+            `- **${arg2}** — the constant being compared against` :
+        isReg(arg1) && isConst(arg2) ?
+            `## cmp — Compare\n\n` +
+            `Compares a register against a constant value without storing the result\n` +
+            `only the condition flags are updated. The following branch instruction reads those flags to decide whether to jump\n\n` +
+            `- **${arg1}** — register holding the value being compared\n` +
+            `- **${arg2}** — the constant being compared against` :
+        isReg(arg1) && isVar(arg2) ?
+            `## cmp — Compare\n\n` +
+            `Compares a register against a variable without storing the result\n` +
+            `only the condition flags are updated. The following branch instruction reads those flags to decide whether to jump\n\n` +
+            `- **${arg1}** — register holding the left hand side\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the right hand side` :
+
+            `## cmp — Compare\n\n` +
+            `Compares two values without storing the result\n` +
+            `only the condition flags are updated. The following branch instruction reads those flags to decide whether to jump\n\n` +
+            `- **${arg1}** — first value\n` +
+            `- **${arg2}** — second value`,
+
+    //arm32 - arm64
+
+    bic: (arg1, arg2, arg3) =>
+        isConst(arg3) ? 
+            `## bic — Bit Clear\n\n` +
+            `Clears the bits specified by the constant mask in the register\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` + 
+            `- **${arg3}** — the bit mask, bits set here will be cleared in **${arg2}**` :
+
+            `## bic — Bit Clear\n\n` +
+            `Clears bits in a register using another register as the mask\n` +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` + 
+            `- **${arg3}** — register whose bits will be cleared from **${arg2}**`,
+
+    bl: (arg1) => 
+        `## bl - Branch with Link\n\n` +
+        `Calls a function and saves the return adress so execution can return after the call\n\n` +
+        `- **${arg1}** — the name of the function beign called\n`,
+
+    //arm64
+    
+    stp: (arg1,arg2,arg3,arg4) =>
+        `## stp — Store Pair\n\n` +
+        `Store two registers to memory in a single instruction\n\n` +
+        `- **${arg1}** — first register being stored\n` +
+        `- **${arg2}** — second register being stored\n` +
+        `- **${arg3}** — base adress register\n` +
+        `- **${arg4}** — byte offset from the base adress`,
+
+    adrp: (arg1, arg2) => 
+        `## adrp - Adress of Page\n\n` +
+        `Loads the page address of a symbol into a register\n `+
+        `Used together with a following offset instruction to form the full address of global data\n` +
+        `- **${arg1}** — destination register, will hold the page adress\n` +
+        `- **${arg2}** — the symbol whose page adress is being loaded\n`,
+    
+    fmov: (arg1,arg2) =>
+        isConst(arg2) ? 
+            `## fmov - Float Move\n\n` +
+            `Loads a float constant directly into a float register\n\n`+
+            `- **${arg1}** — destination float register\n` +
+            `- **${arg2}** — the float constant being loaded\n` :
+        isVar(arg2) ? 
+            `## fmov - Float Move\n\n` +
+            `Loads a variable into a float register to use it in a float computation\n\n`+
+            `- **${arg1}** — destination float register\n` +
+            `- **${arg2}** — variable \`${arg1}\`, being loaded from the stack\n` :
+
+            `## fmov - Float Move\n\n` +
+            `Copies a value between float registers\n\n`+
+            `- **${arg1}** — source float register\n` +
+            `- **${arg2}** — destination float register\n`,
+
+    stur: (arg1, arg2, arg3) =>
+        (arg1 === 'wzr' || arg1 === 'xzr') && isVar(arg2) ?
+            `## stur — Store Unscaled Register\n\n` +
+            `Stores zero into a variable on the stack. The zero register always reads as 0\n\n` +
+            `- **${arg1}** — the zero register, always contains the value 0\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack` :
+        isVar(arg2) ?
+            `## stur — Store Unscaled Register\n\n` +
+            `Stores a register value into a variable on the stack\n\n` +
+            `- **${arg1}** — register holding the value to store\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack` :
+
+            `## stur — Store Unscaled Register\n\n` +
+            `Stores a register value to a raw memory address\n\n` +
+            `- **${arg1}** — register holding the value to store\n` +
+            `- **${arg2}** — base address register\n` +
+            (arg3 ? `- **${arg3}** — byte offset from the base address` : ''),
+
+    ldur: (arg1, arg2, arg3) =>
+        isVar(arg2) ?
+            `## ldur — Load Unscaled Register\n\n` +
+            `Loads a variable from the stack into a register to use it in a computation\n\n` +
+            `- **${arg1}** — destination register, whill hold the loaded value\n` +
+            `- **${arg2}** — variable \`${arg2}\`, read from the stack` :
+
+            `## ldur — Load Unscaled Register\n\n` +
+            `Loads a value from a raw memory adress into a register\n\n` +
+            `- **${arg1}** — destination register, will hold the loaded value\n` +
+            `- **${arg2}** — base adress register\n` +
+            (arg3 ? `- **${arg3}** — byte offset from the base adress` : ''),
+
+    ldp: (arg1, arg2, arg3, arg4) =>
+        arg4 ?
+            `## ldp — Load Pair\n\n` +
+            `Loads two values from memory at a base address plus offset into two registers\n\n` +
+            `- **${arg1}** — first destination register\n` +
+            `- **${arg2}** — second destination register\n` +
+            `- **${arg3}** — base address register\n` +
+            `- **${arg4}** — byte offset from the base address` :
+
+            `## ldp — Load Pair\n\n` +
+            `Loads two values from a base address into two registers\n\n` +
+            `- **${arg1}** — first destination register\n` +
+            `- **${arg2}** — second destination register\n` +
+            `- **${arg3}** — base address register`,
+
+    lsl: (arg1, arg2, arg3) =>
+        `## lsl — Logical Shift Left\n\n` +
+        `Shifts the bits of a register left by a constant amount, equivalent to multiplying by a power of 2\n\n` +
+        `- **${arg1}** — destination register, will hold the result\n` +
+        `- **${arg2}** — source register being shifted\n` +
+        `- **${arg3}** — number of bit positions to shift left`,
+
+    lsr: (arg1, arg2, arg3) =>
+        `## lsr — Logical Shift Right\n\n` +
+        `Shifts the bits of a register right by a constant amount, equivalent to dividing by a power of 2\n\n` +
+        `- **${arg1}** — destination register, will hold the result\n` +
+        `- **${arg2}** — source register being shifted\n` +
+        `- **${arg3}** — number of bit positions to shift right`,
+
+    sdiv: (arg1, arg2, arg3) =>
+        `## sdiv — Signed Divide\n\n` +
+        `Divides two registers using signed integer division and stores the result\n\n` +
+        `- **${arg1}** — destination register, will hold the result\n` +
+        `- **${arg2}** — dividend register (the value being divided)\n` +
+        `- **${arg3}** — divisor register (the value to divide by)`,
+
+    //x86-64, 86
+
+    push: (arg1) =>
+        `## push - Push to stack\n\n` +
+        `Store registers onto the stack so they can be restored later, decreasing the stack pointer\n\n` +
+        `- **${arg1}** — the register or register list being stored in stack\n`,
+
+    pop: (arg1) =>
+        `## pop - Pop from stack\n\n` +
+        `Restores registers from the stack, increasing the stack pointer\n\n` +
+        `- **${arg1}** — the register or register list being restored from the stack\n`,
+
+
+
+
+
 }
+
+const jump = (arg1: string) =>`## Jump\n\n` + `Jumps uncoditionally to **${arg1}**\n\n` +
+    `Used to loop back to the start od a loop or skip an if-block`
+const jumpEqual = (arg1: string) => `## Jump if equal\n\n` + `Jumps to **${arg1}** if the last comparison was ==\n\n` +
+    `Used in condtions like if(a==b) or while (i==0)`
+const jumpNotEqual = (arg1: string) => `## Jump if not equal\n\n` + `Jumps to **${arg1}** if the last comparison was !=\n\n` +
+    `Used in condtions like if(a!=b) or while (i!=0)`
+const jumpGreaterThan = (arg1: string) => `## Jump if greater or equal\n\n` + `Jumps to **${arg1}** if the last comparison was >=\n\n` +
+    `Used in condtions like if(a>=b) or while (i>=0)`
+const jumpLesserThan = (arg1: string) => `## Jump if less or equal\n\n` + `Jumps to **${arg1}** if the last comparison was <=\n\n` +
+    `Used in condtions like if(a==b) or while (i==0)`
+const jumpLesser = (arg1: string) => `## Jump if less than\n\n` + `Jumps to **${arg1}** if the last comparison was <\n\n` +
+    `Used in condtions like if(a<b) or while (i<0)`
+const jumpGreater = (arg1: string) => `## Jump if greater than\n\n` + `Jumps to **${arg1}**  if the last comparison was >\n\n` +
+    `Used in condtions like if(a>b) or while (i>0)`
