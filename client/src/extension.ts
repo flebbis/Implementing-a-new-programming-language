@@ -256,7 +256,8 @@ export async function activate(context: ExtensionContext) {
           const rawTokens = trimmed
             .replace(/\{[^}]*\}/g, m => m.replace(/\s+/g, ''))
             .split(/\s+/)
-            .map((t: string) => t.replace(",", ""));
+            .map((t: string) => t.replace(",", ""))
+            .map((t: string) => t.replace("[", "").replace("]", ""));
 
           // Rename memory into a variable 
           // [sp, #4] -> i

@@ -1,14 +1,14 @@
 type arguments = (arg1?: string, arg2?: string, arg3?: string, arg4?: string) => string;
 // registers %eax, x0, w8 etc
 const isReg   = (a?: string) => !!a && (a.startsWith('%') || /^[xwbsdqv]\d+$/.test(a) || /^r\d+$/.test(a) || ['wzr','xzr','sp','lr','fp'].includes(a));
-// constants $5 (x86), #5 (arm/arm64), 5 (plain)
+// constants $5, #5, 5
 const isConst = (a?: string) => !!a && (a.startsWith('$') || a.startsWith('#') || /^\d+$/.test(a));
 // variable x, i, counter
 const isVar   = (a?: string) => !!a && !isReg(a) && !isConst(a) && !a.startsWith('_') && !a.startsWith('L') && !a.startsWith('[');
-// strip $ or # prefix to get the raw value
+// raw value
 const val     = (a: string)  => (a.startsWith('$') || a.startsWith('#')) ? a.slice(1) : a;
 
-
+const addHeader = `## add - Add values\n\n` + `Adds two values togheter and stores the result\n\n`
 // Describtion for assembly this deals with arm64, arm and x86, x86-64
 export const instructions: Record<string, arguments> = {
 
@@ -47,7 +47,7 @@ export const instructions: Record<string, arguments> = {
         arg3 && isVar(arg1) && isConst(arg3) ? `${arg1} += ${val(arg3!)}` :
         arg3 && isConst(arg3)                ? `Add ${val(arg3!)} to register` :
         arg3                                 ? `Add register to register` :
-        isVar(arg2) && isConst(arg1)         ? `${arg2} += ${val(arg1!)}` :
+        isConst(arg1) && isVar(arg2)         ? `${arg2} += ${val(arg1!)}` :
         isVar(arg2)                          ? `Add register to ${arg2}` :
         `Add to register`,
     
@@ -60,7 +60,7 @@ export const instructions: Record<string, arguments> = {
         arg3 && isVar(arg1) && isConst(arg3) ? `${arg1} -= ${val(arg3!)}` :
         arg3 && isConst(arg3)                ? `Subtract ${val(arg3!)} from register` :
         arg3                                 ? `Subtract register from register` :
-        isVar(arg2) && isConst(arg1)         ? `${arg2} -= ${val(arg1!)}` :
+        isConst(arg1) && isVar(arg2)         ? `${arg2} -= ${val(arg1!)}` :
         isVar(arg2)                          ? `Subtract register from ${arg2}` :
         `Subtract from register`,
 
@@ -171,11 +171,106 @@ export const instructions: Record<string, arguments> = {
 
 export const extendedInstructions: Record<string, arguments> = {
 
+    mov: (arg1, arg2) =>
+        isConst(arg1) && isVar(arg2) ?
+            `## mov — Move value\n\n` +
+            `Copies a constant value into a variable\n\n` +
+            `- **${arg1}** — the literal value being assigned\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack\n\n` +
+            `This is the compiler assigning a constant directly to **${arg2}** in your source code` :
+        isVar(arg1) && isReg(arg2) ?
+            `## mov — Move value\n\n` +
+            `Loads a variable from the stack into a register\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, loaded from the stack\n` +
+            `- **${arg2}** — destination register\n\n` +
+            `The compiler is reading **${arg1}** to use it in a computation` :
+        isReg(arg1) && isVar(arg2) ?
+            `## mov — Move value\n\n` +
+            `Stores a register value back into a variable\n\n` +
+            `- **${arg1}** — source register holding the value\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack\n\n` +
+            `This saves a computed result back into **${arg2}** in your source code` :
+        isReg(arg1) && isConst(arg2) ?
+            `## mov — Move value\n\n` +
+            `Loads a literal value into a register\n\n` +
+            `- **${arg1}** — destination register\n` +
+            `- **${arg2}** — the literal value being loaded\n\n` +
+            `On arm, this is the first step before storing a value into a variable on the stack` :
+
+            `## mov — Move value\n\n` +
+            `Copies data between registers during a computation\n\n` +
+            `- **${arg1}** — source register\n` +
+            `- **${arg2}** — destination register`,
+
+    ldr: (arg1, arg2, arg3) =>
+        isReg(arg1) && isVar(arg2) ? 
+            `## ldr - Load from memory\n\n` + 
+            `Reads a value from memory into a register so it can be used in a computation\n\n` +
+            `- **${arg1}** - destination register, will hold the loaded value\n` +
+            `- **${arg2}** - variable \`${arg2}\`, read from the stack\n\n` +
+            `The compiler is reading **${arg2}** from memory to use its value in the next operation` : 
+
+            `## ldr — Load from memory\n\n` +
+            `Reads a value from memory into a register so it can be used in a computation\n\n` +
+            `- **${arg1}** - destination register, will hold the loaded value\n` +
+            `- **${arg2}** - base adress register\n` +
+            (arg3 ? `- **${arg3}** - offset in bytes from the base adress\n\n` : '') +
+            `Reads a value from a memory adress into a register`,
+            
+    
     str: (arg1, arg2, arg3) =>
-  `## str — Store to memory\n\n` +
-  `Writes the value in \`${arg1}\` into memory.\n\n` +
-  `- **${arg1}** — register holding the value to store\n` +
-  `- **${arg2}** — base address register (stack pointer)\n` +
-  (arg3 ? `- **${arg3}** — offset in bytes from the stack pointer\n\n` : `\n`) +
-  (isVar(arg2) ? `This saves a computed result back into **${arg2}** in your source code.` : '')
+        (arg1 === 'wzr' || arg1 === 'xzr') ?
+            `## str — Store to memory\n\n` +
+            `Stores the value zero into the variable **${arg2}**. The zero register always reads as 0\n\n` +
+            `- **${arg1}** — the zero register, always contains the value 0\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack\n\n` :
+        isReg(arg1) && isVar(arg2) ? 
+            `## str — Store to memory\n\n` +
+            `Stores the value in the register into the variable **${arg2}** on the stack\n\n` + 
+            `- **${arg1}** — register holding the value to store\n` +
+            `- **${arg2}** — variable \`${arg2}\`, the destination on the stack\n` +
+            (arg3 ? `- **${arg3}** — offset in bytes from the stack pointer\n` : '') :
+
+            `## str — Store to memory\n\n` +
+            `Stores the value in the register into a memory address\n\n` + 
+            `- **${arg1}** — register holding the value to store\n` +
+            `- **${arg2}** — base adress register (stack pointer)\n` +
+            (arg3?`- **${arg3}** — offset in bytes from the stack pointer\n` :''),
+
+    // ------------ ARITHMETIC ------------ 
+
+    add: (arg1, arg2, arg3) =>
+        arg3 && isVar(arg1) && isConst(arg3) ? 
+            addHeader +
+            `- **${arg1}** — variable \`${arg1}\`, the destination being updated\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value being added\n\n` +
+            `This is the compiler performing **${arg1} += ${val(arg3!)}** in your source code.` :
+        arg3 && isConst(arg3) ? 
+            addHeader +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — the literal value being added\n\n` +
+            `Adds a constant to a register value` :
+        arg3 ? 
+            addHeader +
+            `- **${arg1}** — destination register, will hold the result\n` +
+            `- **${arg2}** — source register\n` +
+            `- **${arg3}** — second source register\n\n` +
+            `Adds two register values togheter` :
+        isConst(arg1) && isVar(arg2) ? 
+            addHeader +
+            `- **${arg1}** — the literal value being added\n` +
+            `- **${arg2}** — variable \`${arg2}\`, both the source and destination\n` +
+            `This is the compiler performing **${arg2} += ${val(arg1!)}** in your source code` :
+        isVar(arg2) ? 
+            addHeader +
+            `- **${arg1}** — register holding the value to add\n` +
+            `- **${arg2}** — variable \`${arg2}\`, both the source and destination\n` +
+            `Adds a register value into the variable **${arg2}**` :
+
+            addHeader +
+            `- **${arg1}** — first value\n` +
+            `- **${arg2}** — destination\n` +
+            `Adds a value to aregister`,
 }
