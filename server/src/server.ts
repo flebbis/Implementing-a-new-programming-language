@@ -540,6 +540,7 @@ function isLatest(uri: string, version: number): boolean {
 }
 
 async function inferenceAnalysis(uri: string, text: string, version: number) {
+  connection.console.log("running analysis...")
   if (isLatest(uri, version)) {
     try {
       let result = await runJavaAnalysis(text);
@@ -559,9 +560,17 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
 function runJavaAnalysis(text: string): Promise<any> {
+  connection.console.log("running java...")
+
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
+
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
+
+    connection.console.log(jarPath)
+    connection.console.log(text)
+    
+
     const java = spawn("java", ["-jar", jarPath, text]);
 
     // Capture stdout and stderr from the Java process
