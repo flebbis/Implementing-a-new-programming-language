@@ -189,7 +189,6 @@ export async function activate(context: ExtensionContext) {
       const lines = filtered.split('\n').map((line: string) => line.replace(/\t/g, '    '));
       // Retrieve asmfile for 
       lineMap = buildLineMap(asm.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
-      asm.split('\n').forEach((line: string, i: number) => console.log(`raw[${i}]: "${line}"`));
 
       if(!lineMap){
         vscode.window.showErrorMessage("buildLineMap not active")
@@ -198,9 +197,6 @@ export async function activate(context: ExtensionContext) {
       const varMap = buildVarMap(llContent);
       const stackMap = buildStackMap(filtered.split('\n'), PROFILES[assembly as keyof typeof PROFILES]);
       zippVarMap = zippedVarMap(varMap.funcVarMap, stackMap.funcStackMap);
-      console.log("funcVarMap:", [...varMap.funcVarMap.entries()]);
-      console.log("funcStackMap:", [...stackMap.funcStackMap.entries()]);
-      console.log("zippVarMap:", [...zippVarMap.entries()].map(([k,v]) => [k, [...v.entries()]]));
 
       // add padding for inlayHints
       let maxLength: number = 0;
@@ -273,7 +269,6 @@ export async function activate(context: ExtensionContext) {
               if (value) tokens[k] = value;
             }
             const text = operand(tokens[1], tokens[2], tokens[3], tokens[4]);
-            console.log("tokens:", tokens, "→", text);
             const pos = new vscode.Position(i, document.lineAt(i).text.length);
             hints.push(new vscode.InlayHint(pos, text));
           }

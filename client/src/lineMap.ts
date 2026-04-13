@@ -5,11 +5,12 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
     let currentSrcLine: number = 0;
     let currentAsmLine: number = 0;
     let isFunction = false; // check if its a function or not
+    let inPrologue = false;
 
     for(let i = 0; i < asmLines.length; i++) {
         const line = asmLines[i];
         // For each line in .s, check that it is a real instruction for assembly output
-        // Then check if the line starts with .loc, retrieve the sourceline 
+        // Then check if the line starts with .loc, retrieve the sourceline
         // If the line is a instruction set the value for the assemblyline to the sourceline
         // and sourceline to the assemblyline
         const trimmed = line.trim();
@@ -19,6 +20,7 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
             const parsed = Number(words[2]);
             if(parsed > 0) {
                 currentSrcLine = parsed;
+                inPrologue = false;
             }
             continue;
         }   
@@ -44,8 +46,10 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         if(newFunction) {
             if(trimmed.includes("main")){
                 isFunction = false;
+                inPrologue = false;
             } else {
                 isFunction = true;
+                inPrologue = profile.name === 'arm';
             }
 
             for (let k = i + 1; k < asmLines.length; k++) {
@@ -68,7 +72,24 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         // if its main, recordMap on lines except assembly given from llvm
         if(currentSrcLine > 0) {
             if(isFunction) {
-                recordMap(asmMapSrc,srcMapAsm,currentAsmLine,currentSrcLine);
+                let effectiveSrcLine = currentSrcLine;
+                if (inPrologue) {
+                    for (let k = i + 1; k < asmLines.length; k++) {
+                        const next = asmLines[k].trim();
+                        if (next === '' || next.startsWith('@')) continue;
+                        if (next.startsWith('.') && !next.startsWith('.loc')) continue;
+                        // skip Ltmp/Lfunc style labels (same as isNonLBBLabel filter)
+                        if ((next.startsWith('L') || next.endsWith(':'))
+                                && !next.startsWith('LBB') && !next.startsWith('_')) continue;
+                        if (next.startsWith('.loc')) {
+                            const parts = next.split(/\s+/);
+                            const num = Number(parts[2]);
+                            if (num > 0) effectiveSrcLine = num;
+                        }
+                        break;
+                    }
+                }
+                recordMap(asmMapSrc,srcMapAsm,currentAsmLine,effectiveSrcLine);
             } else {
                 // check if it match with one of the patterns if it does not record
                 if(!profile.patterns.some(pattern => pattern.test(trimmed))) {
@@ -79,6 +100,8 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         currentAsmLine++;
     }
 
+    asmMapSrc.forEach((src, asm) => console.log(`  asm[${asm}] -> src line ${src}`));
+    srcMapAsm.forEach((asms, src) => console.log(`  src[${src}] -> asm lines [${asms}]`));
     return {asmMapSrc, srcMapAsm};
 }
     // record values into the maps
