@@ -257,14 +257,26 @@ public class ExpressionCodeGen extends Helper {
         String left = generateExpression(cmpExp.left());
         String right = generateExpression(cmpExp.right());
         String register = generateRegister();
-        switch (cmpExp.op()) {
-            case LT -> {sb.append(register).append(" = icmp slt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case GT -> {sb.append(register).append(" = icmp sgt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case LE -> {sb.append(register).append(" = icmp sle ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case GE -> {sb.append(register).append(" = icmp sge ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case EQ -> {sb.append(register).append(" = icmp eq ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case NE -> {sb.append(register).append(" = icmp ne ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
+        String type = convertType(cmpExp.left().type());
+        if (type.equals("double")) {
+            switch (cmpExp.op()) {
+                case LT -> {sb.append(register).append(" = fcmp olt ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case GT -> {sb.append(register).append(" = fcmp ogt ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case LE -> {sb.append(register).append(" = fcmp ole ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case GE -> {sb.append(register).append(" = fcmp oge ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case EQ -> {sb.append(register).append(" = fcmp oeq ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case NE -> {sb.append(register).append(" = fcmp one ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+            }
+        } else {
+            switch (cmpExp.op()) {
+                case LT -> {sb.append(register).append(" = icmp slt ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case GT -> {sb.append(register).append(" = icmp sgt ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case LE -> {sb.append(register).append(" = icmp sle ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case GE -> {sb.append(register).append(" = icmp sge ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case EQ -> {sb.append(register).append(" = icmp eq ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
+                case NE -> {sb.append(register).append(" = icmp ne ").append(type).append(" ").append(left).append(", ").append(right).append("\n");}
         }
+    }
         return register;
 
     }
