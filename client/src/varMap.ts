@@ -1,4 +1,15 @@
 import { architecture } from "./architecture";
+// .ll file produce  define void @main() !dbg !2 {
+//                   entry:
+//                   %register0 = alloca i32, !dbg !3
+//                   #dbg_declare(ptr %register0, !5, !DIExpression(), !3)
+//                   !5 = !DILocalVariable(name: "x", scope: !2, file: !1, line: 1, type: !4)
+
+// To retrieve the variable it first check of the line match !DILOcalVariable, and retrieve the meta id and variable
+// After it checks if the line match with dbg declare and retireve the register and meta id 
+// Then for each function it checks lines with alloca (this is where variables is declared)
+// If it sees an alloca get the meta id through the register and then variabel through meta id
+// Then push the variable for the function
 
 export function buildVarMap(llLines: string) {
     let funcVarMap: Map<string, string[]> = new Map();
@@ -59,7 +70,6 @@ export function buildStackMap(asmLines: string[],profile: architecture) {
         
         if(functionName) {
             if(profile.stackSlot.test(trimmed)) {
-                console.log('Stack: found slot line:', trimmed);
                 stack = trimmed.match(profile.stackSlot)?.[1];
                 if(stack) {
                     let stackList = funcStackMap.get(functionName);

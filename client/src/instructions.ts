@@ -1,12 +1,12 @@
 type arguments = (arg1?: string, arg2?: string, arg3?: string, arg4?: string) => string;
 // registers %eax, x0, w8 etc
 const isReg   = (a?: string) => !!a && (a.startsWith('%') || /^[xwbsdqv]\d+$/.test(a) || /^r\d+$/.test(a) || ['wzr','xzr','sp','lr','fp'].includes(a));
-// contansts %5, 5
-const isConst = (a?: string) => !!a && (a.startsWith('$') || /^\d+$/.test(a));
+// constants $5 (x86), #5 (arm/arm64), 5 (plain)
+const isConst = (a?: string) => !!a && (a.startsWith('$') || a.startsWith('#') || /^\d+$/.test(a));
 // variable x, i, counter
 const isVar   = (a?: string) => !!a && !isReg(a) && !isConst(a) && !a.startsWith('_') && !a.startsWith('L') && !a.startsWith('[');
-// value 5
-const val     = (a: string)  => a.startsWith('$') ? a.slice(1) : a;
+// strip $ or # prefix to get the raw value
+const val     = (a: string)  => (a.startsWith('$') || a.startsWith('#')) ? a.slice(1) : a;
 
 
 // Describtion for assembly this deals with arm64, arm and x86, x86-64
@@ -23,8 +23,8 @@ export const instructions: Record<string, arguments> = {
         isReg(arg1) && isConst(arg2) ? `Load ${val(arg2!)} into register`:
         `Copy register into register`,
 
-    // arm/arm64: ldr r0, [sp, #4]  →  Load from address into register
-    // arm/arm64: ldr r0, x        →  Load x into register   (slot resolved)
+    // arm/arm64: ldr r0, [sp, #4]
+    // arm/arm64: ldr r0, x       
     ldr: (_arg1, arg2) =>
         isVar(arg2) ? `Load ${arg2} into register` :
         `Load from address into register`,
@@ -85,9 +85,21 @@ export const instructions: Record<string, arguments> = {
     'b.lt': (arg1)           => `Jump if lesser than < ${arg1}`,
     'b.gt': (arg1)           => `Jump if greater than > ${arg1}`,
 
-    // arm
+    // arm32
+    // bic sp, sp, #7  
+    bic: (_arg1, _arg2, arg3) =>
+        isConst(arg3) ? `Clear bits ${val(arg3!)} in register` :
+        `Bitwise AND NOT`,
+
+    bge: (arg1) => `Jump if >= to ${arg1}`,
+    bgt: (arg1) => `Jump if > to ${arg1}`,
+    ble: (arg1) => `Jump if <= to ${arg1}`,
+    blt: (arg1) => `Jump if < to ${arg1}`,
+    beq: (arg1) => `Jump if == to ${arg1}`,
+    bne: (arg1) => `Jump if != to ${arg1}`,
+
     cmp: (arg1, arg2)        => `Compare ${arg1} and ${arg2}`,
-    b:   (arg1)              => `Jump to ${arg1}`, 
+    b:   (arg1)              => `Jump to ${arg1}`,
     bl:  (arg1)              => `Call ${arg1}`,
     ret: ()                  => `Return`,
     push: (arg1)             => `Push ${arg1} onto stack`,
@@ -95,6 +107,16 @@ export const instructions: Record<string, arguments> = {
     stp: (arg1, arg2, arg3, arg4) => `Save ${arg1} and ${arg2} to stack at (${arg3} + ${arg4})`,
 
     // --- arm64 ---
+
+    // adrp x8, LCPI0_0@PAGE 
+    adrp: (_arg1, _arg2) => `Load page address into register`,
+
+    // fmov d0, #2.0e+0  
+    // fmov d0, x0   
+    fmov: (_arg1, arg2) =>
+        isConst(arg2) ? `Load ${val(arg2!)} into float register` :
+        isVar(arg2)   ? `Load ${arg2} into float register` :
+        `Copy float register`,
 
     // stur wzr, [sp, #-4]
     // arm64 stur w0, [sp, #-4]
@@ -121,7 +143,20 @@ export const instructions: Record<string, arguments> = {
     sdiv: () => `Divide registers (signed)`,
 
     // ---- x86, x86-64------
-    jmp:   (arg1)            => `Jump to ${arg1}`, 
+
+    // leaq -4(%rsp), %rax  
+    leaq: (arg1, _arg2) =>
+        isVar(arg1) ? `Load address of ${arg1}` :
+        `Load effective address`,
+
+    // movsd %xmm0, -8(%rbp)   
+    // movsd -8(%rbp), %xmm0  
+    movsd: (arg1, arg2) =>
+        isVar(arg1) && isReg(arg2) ? `Load ${arg1} into register` :
+        isReg(arg1) && isVar(arg2) ? `${arg2} = register` :
+        `Copy float register`,
+
+    jmp:   (arg1)            => `Jump to ${arg1}`,
     call:  (arg1)            => `Call ${arg1}`,
     je: (arg1)               => `Jump if equal == to ${arg1}`,
     jne: (arg1)              => `Jump if not equal != ${arg1}`,
@@ -130,5 +165,17 @@ export const instructions: Record<string, arguments> = {
     jl: (arg1)               => `Jump if lesser than < ${arg1}`,
     jg: (arg1)               => `Jump if greater than > ${arg1}`,
     idiv: (arg1)             => `Divide by ${arg1}`,
+}
 
+// --------------- EXTENDED INSTRUCTIONS ---------------
+
+export const extendedInstructions: Record<string, arguments> = {
+
+    str: (arg1, arg2, arg3) =>
+  `## str — Store to memory\n\n` +
+  `Writes the value in \`${arg1}\` into memory.\n\n` +
+  `- **${arg1}** — register holding the value to store\n` +
+  `- **${arg2}** — base address register (stack pointer)\n` +
+  (arg3 ? `- **${arg3}** — offset in bytes from the stack pointer\n\n` : `\n`) +
+  (isVar(arg2) ? `This saves a computed result back into **${arg2}** in your source code.` : '')
 }

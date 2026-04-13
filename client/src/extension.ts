@@ -2,7 +2,7 @@ import * as path from "path";
 import { workspace, ExtensionContext } from "vscode";
 import * as vscode from 'vscode';
 import { execFileSync } from 'child_process';
-import { instructions } from './instructions';
+import { extendedInstructions, instructions } from './instructions';
 import { buildLineMap } from "./lineMap";
 import {
   LanguageClient,
@@ -243,13 +243,23 @@ export async function activate(context: ExtensionContext) {
             const varStackMap = zippVarMap?.get(funcName);
             if (!varStackMap) continue;
             slotMap = new Map([...varStackMap].map(([k, v]) => [v, k]));
+            // print out Variables, Make a markdownString of every entry key -> value
+            // Turn md to a inlayHint and push it to hints
             const entries = [...varStackMap.entries()];
             const label = `  Variables(${entries.length}): ` + entries.map(([k]) => k).join(', ');
-            const tooltip = new vscode.MarkdownString(entries.map(([k,v]) => `**${k}** → \`${v}\``).join('\n\n'));
+            const md = new vscode.MarkdownString(entries.map(([k,v]) => `**${k}** → \`${v}\``).join('\n\n'));
             const il = new vscode.InlayHint(new vscode.Position(i, document.lineAt(i).text.length), label);
-            il.tooltip = tooltip;
+            il.tooltip = md;
             hints.push(il);
           }
+          // rawTokens, This is for extendedInstructions so i can pass in [sp, #20] for example instead of i
+          const rawTokens = trimmed
+            .replace(/\{[^}]*\}/g, m => m.replace(/\s+/g, ''))
+            .split(/\s+/)
+            .map((t: string) => t.replace(",", ""));
+
+          // Rename memory into a variable 
+          // [sp, #4] -> i
           let resolved = trimmed;
           for (const [slot, varName] of slotMap) {
             if (slot.startsWith('[')) {
@@ -263,15 +273,24 @@ export async function activate(context: ExtensionContext) {
             .map((t: string) => t.replace("#", ""));
           const clearOp = tokens[0].replace(/[lq]$/, '');
           const operand = instructions[clearOp];
+          const extended = extendedInstructions[clearOp];
+          const pos = new vscode.Position(i, document.lineAt(i).text.length);
+          // If tokens have any variables, change them to to varaible and then push hint %4exp -> i
           if (operand) {
             for (let k = 1; k < tokens.length; k++) {
               const value = slotMap.get(tokens[k]);
               if (value) tokens[k] = value;
             }
+            // for a given operand, make it a inlayhint and create markdownString for the extended hint, push the hint
             const text = operand(tokens[1], tokens[2], tokens[3], tokens[4]);
-            const pos = new vscode.Position(i, document.lineAt(i).text.length);
-            hints.push(new vscode.InlayHint(pos, text));
-          }
+            const hint = new vscode.InlayHint(pos, text);
+            if (extended) {
+              const extendedText = extended(rawTokens[1], rawTokens[2], rawTokens[3], rawTokens[4]);
+              const md = new vscode.MarkdownString(extendedText);
+              hint.tooltip = md;
+            }
+            hints.push(hint);
+          } 
         }
         return hints;
       }

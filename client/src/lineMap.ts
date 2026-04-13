@@ -99,9 +99,6 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         }
         currentAsmLine++;
     }
-
-    asmMapSrc.forEach((src, asm) => console.log(`  asm[${asm}] -> src line ${src}`));
-    srcMapAsm.forEach((asms, src) => console.log(`  src[${src}] -> asm lines [${asms}]`));
     return {asmMapSrc, srcMapAsm};
 }
     // record values into the maps
