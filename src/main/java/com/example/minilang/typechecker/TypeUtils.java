@@ -49,4 +49,8 @@ public class TypeUtils {
         } 
         return false;
     }
+
+    public static boolean isNumeric(Ast.Type type) {
+        return type instanceof Ast.TInt || type instanceof Ast.TDouble;
+    }
 }

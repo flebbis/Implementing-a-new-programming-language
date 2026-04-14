@@ -121,7 +121,6 @@ public class TypeChecker {
 
 
                 Ast.Arg arg = func.params().get(i);
-                System.out.println(sig.paramTypes);
 
 
                 // Inference suggestion
@@ -145,7 +144,6 @@ public class TypeChecker {
             }
 
             boolean calledFunc = statementTypeChecker.getCalledFunctions().contains(name);
-            System.out.println(calledFunc);
 
             checkedFuncs.add(new Ast.Func(name, currentParams, sig.returnType,
                     new Ast.SBlock(bodyStmts, func.body().pos()), calledFunc, func.pos()));

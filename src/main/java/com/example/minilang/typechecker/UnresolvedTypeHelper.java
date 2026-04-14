@@ -19,26 +19,31 @@ public class UnresolvedTypeHelper {
         this.functionSignatures = functionSignatures;
     }
 
-    /** Adds numeric conditions (int and double) to an unresolved expression, if it is not already resolved to a numeric type. */
-    protected Ast.Exp addNumericConditionToUnresolvedExp(Ast.Exp unresolved) {
-        Ast.Exp addedInt = unresolvedTypeCheck(unresolved, new Ast.TInt());
-        return unresolvedTypeCheck(addedInt, new Ast.TDouble());
+    public void setCurrentFunction(String currentFunction) {
+        this.currentFunction = currentFunction;
     }
 
-    /** Checks if the resolved type satisfies the conditions of the unresolved type.
-     * If so, adds the resolved type to the conditions of the unresolved type and updates the context and function signatures accordingly. */
-    protected Ast.Exp unresolvedTypeCheck(Ast.Exp unresolved, Ast.Type resolved) {
+    /** Adds numeric conditions (int and double) to an unresolved expression, if it is not already resolved to a numeric type. */
+    protected Ast.Exp addNumericConditionToUnresolvedExp(Ast.Exp unresolved) {
+        Ast.Exp addedInt = addUnresolvedCondition(unresolved, new Ast.TInt());
+        return addUnresolvedCondition(addedInt, new Ast.TDouble());
+    }
+
+    /** Checks if the condition type satisfies the current conditions of the unresolved type.
+     * If so, adds the condition type to the conditions of the unresolved type and updates the context and function signatures accordingly. */
+    protected Ast.Exp addUnresolvedCondition(Ast.Exp unresolved, Ast.Type condition) {
         if (unresolved.type() instanceof Ast.TUnresolved unresolvedType) {
 
-            if(!checkUnresolvedConditionsMatch(unresolvedType, resolved)) {
-                throw new TypeException(unresolvedType.id() + " must be of type " + TypeConverter.typeToString(unresolvedType) + ", " + TypeConverter.typeToString(resolved) + " is not supported", unresolved.pos());
+            System.out.println("getting unresolved " + unresolved.type() + " with conditions " + unresolvedType.conditions() + " and adding condition " + condition);
+            if(!checkUnresolvedConditionsMatch(unresolvedType, condition)) {
+                throw new TypeException(unresolvedType.id() + " is of type " + TypeConverter.typeToString(unresolvedType) + ", attempting to use as type " + TypeConverter.typeToString(condition), unresolved.pos());
             }
 
             List<Ast.Type> conditions = new ArrayList<>(unresolvedType.conditions());
-            if(conditions.contains(resolved)) {
+            if(conditions.contains(condition)) {
                 return unresolved; // Already satisfies the conditions, no need to update
             }
-            conditions.add(resolved);
+            conditions.add(condition);
 
             Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), conditions);
             context.update(unresolvedType.id(), newType);

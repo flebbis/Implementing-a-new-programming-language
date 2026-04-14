@@ -1,3 +1,4 @@
-int func test(n) {
-
+int func test(n, x) {
+    n or true
+    x > n
 }

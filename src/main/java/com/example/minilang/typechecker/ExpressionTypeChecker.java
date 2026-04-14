@@ -97,7 +97,7 @@ public class ExpressionTypeChecker {
         if (exp.type() instanceof Ast.TBool) {
             return new Ast.ENot(exp, new Ast.TBool(), enot.pos());
         } else if(exp.type() instanceof Ast.TUnresolved) {
-            Ast.Exp newExp = unresolvedTypeHelper.unresolvedTypeCheck(exp, new Ast.TBool());
+            Ast.Exp newExp = unresolvedTypeHelper.addUnresolvedCondition(exp, new Ast.TBool());
             return newExp;
         }else {
             throw new TypeException("Logical NOT operator requires boolean operand", enot.pos());
@@ -267,7 +267,7 @@ public class ExpressionTypeChecker {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
                 if(varType instanceof Ast.TUnresolved) {
-                    value = unresolvedTypeHelper.unresolvedTypeCheck(eAss, value.type());
+                    value = unresolvedTypeHelper.addUnresolvedCondition(eAss, value.type());
                     return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
                 }
                 throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to variable of type " + TypeConverter.typeToString(varType), eAss.pos());
