@@ -34,18 +34,30 @@ public class UnresolvedTypeHelper {
     protected Ast.Exp addUnresolvedCondition(Ast.Exp unresolved, Ast.Type condition) {
         if (unresolved.type() instanceof Ast.TUnresolved unresolvedType) {
 
-            System.out.println("getting unresolved " + unresolved.type() + " with conditions " + unresolvedType.conditions() + " and adding condition " + condition);
-            if(!checkUnresolvedConditionsMatch(unresolvedType, condition)) {
-                throw new TypeException(unresolvedType.id() + " is of type " + TypeConverter.typeToString(unresolvedType) + ", attempting to use as type " + TypeConverter.typeToString(condition), unresolved.pos());
+            List<Ast.Type> unresolvedConditions = new ArrayList<>(unresolvedType.conditions());
+            List<Ast.Type> resolvedConditions = new ArrayList<>();
+
+            if(condition instanceof Ast.TUnresolved unresolvedCondition) {
+                // If the condition is itself an unresolved type, we want its conditions
+                resolvedConditions.addAll(unresolvedCondition.conditions());
+            } else {
+                // Otherwise, it's a resolved type and we can add it directly as a condition
+                resolvedConditions.add(condition);
             }
 
-            List<Ast.Type> conditions = new ArrayList<>(unresolvedType.conditions());
-            if(conditions.contains(condition)) {
+            for(Ast.Type resolvedCondition : resolvedConditions) {
+                if(!checkUnresolvedConditionsMatch(unresolvedType, resolvedCondition)) {
+                    throw new TypeException(unresolvedType.id() + " is of type " + TypeConverter.typeToString(unresolvedType) + ", attempting to use as type " + TypeConverter.typeToString(resolvedCondition), unresolved.pos());
+                }
+            }
+
+            if(unresolvedConditions.containsAll(resolvedConditions)) {
                 return unresolved; // Already satisfies the conditions, no need to update
             }
-            conditions.add(condition);
 
-            Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), conditions);
+            unresolvedConditions.addAll(resolvedConditions);
+
+            Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), unresolvedConditions);
             context.update(unresolvedType.id(), newType);
             List<Ast.Type> paramTypes = functionSignatures.get(currentFunction).paramTypes;
 

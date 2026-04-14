@@ -4,6 +4,7 @@ import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -24,6 +25,7 @@ public class ExpressionTypeChecker {
 
     public void setCurrentFunction(String currentFunction) {
         this.currentFunction = currentFunction;
+        unresolvedTypeHelper.setCurrentFunction(currentFunction);
     }
 
     public List<String> getCalledFunctions() {
@@ -112,23 +114,22 @@ public class ExpressionTypeChecker {
         if (base.type() instanceof Ast.TUnknown || exponent.type() instanceof Ast.TUnknown) {
             return new Ast.EPower(base, exponent, new Ast.TUnknown(), ePower.pos());
         }
+
+        exponent = checkUnresolved(exponent, new ArrayList<>(Arrays.asList(base.type(), new Ast.TInt(), new Ast.TDouble())));
+        base = checkUnresolved(base, new ArrayList<>(Arrays.asList(exponent.type(), new Ast.TInt(), new Ast.TDouble())));
+
         System.out.println("Base type: " + base.type() + ", Exponent type: " + exponent.type());
 
-        if (base.type() instanceof Ast.TInt || base.type() instanceof Ast.TDouble) {
-            if (exponent.type() instanceof Ast.TInt || exponent.type() instanceof Ast.TDouble) {
+
+        if (TypeUtils.equalTypes(base.type(), new Ast.TInt()) || TypeUtils.equalTypes(base.type(), new Ast.TDouble())) {
+            if (TypeUtils.equalTypes(exponent.type(), new Ast.TInt())|| TypeUtils.equalTypes(exponent.type(), new Ast.TDouble())) {
                 // If either is double, the result is double
                 Ast.Type resultType = (base.type() instanceof Ast.TDouble || exponent.type() instanceof Ast.TDouble) ? new Ast.TDouble() : new Ast.TInt();
                 return new Ast.EPower(base, exponent, resultType, ePower.pos());
 
-            } else if(exponent.type() instanceof Ast.TUnresolved) {
-                exponent = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(exponent);
-                return new Ast.EPower(base, exponent, new Ast.TDouble(), ePower.pos());
             } else {
                 throw new TypeException("Exponent must be of type int or double", ePower.pos());
             }
-        } else if(base.type() instanceof Ast.TUnresolved) {
-            base = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(base);
-            return new Ast.EPower(base, exponent, new Ast.TDouble(), ePower.pos());
         }
         throw new TypeException("Power base must be of type int or double", ePower.pos());
     }
@@ -142,6 +143,11 @@ public class ExpressionTypeChecker {
             return new Ast.ECmp(left, right, eCmp.op(), new Ast.TUnknown(), eCmp.pos());
         }
 
+
+        left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
+        right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
+
+
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
 
@@ -150,10 +156,6 @@ public class ExpressionTypeChecker {
             if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
                     && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
                 return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
-            } else if(leftType instanceof Ast.TUnresolved) {
-                left = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(left);
-            } else if(rightType instanceof Ast.TUnresolved) {
-                right = unresolvedTypeHelper.addNumericConditionToUnresolvedExp(right);
             } else {
                 throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
             }
@@ -606,5 +608,13 @@ public class ExpressionTypeChecker {
         }
 
         return new Ast.EArrayIndexAssign(array, index, value, arrayType.elementType(), eArrayIndexAssign.pos());
+    }
+
+    private Ast.Exp checkUnresolved(Ast.Exp exp, List<Ast.Type> potentialConditions) {
+        Ast.Exp result = exp;
+        for(Ast.Type condition : potentialConditions) {
+            result = unresolvedTypeHelper.addUnresolvedCondition(result, condition);
+        }
+        return result;
     }
 }
