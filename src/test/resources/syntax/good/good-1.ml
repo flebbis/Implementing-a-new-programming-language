@@ -1,3 +1,5 @@
 func test(x, n) {
-    x**n
+    x++
+
+    x + n
 }

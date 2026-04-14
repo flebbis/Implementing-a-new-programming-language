@@ -118,9 +118,6 @@ public class ExpressionTypeChecker {
         exponent = checkUnresolved(exponent, new ArrayList<>(Arrays.asList(base.type(), new Ast.TInt(), new Ast.TDouble())));
         base = checkUnresolved(base, new ArrayList<>(Arrays.asList(exponent.type(), new Ast.TInt(), new Ast.TDouble())));
 
-        System.out.println("Base type: " + base.type() + ", Exponent type: " + exponent.type());
-
-
         if (TypeUtils.equalTypes(base.type(), new Ast.TInt()) || TypeUtils.equalTypes(base.type(), new Ast.TDouble())) {
             if (TypeUtils.equalTypes(exponent.type(), new Ast.TInt())|| TypeUtils.equalTypes(exponent.type(), new Ast.TDouble())) {
                 // If either is double, the result is double
@@ -143,10 +140,8 @@ public class ExpressionTypeChecker {
             return new Ast.ECmp(left, right, eCmp.op(), new Ast.TUnknown(), eCmp.pos());
         }
 
-
         left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
         right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
-
 
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
@@ -172,7 +167,12 @@ public class ExpressionTypeChecker {
             return new Ast.ELogic(left, right, eLogic.op(), new Ast.TUnknown(), eLogic.pos());
         }
 
-        if (left.type() instanceof Ast.TBool && right.type() instanceof Ast.TBool) {
+        left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TBool())));
+        right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TBool())));
+
+
+        if (TypeUtils.equalTypes(left.type(), new Ast.TBool()) &&
+                TypeUtils.equalTypes(right.type(), new Ast.TBool())) {
             return new Ast.ELogic(left, right, eLogic.op(), new Ast.TBool(), eLogic.pos());
         } else {
             throw new TypeException("Logical operators require boolean operands", eLogic.pos());
@@ -190,7 +190,12 @@ public class ExpressionTypeChecker {
 
         // Modulus operator only works for integers
         if (eOpp.op() == Ast.Op.MOD) {
-            if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TInt) {
+
+            left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt())));
+            right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt())));
+
+            if (TypeUtils.equalTypes(left.type(), new Ast.TInt()) &&
+                    TypeUtils.equalTypes(right.type(), new Ast.TInt())) {
                 return new Ast.EOpp(left, right, eOpp.op(), new Ast.TInt(), eOpp.pos());
             } else {
                 throw new TypeException("Modulus operator requires integer operands", eOpp.pos());
@@ -199,9 +204,19 @@ public class ExpressionTypeChecker {
 
         // String addition
         if (eOpp.op() == Ast.Op.ADD) {
-            if (left.type() instanceof Ast.TString && right.type() instanceof Ast.TString) {
-                return new Ast.EOpp(left, right, eOpp.op(), new Ast.TString(), eOpp.pos());
-            } else if (left.type() instanceof Ast.TString || right.type() instanceof Ast.TString) {
+
+            // one is string
+            if (TypeUtils.equalTypes(left.type(), new Ast.TString())|| TypeUtils.equalTypes(right.type(), new Ast.TString())) {
+
+                left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TString())));
+                right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TString())));
+
+                // both are string
+                if (TypeUtils.equalTypes(left.type(), new Ast.TString())
+                        && TypeUtils.equalTypes(right.type(), new Ast.TString())) {
+                    return new Ast.EOpp(left, right, eOpp.op(), new Ast.TString(), eOpp.pos());
+                }
+
                 // Wrap non-string operand in EStringCast
                 if (!(left.type() instanceof Ast.TString)) {
                     left = new Ast.EStringCast(left, new Ast.TString(), left.pos());
@@ -213,14 +228,18 @@ public class ExpressionTypeChecker {
             }
         }
 
+        // operands can be double or int if they are unresolved
+        left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
+        right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
+
         // For other arithmetic operators, we allow int and double, with implicit conversion from int to double if needed
-        if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TInt) {
+        if (TypeUtils.equalTypes(left.type(), new Ast.TInt()) && TypeUtils.equalTypes(right.type(), new Ast.TInt())) {
             return new Ast.EOpp(left, right, eOpp.op(), new Ast.TInt(), eOpp.pos());
-        } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TDouble) {
+        } else if (TypeUtils.equalTypes(left.type(), new Ast.TDouble()) && TypeUtils.equalTypes(right.type(), new Ast.TDouble()) ) {
             return new Ast.EOpp(left, right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
-        } else if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TDouble) {
+        } else if (TypeUtils.equalTypes(left.type(), new Ast.TInt()) && TypeUtils.equalTypes(right.type(), new Ast.TDouble()) ) {
             return new Ast.EOpp(new Ast.EDInt(left, new Ast.TDouble(), left.pos()), right, eOpp.op(), new Ast.TDouble(), eOpp.pos());
-        } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TInt) {
+        } else if (TypeUtils.equalTypes(left.type(), new Ast.TDouble())  && TypeUtils.equalTypes(right.type(), new Ast.TInt()) ) {
             return new Ast.EOpp(left, new Ast.EDInt(right, new Ast.TDouble(), right.pos()), eOpp.op(), new Ast.TDouble(), eOpp.pos());
         } else {
             throw new TypeException("Arithmetic operators require numeric operands", eOpp.pos());
@@ -235,7 +254,9 @@ public class ExpressionTypeChecker {
             return new Ast.EUnary(exp, eUnary.op(), new Ast.TUnknown(), eUnary.pos());
         }
 
-        if (exp.type() instanceof Ast.TInt) {
+        exp = checkUnresolved(exp, new ArrayList<>(Arrays.asList(new Ast.TInt())));
+
+        if (TypeUtils.equalTypes(exp.type(), new Ast.TInt())) {
             return new Ast.EUnary(exp, eUnary.op(), exp.type(), eUnary.pos());
         }
         if (eUnary.op() == Ast.UnaryOp.INC) {
