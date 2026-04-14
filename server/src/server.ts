@@ -565,7 +565,7 @@ function runJavaAnalysis(text: string): Promise<any> {
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
 
-    const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
+    const jarPath = path.join(__dirname, '../../compile.jar');
 
     connection.console.log(jarPath)
     connection.console.log(text)

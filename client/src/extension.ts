@@ -96,7 +96,7 @@ export async function activate(context: ExtensionContext) {
 
     //  OBS the jar file must be located in root for this to work, but it should then be able to be included in the exctension
     const JAR_PATH = context.asAbsolutePath(
-      path.join('.', 'LLVMINI-1.0-SNAPSHOT.jar')
+      path.join('.', 'compile.jar')
     );
     console.log(JAR_PATH)
 
