@@ -76,20 +76,14 @@ export const instructions: Record<string, arguments> = {
         arg3 && isConst(arg3) ? `Subtract ${val(arg3)} from register, set flags` :
         `Subtract registers, set flags`,                                            
 
-    // ----- JUMPS ---- dont think these are used
-    'b.eq': (arg1)           => `Jump if equal == to ${arg1}`,
-    'b.ne': (arg1)           => `Jump if not equal != ${arg1}`,
-    'b.ge': (arg1)           => `Jump if greater equal than >= ${arg1}`,
-    'b.le': (arg1)           => `Jump if lesser equal than <= ${arg1}`,
-    'b.lt': (arg1)           => `Jump if lesser than < ${arg1}`,
-    'b.gt': (arg1)           => `Jump if greater than > ${arg1}`,
-
-    // arm32
-    // bic sp, sp, #7  
-    bic: (_arg1, _arg2, arg3) =>
-        isConst(arg3) ? `Clear bits ${val(arg3!)} in register` :
+        
+        // arm32
+        // bic sp, sp, #7  
+        bic: (_arg1, _arg2, arg3) =>
+            isConst(arg3) ? `Clear bits ${val(arg3!)} in register` :
         `Bitwise AND NOT`,
-
+        
+        // ----- JUMPS ---- 
     bge: (arg1) => `Jump if >= to ${arg1}`,
     bgt: (arg1) => `Jump if > to ${arg1}`,
     ble: (arg1) => `Jump if <= to ${arg1}`,
@@ -103,7 +97,9 @@ export const instructions: Record<string, arguments> = {
     ret: ()                  => `Return`,
     push: (arg1)             => `Push ${arg1} onto stack`,
     pop: (arg1)              => `Pop from stack into ${arg1}`,
-    stp: (arg1, arg2, arg3, arg4) => `Save ${arg1} and ${arg2} to stack at (${arg3} + ${arg4})`,
+    stp: (arg1, arg2, arg3, arg4) => arg4
+        ? `Store ${arg1} and ${arg2} to [${arg3} + ${arg4}]`
+        : `Store ${arg1} and ${arg2} to [${arg3}]`,
 
     // --- arm64 ---
 
@@ -130,16 +126,16 @@ export const instructions: Record<string, arguments> = {
         `Load from address into register`,
 
     ldp:  (arg1, arg2, arg3, arg4) => arg4
-        ? `Load offset ${arg4} into reg ${arg1} and reg ${arg2}`
-        : `Load reg ${arg3} into reg ${arg1} and reg ${arg2}`,
+        ? `Load [${arg3} + ${arg4}] into ${arg1} and ${arg2}`
+        : `Load [${arg3}] into ${arg1} and ${arg2}`,
 
     lsl:  (arg1, arg2, arg3) =>
-        `Shift reg ${arg2} left by ${arg3}, store in reg ${arg1}`,
+        `Shift ${arg2} left by ${arg3} into ${arg1}`,
 
     lsr:  (arg1, arg2, arg3) =>
-        `Shift reg ${arg2} right by ${arg3}, store in reg ${arg1}`,
+        `Shift ${arg2} right by ${arg3} into ${arg1}`,
 
-    sdiv: () => `Divide registers (signed)`,
+    sdiv: (_arg1, arg2, arg3) => arg3 ? `Divide ${arg2} by ${arg3} (signed)` : `Divide registers (signed)`,
 
     // ---- x86, x86-64------
 
@@ -157,13 +153,13 @@ export const instructions: Record<string, arguments> = {
 
     jmp:   (arg1)            => `Jump to ${arg1}`,
     call:  (arg1)            => `Call ${arg1}`,
-    je: (arg1)               => `Jump if equal == to ${arg1}`,
-    jne: (arg1)              => `Jump if not equal != ${arg1}`,
-    jge: (arg1)              => `Jump if greater equal than >= ${arg1}`,
-    jle: (arg1)              => `Jump if lesser equal than <= ${arg1}`,
-    jl: (arg1)               => `Jump if lesser than < ${arg1}`,
-    jg: (arg1)               => `Jump if greater than > ${arg1}`,
-    idiv: (arg1)             => `Divide by ${arg1}`,
+    je: (arg1)               => `Jump if == to ${arg1}`,
+    jne: (arg1)              => `Jump if != to ${arg1}`,
+    jge: (arg1)              => `Jump if >= to ${arg1}`,
+    jle: (arg1)              => `Jump if <= to ${arg1}`,
+    jl: (arg1)               => `Jump if < to ${arg1}`,
+    jg: (arg1)               => `Jump if > to ${arg1}`,
+    idiv: (arg1)             => `Signed divide by ${arg1}`,
 }
 
 // --------------- EXTENDED INSTRUCTIONS ---------------
@@ -538,6 +534,46 @@ export const extendedInstructions: Record<string, arguments> = {
         `## pop - Pop from stack\n\n` +
         `Restores registers from the stack, increasing the stack pointer\n\n` +
         `- **${arg1}** — the register or register list being restored from the stack\n`,
+
+    call: (arg1) =>
+        `## call - Call Function\n\n` +
+        `Calls a function and saves the return adress on the stack\n\n` +
+        `- **${arg1}** — the name of the function being called\n`,
+
+    idiv: (arg1) =>
+        `## idiv - Signed Integer Divide\n\n` +
+        `Divides the accumulator register by the given reigster or value\n\n` +
+        `- **${arg1}** — the value to divide by\n`,
+
+    leaq: (arg1, arg2) =>
+        isVar(arg1) ? 
+            `## leaq - Load Effective Adress\n\n` +
+            `Loads the memory adress of a variable into a register\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, whose address is being loaded\n` +
+            `- **${arg1}** — destination register, will hold the adress\n` :
+
+            `## leaq - Load Effective Adress\n\n` +
+            `Computes a memory adress and stores it in a register\n\n` +
+            `- **${arg1}** — the memory expression being evaluated\n` +
+            `- **${arg1}** — destination register, will hold the computed adress\n`,
+
+    movsd: (arg1, arg2) =>
+        isVar(arg1) && isReg(arg2) ? 
+            `## movsd - Move Scalar Double\n\n` +
+            `Loads a variable from the stack into a float register to use it in a computation\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, read from the stack\n` +
+            `- **${arg1}** — destination float register\n` :
+        isReg(arg1) && isVar(arg2) ?
+            `## movsd - Move Scalar Double\n\n` +
+            `Stores a float register value into a variable on the stack\n\n` +
+            `- **${arg1}** — the memory expression being evaluated\n` +
+            `- **${arg1}** — variable \`${arg2}\`, the destination on the stack\n` : 
+
+            `## movsd - Move Scalar Double\n\n` +
+            `Copies a value between float registers\n\n` +
+            `- **${arg1}** — source float register\n` +
+            `- **${arg1}** — destination float register\n`,
+
 
 
 
