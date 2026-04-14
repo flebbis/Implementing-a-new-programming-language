@@ -237,7 +237,8 @@ public class StatementTypeChecker {
 
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
-        if (!(exp.type() instanceof Ast.TInt)) {
+
+        if (!(TypeUtils.equalTypes(exp.type(), new Ast.TInt()))) {
             throw new TypeException("Expression in do statement must be of type int, type "
                     + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
         }
