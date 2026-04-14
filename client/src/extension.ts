@@ -61,7 +61,7 @@ export async function activate(context: ExtensionContext) {
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
     // Register the server for all 'fika' files defined in package.json as having ending .fika
-    documentSelector: [{ scheme: "file", language: "mylang" }],
+    documentSelector: [{ scheme: "file", language: "fika" }],
     synchronize: {
       // Notify the server about file changes to '.clientrc files contained in the workspace
       fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
@@ -91,27 +91,30 @@ export async function activate(context: ExtensionContext) {
   );
 
   let lastPath: string | undefined;
+
+
   async function showAssembly(optLevel: string) {
 
 
     //  OBS the jar file must be located in root for this to work, but it should then be able to be included in the exctension
     const JAR_PATH = context.asAbsolutePath(
-      path.join('.', 'compile.jar')
+      path.join('.', 'LLVMINI-1.0-SNAPSHOT.jar')
     );
-    console.log(JAR_PATH)
+    // console.log(JAR_PATH)
 
     vscode.window.showInformationMessage('Optimazation level' + optLevel);
     try {
       // get the editor and the filepath then save the file
       const editor = vscode.window.activeTextEditor;
-
+      let filecontent = ""
       if (editor && editor.document.uri.scheme === 'file') {
         lastPath = editor.document.uri.fsPath;
+        filecontent = editor.document.getText();
         await editor.document.save();
       }
 
       if (!lastPath) {
-        vscode.window.showErrorMessage('No active .ml file!');
+        vscode.window.showErrorMessage('No active .fika file!');
         return;
       }
 
@@ -120,13 +123,13 @@ export async function activate(context: ExtensionContext) {
         vscode.window.showErrorMessage('No active editor!');
         return;
       }
-
-
-      execFileSync('java', ['-jar', JAR_PATH, lastPath]);
+      
+      console.log(lastPath)
+      execFileSync('java', ['-jar', JAR_PATH, filecontent, lastPath]);
 
       // run llc on the .ll file to produce assembly
-      const llFile = lastPath.replace('.ml', '.ll');
-      const asmFile = lastPath.replace('.ml', '.s');
+      const llFile = lastPath.replace('.fika', '.ll');
+      const asmFile = lastPath.replace('.fika', '.s');
       execFileSync('llc', ['-filetype=asm', optLevel, llFile, '-o', asmFile]);
 
 
@@ -195,7 +198,7 @@ export async function activate(context: ExtensionContext) {
   workspace.onDidSaveTextDocument((document: TextDocument) => {
     const conf: Boolean | undefined = vscode.workspace.getConfiguration('assemblyExtension', document.uri).get('showAssemblyOnSave')
     if (conf) {
-      if (document.languageId === "mylang" && document.uri.scheme === "file") {
+      if (document.languageId === "fika" && document.uri.scheme === "file") {
         showAssembly('-O0')
       }
     }

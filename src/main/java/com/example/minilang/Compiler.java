@@ -20,7 +20,7 @@ public class Compiler {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
-            System.err.println("Usage: java -jar compiler.jar <sourcefile>");
+            System.err.println("Usage: java -jar compiler.jar <source-text> <source-filepath>");
             System.exit(1);
         }
         String optLevel = args.length > 2 ? args[1] : "-O3";
@@ -71,7 +71,7 @@ public class Compiler {
         List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
 
         Path path = Path.of(strPath);
-        String outputFileName = path.getFileName().toString().replace(".ml", ".ll");
+        String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
         Path outputPath = path.getParent().resolve(outputFileName);
         String llvmCode = generateLLVM(typeCheckedAst);
         Files.writeString(outputPath, llvmCode);

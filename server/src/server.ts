@@ -20,6 +20,7 @@ import {
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { URI } from "vscode-uri";
 
 import { spawn } from 'child_process';
 import * as path from 'path';
@@ -543,7 +544,7 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
   connection.console.log("running analysis...")
   if (isLatest(uri, version)) {
     try {
-      let result = await runJavaAnalysis(text);
+      let result = await runJavaAnalysis(uri, text);
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
       console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
       const suggestions: InferenceSuggestion[] = result ?? [];
@@ -559,19 +560,16 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
-function runJavaAnalysis(text: string): Promise<any> {
-  connection.console.log("running java...")
+function runJavaAnalysis(uri: string, text: string): Promise<any> {
+  // connection.console.log("running java...")
 
   return new Promise((resolve, reject) => {
     // Path to the compiled JAR file
 
-    const jarPath = path.join(__dirname, '../../compile.jar');
+    const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
 
-    connection.console.log(jarPath)
-    connection.console.log(text)
     
-
-    const java = spawn("java", ["-jar", jarPath, text]);
+    const java = spawn("java", ["-jar", jarPath, text, URI.parse(uri).fsPath]);
 
     // Capture stdout and stderr from the Java process
     let stdout = "";
@@ -665,7 +663,7 @@ documents.onDidChangeContent(async change => {
     insertInfered(uri);
   }
   // Refresh inlay hints
-  if (isLatest(uri, version) && settings.inlineTypeHint) {
+  if (settings.inlineTypeHint) {
     connection.languages.inlayHint.refresh();
   }
 });
@@ -712,7 +710,7 @@ documents.onWillSaveWaitUntil(async (params) => {
     latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
     // Type check & inference phase
-    let inferDone = await inferenceAnalysis(uri, text, version);
+    inferenceAnalysis(uri, text, version);
 
     if (isLatest(uri, version)) {
       changes = inferedInserts(uri);

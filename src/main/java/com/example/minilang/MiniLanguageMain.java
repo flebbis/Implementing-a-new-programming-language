@@ -16,7 +16,7 @@ public class MiniLanguageMain {
         String path = "";
 
         if(args.length == 0) {
-            path = testFilePath + "syntax/good/good-1.ml";
+            path = testFilePath + "syntax/good/good-1.fika";
             text = Files.readString(Path.of(path));
         } else if (args.length == 1){
              text = args[0];

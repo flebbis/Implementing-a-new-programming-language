@@ -20,12 +20,11 @@
   "contributes": {
     "languages": [
       {
-        "id": "mylang",
+        "id": "fika",
         "extensions": [
-          ".ml"
+          ".fika"
         ],
         "aliases": [
-          "fika",
           "Fika",
           "FIKA"
         ],
@@ -34,7 +33,7 @@
     ],
     "grammars": [
       {
-        "language": "mylang",
+        "language": "fika",
         "scopeName": "source.fika",
         "path": "./language-tools/fika.tmLanguage.json"
       }
