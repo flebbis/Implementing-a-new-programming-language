@@ -1,5 +1,7 @@
 func test(x, n) {
-    x++
+    test2(x,n)
+}
 
-    x + n
+func test2(int x, bool n) {
+
 }

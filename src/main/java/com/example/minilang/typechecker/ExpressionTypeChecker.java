@@ -268,6 +268,7 @@ public class ExpressionTypeChecker {
 
     public Ast.EAss typeCheck(Ast.EAss eAss) {
         Ast.Exp value = typeCheck(eAss.value());
+
         Ast.Type varType = context.lookupLatest(eAss.name());
         if (varType == null) {
             throw new TypeException("Variable " + eAss.name() + " is not declared", eAss.pos());
@@ -326,12 +327,20 @@ public class ExpressionTypeChecker {
         // Then look up the function signature
         if (functionSignatures.containsKey(eCall.name())) {
             int i = 0;
+
+            // Check size of function
             if(functionSignatures.get(eCall.name()).paramTypes.size() != eCall.args().size()) {
                 throw new TypeException("Function " + eCall.name() + " expects " + functionSignatures.get(eCall.name()).paramTypes.size() + " arguments but got " + eCall.args().size(), eCall.pos());
             }
+
+            // Check call against signature for parameters
             for (Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
+
+                // Handle Potential TUnresolved
+                args.set(i, checkUnresolved(args.get(i), new ArrayList<>(Arrays.asList(paramType))));
+
                 // Check mismatch
-                if (!args.get(i).type().equals(paramType)) {
+                if (!TypeUtils.equalTypes(args.get(i).type(), paramType)) {
                     // Inference: If param is TUnknown, infer from arg
                     if ((paramType instanceof Ast.TUnknown) && !(args.get(i).type() instanceof Ast.TUnknown)) {
                         functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
@@ -631,6 +640,15 @@ public class ExpressionTypeChecker {
         return new Ast.EArrayIndexAssign(array, index, value, arrayType.elementType(), eArrayIndexAssign.pos());
     }
 
+    /**
+     * Helper method to check if an expression of unresolved type can satisfy any of the potential conditions.
+     * If the expression is not of unresolved type, it is returned as is.
+     * If it is of unresolved type, the conditions are added to it and the expression is updated in the context.
+     * This allows us to handle cases where we have an expression of unresolved type that can satisfy multiple conditions, such as being used in both a numeric and a string context.
+     * @param exp the expression to check for unresolved type and add conditions to if needed
+     * @param potentialConditions list of potential conditions that the unresolved expression could satisfy, such as TInt, TDouble...
+     * @return
+     */
     private Ast.Exp checkUnresolved(Ast.Exp exp, List<Ast.Type> potentialConditions) {
         Ast.Exp result = exp;
         for(Ast.Type condition : potentialConditions) {
