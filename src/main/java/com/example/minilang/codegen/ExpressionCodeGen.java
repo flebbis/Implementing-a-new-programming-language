@@ -36,7 +36,6 @@ import com.example.minilang.ast.Ast.TInt;
 import com.example.minilang.ast.Ast.Type;
 import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
-import com.example.minilang.codegen.ArrayValue;
 
 public class ExpressionCodeGen extends Helper {
     private static Map<String, String> stringRegisterToGlobal = new HashMap<>();
@@ -236,7 +235,7 @@ public class ExpressionCodeGen extends Helper {
         String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
 		String register = generateRegister();
         
-        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value)
+        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")")
         .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
         return register;
     }
