@@ -179,9 +179,21 @@ public class StatementCodeGen extends Helper {
         }
         
         if (initStmt.type() instanceof TArray) {
-            String value = expressionCodeGen.generateExpression(initStmt.value());
-            environment.pushToCurrentScope(initStmt.name(), value);
-            //sb.append(" store ").append(convertType(initStmt.type())).append(" ").append(value).append(", ").append(convertType(initStmt.type())).append("* %").append(initStmt.name()).append("\n");
+            String arrPtr = expressionCodeGen.generateExpression(initStmt.value());
+            String structType = convertType(initStmt.type());
+
+            String slot = generateRegister();
+            sb.append(slot)
+                    .append(" = alloca " + structType + "*\n"); // slot holds a pointer-to-struct
+
+            // Store the pointer to the array struct in the allocated slot
+            sb.append("store " + structType +" ")
+                    .append(arrPtr)
+                    .append(", " + structType + "* ")
+                    .append(slot)
+                    .append("\n");
+
+            environment.pushToCurrentScope(initStmt.name(), slot);
 
         } else {
             String value = expressionCodeGen.generateExpression(initStmt.value());

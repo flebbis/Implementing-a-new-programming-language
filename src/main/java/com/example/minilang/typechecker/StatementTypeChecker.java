@@ -302,7 +302,8 @@ public class StatementTypeChecker {
 
         Ast.Stmt elseStmt = null;
         if(stmt.elseBranch() != null) {
-            if (!(stmt.elseBranch() instanceof Ast.SBlock)) {
+            System.out.println(stmt.elseBranch());
+            if (!(stmt.elseBranch() instanceof Ast.SBlock || stmt.elseBranch() instanceof Ast.SIf)) {
                 throw new TypeException("Else branch of if statement must be a block statement",
                         stmt.elseBranch().pos());
             }

@@ -1,9 +1,18 @@
-x = ["hej", "hå"]
 
-func test(x) {
-    return x
+func test2(x) {
+    x.append(1)
+    print(x)
 }
 
-y = test(x)
+func test(x) {
+    x.append(100)
+    print(x)
+}
 
-print(y + " test")
+y = [1,2,3]
+print(y)
+test2(y)
+test(y)
+
+y.append(5)
+print(y)

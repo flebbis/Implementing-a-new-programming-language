@@ -122,12 +122,15 @@ public class ExpressionTypeChecker {
         Ast.Type rightType = right.type();
 
         // Int and double can be compared
-        if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
-                && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
-            return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
-        } else {
-            throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
+        if(!TypeUtils.equalTypes(leftType, rightType)) {
+            if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
+                    && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
+                return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
+            } else {
+                throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
+            }
         }
+        return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
     }
 
     public Ast.Exp typeCheck(Ast.ELogic eLogic) {
@@ -419,11 +422,11 @@ public class ExpressionTypeChecker {
 
                     // Handle inference: If array type is TUnknown, we can infer it from the element being appended
                     if (tArray.elementType() instanceof Ast.TUnknown) {
-                        arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
-                        context.update(arrayId.name(), arrayType);
                         array = new Ast.EId(arrayId.name(), arrayType, arrayId.pos());
                     }
                     elements = tArray.arraySize() + 1; // New size after append
+                    arrayType = new Ast.TArray(element.type(), elements); // Size should be 0
+                    //context.update(arrayId.name(), arrayType);
 
                 } else {
                     throw new TypeException("Attempting to append to a non-array variable: " + arrayId.name() + " of type " + TypeConverter.typeToString(arrayType), arrayId.pos());
@@ -445,6 +448,23 @@ public class ExpressionTypeChecker {
                     return eAppend;
                 }
             }
+            case Ast.EAppend arrayAppend -> {
+                // Handle chained append: the array expression itself is an EAppend from a previous append
+                if (arrayAppend.type() instanceof Ast.TUnknown) {
+                    // still unknown in inference pass
+                    return new Ast.EAppend(array, element, new Ast.TUnknown(), eAppend.pos());
+                } else if (arrayAppend.type() instanceof Ast.TArray) {
+                    Ast.TArray tArray = (Ast.TArray) arrayAppend.type();
+                    typeOfArray = tArray;
+                    elements = tArray.arraySize() + 1;
+                    // If elementType is unknown, update the nested EAppend node's type to reflect inference
+                    if (tArray.elementType() instanceof Ast.TUnknown) {
+                        array = new Ast.EAppend(arrayAppend.array(), arrayAppend.element(), new Ast.TArray(element.type(), elements - 1), arrayAppend.pos());
+                    }
+                } else {
+                    throw new TypeException("Attempting to append to a non-array expression", arrayAppend.pos());
+                }
+            }
             case Ast.EArrayIndex eArrayIndex -> {
                 if (array.type() instanceof Ast.TUnknown) {
                     //simply return the array as is with TUnknown, we're in first pass
@@ -461,6 +481,32 @@ public class ExpressionTypeChecker {
                     throw new TypeException("Attempting to append to a non-array type on array indexing: " + TypeConverter.typeToString(array.type()), array.pos());
                 }
             }
+            case Ast.EArray eArray-> {
+                if (array.type() instanceof Ast.TUnknown) {
+                    //still unknown in inference pass
+                    return new Ast.EAppend(array, element, new Ast.TUnknown(), eAppend.pos());
+                } else if (array.type() instanceof Ast.TArray) {
+                    Ast.TArray tArray = (Ast.TArray) array.type();
+                    typeOfArray = tArray;
+                    elements = tArray.arraySize() + 1;
+
+                    if(TypeUtils.equalTypes(element.type(), tArray.elementType())) {
+                        //do nothing :D
+                    } else if (tArray.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
+                        element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
+                    } else if (!(tArray.elementType() instanceof Ast.TUnknown)) {
+                        throw new TypeException("Attempting to append element of type " + TypeConverter.typeToString(element.type()) + " to array of type " + TypeConverter.typeToString(tArray.elementType()), element.pos());
+                    }
+
+                    // Handle inference: If array type is TUnknown, we can infer it from the element being appended
+                    if (tArray.elementType() instanceof Ast.TUnknown) {
+                        array = new Ast.EArray(eArray.elements(), new Ast.TArray(element.type(), elements - 1), eArray.pos());
+                    }
+
+                } else {
+                    throw new TypeException("Attempting to append to a non-array literal: " + TypeConverter.typeToString(array.type()), array.pos());
+                }
+            }
 
             case null, default ->
                     throw new TypeException("Attempting to append to a non-array expression", array.pos());
@@ -474,8 +520,7 @@ public class ExpressionTypeChecker {
             if(typeOfArray.elementType() instanceof Ast.TDouble && element.type() instanceof Ast.TInt) {
                 element = new Ast.EDInt(element, new Ast.TDouble(), element.pos());
             } else if ((TypeUtils.equalTypes(typeOfArray.elementType(), element.type()))){
-                //Do nothing :D
-                System.out.println("asd");
+
             }
             else {
                 throw new TypeException("Attempting to append element of type " + TypeConverter.typeToString(element.type()) + " to array of type " + TypeConverter.typeToString(typeOfArray.elementType()), element.pos());
