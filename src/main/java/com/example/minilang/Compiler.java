@@ -14,23 +14,30 @@ import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.codegen.FunctionCodeGen;
 import com.example.minilang.codegen.StatementCodeGen;
 import com.example.minilang.typechecker.TypeChecker;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Compiler {
 
+        private static final ObjectMapper objectMapper = new ObjectMapper();
+
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
-            System.err.println("Usage: java -jar compiler.jar <sourcefile>");
+            System.err.println("Usage: java -jar compiler.jar <source-filepath>");
             System.exit(1);
         }
         String optLevel = args.length > 1 ? args[1] : "-O3";
-        parseFile(Path.of(args[0]), optLevel);
-
+        Path filePath = Path.of(args[0]);
+        try {
+            List<InferenceSuggestion> suggestions = parseFile(filePath, optLevel);
+            // Output as JSON to stdout for the language server to parse
+            System.out.println(objectMapper.writeValueAsString(suggestions));
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
-
-    public static List<InferenceSuggestion> parseFile(Path path) throws IOException {
-        return parseFile(path, "0");
-    }
-
+    
     public static List<InferenceSuggestion> parseFile(Path path, String optLevel) throws IOException {
 
         String input = Files.readString(path);
