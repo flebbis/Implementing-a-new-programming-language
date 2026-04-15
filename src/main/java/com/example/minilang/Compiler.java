@@ -61,6 +61,7 @@ public class Compiler {
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
 
         String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
+        // System.err.println(typeCheckedAst.toString());
         List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
 
         // ===== STEP 5: Write to File =====

@@ -234,7 +234,7 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
   settings: ServerSettings, document: TextDocument, diagnostics: Diagnostic[]): Diagnostic[] {
   //Validator matching
   let text = document.getText();
-  let d = Array.from(diagnostics) 
+  let d = Array.from(diagnostics)
   let m: RegExpExecArray | null
   let problems = 0;
   while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
@@ -372,7 +372,7 @@ function shiftChar(pos: Position, by: number): Position {
 }
 
 function shiftLine(pos: Position, by: number): Position {
-  return {line: pos.line + by, character: pos.character}
+  return { line: pos.line + by, character: pos.character }
 }
 /* ignore functions for now */
 function inSameScope(doc: TextDocument, start: Position, end: Position): boolean {
@@ -543,7 +543,7 @@ function isLatest(uri: string, version: number): boolean {
 async function inferenceAnalysis(uri: string, document: TextDocument, version: number) {
   if (isLatest(uri, version)) {
     try {
-      connection.console.log("run analysis...")
+      // connection.console.log("run analysis...")
       let result = await runJavaAnalysis(uri, document);
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
       console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
@@ -568,7 +568,7 @@ function runJavaAnalysis(uri: string, document: TextDocument): Promise<any> {
 
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
 
-    
+
     const java = spawn("java", ["-jar", jarPath, URI.parse(uri).fsPath, document.getText()]);
 
     // Capture stdout and stderr from the Java process
@@ -605,10 +605,11 @@ function runJavaAnalysis(uri: string, document: TextDocument): Promise<any> {
 
 async function insertInfered(uri: string) {
   const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+  // connection.console.log(suggestions.toString())
   // Apply edit in document for each inference suggestion
   for (const s of suggestions) {
-    connection.console.log("inserting: ")
-    connection.console.log(s.name + ":" + s.inferredType)
+    // connection.console.log("inserting: ")
+    // connection.console.log(s.name + ":" + s.inferredType)
     await connection.workspace.applyEdit({
       changes: {
         [uri]: [
@@ -624,6 +625,8 @@ async function insertInfered(uri: string) {
       }
     });
   }
+  // connection.console.log("clearing...")
+  inferenceSuggestionMap.clear();
 }
 
 function inferedInserts(uri: string): TextEdit[] {
@@ -649,25 +652,25 @@ documents.onDidChangeContent(async change => {
   const doc = change.document
   const version = doc.version;
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
-
+  
   // Type check & inference phase
-  if (isLatest(uri, version) && (settings.inlineTypeHint
-    || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange)) {
-    await inferenceAnalysis(uri, doc, version);
-    connection.console.log(inferenceSuggestionMap.size.toString())
-  }
+  if (settings.inlineTypeHint || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
 
-  // Apply on change immediately if possible
-  if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
-    connection.console.log("inserting...")
-    insertInfered(uri);
+    if (isLatest(uri, version)) {
+      await inferenceAnalysis(uri, doc, version);
+      connection.console.log(inferenceSuggestionMap.size.toString())
+    }
+
+    // Apply on change immediately if possible
+    if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+      // connection.console.log("inserting...")
+      insertInfered(uri);
+    }
+    if (isLatest(uri, version) && settings.inlineTypeHint) { // Refresh inlay hints
+      connection.languages.inlayHint.refresh();
+    }
+    // connection.console.log("done.")
   }
-  if (isLatest(uri, version) && settings.inlineTypeHint) { // Refresh inlay hints, unless instant insert
-    connection.languages.inlayHint.refresh();
-  }
-  connection.console.log("clearing...")
-  inferenceSuggestionMap.clear();
-  connection.console.log("done.")
 });
 
 
@@ -712,20 +715,20 @@ documents.onWillSaveWaitUntil(async (params) => {
     latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
     // Type check & inference phase
-    inferenceAnalysis(uri,doc, version);
+    inferenceAnalysis(uri, doc, version);
 
     if (isLatest(uri, version)) {
-      connection.console.log("inserting...")
+      // connection.console.log("inserting...")
       changes = inferedInserts(uri);
       // clear suggestions after insertion
-      connection.console.log("inserting...")
-      inferenceSuggestionMap.clear(); 
+      // connection.console.log("clearing...")
+      inferenceSuggestionMap.clear();
     }
   }
   if (settings.inlineTypeHint) {
     connection.languages.inlayHint.refresh();
   }
-  connection.console.log("done.")
+  // connection.console.log("done.")
   return changes
 })
 
