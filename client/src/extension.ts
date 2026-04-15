@@ -155,8 +155,8 @@ export async function activate(context: ExtensionContext) {
       execFileSync('java', ['-jar', JAR_PATH, filecontent, lastPath]);
 
       // run llc on the .ll file to produce assembly
-      const llFile = lastPath.replace('.fika', '.ll');
-      const asmFile = lastPath.replace('.fika', '.s');
+      const llFile = lastPath.replace(/\.(fika)$/, '.ll');
+      const asmFile = lastPath.replace(/\.(fika)$/, '.s');
       execFileSync('llc', [`-march=${assembly}`,'-filetype=asm', optLevel, llFile, '-o', asmFile]);
 
       // read the assembly file
