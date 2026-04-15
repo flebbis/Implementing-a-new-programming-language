@@ -40,17 +40,11 @@ public class Compiler {
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         GrammarParser parser = new GrammarParser(tokens);
 
-        //parser.setErrorHandler(new BailErrorStrategy());
-        //lexer.removeErrorListeners();
-        //lexer.addErrorListener();
-
         // 3. Parse and create Tree
         ParseTree tree = parser.program();
 
 
         // 5. Output
-      //  System.out.println("Equation: " + input);
-        //System.out.println("Tree: " + tree.toStringTree(parser));
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
@@ -60,17 +54,14 @@ public class Compiler {
         TypeChecker typeChecker = new TypeChecker();
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
 
-    
         String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
+        List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
         
-        //System.out.println("\n===== LLVM IR Code =====");
-        //System.out.println(llvmCode);
         
         // ===== STEP 5: Write to File =====
         String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
         Path outputPath = path.getParent().resolve(outputFileName);
         Files.writeString(outputPath, llvmCode);
-        //System.err.println("\nOutput written to: " + outputPath);
         return suggestions;
     }
 
