@@ -714,6 +714,8 @@ documents.onWillSaveWaitUntil(async (params) => {
 
     if (isLatest(uri, version)) {
       changes = inferedInserts(uri);
+      // clear suggestions after insertion
+      inferenceSuggestionMap.clear();
     }
   }
   if (settings.inlineTypeHint) {

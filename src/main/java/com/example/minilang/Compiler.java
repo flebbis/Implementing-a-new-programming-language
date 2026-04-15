@@ -41,6 +41,7 @@ public class Compiler {
         // For debugging, needs to be error so not interference with JSON output
         System.err.println("=== COMPILATION START ===");
         System.err.println("Reading: " + input);
+        System.err.println("From: " + strPath);
 
         // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
@@ -75,7 +76,7 @@ public class Compiler {
         Path outputPath = path.getParent().resolve(outputFileName);
         String llvmCode = generateLLVM(typeCheckedAst);
         Files.writeString(outputPath, llvmCode);
-        //System.out.println("\nOutput written to: " + outputPath);
+        System.err.println("\nOutput written to: " + outputPath);
         return suggestions;
     }
 
