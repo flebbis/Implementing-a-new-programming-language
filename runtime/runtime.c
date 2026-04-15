@@ -2,6 +2,36 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <locale.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#endif
+
+// Ensure console uses UTF-8 so characters like å, ä, ö render correctly without manual shell tweaks
+static void runtime_set_utf8(void) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    setlocale(LC_ALL, ".UTF-8");
+    _setmode(_fileno(stdout), _O_BINARY);
+#else
+    setlocale(LC_ALL, "");
+#endif
+}
+
+__attribute__((constructor))
+static void runtime_init(void) {
+    runtime_set_utf8();
+}
+
+// out of bounds for array
+void array_index_out_of_bounds(int index, int size) {
+    fprintf(stderr, "\033[31mERROR:\033[0m Index %d out of bounds for array of size %d\n", index, size);
+    fflush(stderr);
+    exit(1);
+}
 
 // for EStringCast int to string
 char* int_to_string(int x) {
@@ -151,4 +181,104 @@ char* array_string_to_string(char** arr, int len) {
     *p++ = ']';
     *p = '\0';
     return buf;
+}
+
+// FOR COPYING ARRAYS
+
+typedef struct {
+    int size;
+    int capacity;
+    int* data;
+} array_i32;
+
+array_i32* array_int_copy(array_i32* arr) {
+    if (arr == NULL) {
+        return NULL;
+    }
+
+    array_i32* copy = malloc(sizeof(array_i32));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(int) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}
+
+typedef struct {
+    int size;
+    int capacity;
+    double* data;
+} array_double;
+
+array_double* array_double_copy(array_double* arr) {
+    if (arr == NULL) return NULL;
+
+    array_double* copy = malloc(sizeof(array_double));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(double) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}
+
+typedef struct {
+    int size;
+    int capacity;
+    bool* data;
+} array_i1;
+
+array_i1* array_bool_copy(array_i1* arr) {
+    if (arr == NULL) return NULL;
+
+    array_i1* copy = malloc(sizeof(array_i1));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(bool) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
+}
+
+typedef struct {
+    int size;
+    int capacity;
+    char** data;
+} array_i8ptr;
+
+array_i8ptr* array_string_copy(array_i8ptr* arr) {
+    if (arr == NULL) return NULL;
+
+    array_i8ptr* copy = malloc(sizeof(array_i8ptr));
+    if (copy == NULL) return NULL;
+
+    copy->size = arr->size;
+    copy->capacity = arr->capacity;
+    copy->data = malloc(sizeof(char*) * arr->capacity);
+    if (copy->data == NULL) return NULL;
+
+    for (int i = 0; i < arr->size; i++) {
+        copy->data[i] = arr->data[i];
+    }
+
+    return copy;
 }

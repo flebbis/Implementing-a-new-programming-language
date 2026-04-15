@@ -1,32 +1,63 @@
 package com.example.minilang.codegen;
 
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
+import com.example.minilang.DebugMetaData;
 import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
-import com.example.minilang.ast.Ast.*;
-import java.util.HashSet;
+import com.example.minilang.ast.Ast.AssOp;
+import com.example.minilang.ast.Ast.EAppend;
+import com.example.minilang.ast.Ast.EArray;
+import com.example.minilang.ast.Ast.EArrayIndex;
+import com.example.minilang.ast.Ast.EArrayIndexAssign;
+import com.example.minilang.ast.Ast.EAss;
+import com.example.minilang.ast.Ast.EBool;
+import com.example.minilang.ast.Ast.ECall;
+import com.example.minilang.ast.Ast.ECmp;
+import com.example.minilang.ast.Ast.EDInt;
+import com.example.minilang.ast.Ast.EDouble;
+import com.example.minilang.ast.Ast.EId;
+import com.example.minilang.ast.Ast.EInt;
+import com.example.minilang.ast.Ast.ELogic;
+import com.example.minilang.ast.Ast.ENot;
+import com.example.minilang.ast.Ast.EOpp;
+import com.example.minilang.ast.Ast.EPower;
+import com.example.minilang.ast.Ast.EString;
+import com.example.minilang.ast.Ast.EStringCast;
+import com.example.minilang.ast.Ast.EUnary;
+import com.example.minilang.ast.Ast.Exp;
+import com.example.minilang.ast.Ast.TArray;
+import com.example.minilang.ast.Ast.TBool;
+import com.example.minilang.ast.Ast.TDouble;
+import com.example.minilang.ast.Ast.TInt;
+import com.example.minilang.ast.Ast.Type;
+import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
+import com.example.minilang.codegen.ArrayValue;
 
 public class ExpressionCodeGen extends Helper {
-
+    private static Map<String, String> stringRegisterToGlobal = new HashMap<>();
+    private static Map<String, Integer> stringGlobalToLength = new HashMap<>();
+    private static Map<String, ArrayValue> arrayNameToValue = new HashMap<>();
     private StringBuilder sb;
     private StringBuilder globals;
-    private String arrayName; // For array initialization, we need to keep track of the array name to generate the correct GEP instructions.
+    private StringBuilder globalStrings;
     private int stringCounter = 0;
     private HashSet<String> functionVariables;
     private Environment environment;
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, Environment environment) {
+    private DebugMetaData debugMetaData;
+    private ArrayCodeGenHelper arrayCodeGenHelper;
+    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, Environment environment, DebugMetaData debugMetadata) {
         this.sb = sb;
         this.globals = globals;
+        this.globalStrings = globalStrings;
         this.functionVariables = functionVariables;
         this.environment = environment;
-    }
-
-    public ExpressionCodeGen(StringBuilder sb, StringBuilder globals, HashSet<String> functionVariables, Environment environment, String arrayName){
-        this.sb = sb;
-        this.globals = globals;
-        this.functionVariables = functionVariables;
-        this.environment = environment;
-        this.arrayName = arrayName;
+        this.debugMetaData = debugMetadata;
+        this.arrayCodeGenHelper = new ArrayCodeGenHelper(sb);
     }
 
     public String generateExpression(Exp exp) {
@@ -43,10 +74,12 @@ public class ExpressionCodeGen extends Helper {
             if (exp instanceof ELogic logicExp) return generateLogic(logicExp);
             if (exp instanceof EAss assExp) return generateAss(assExp);
             if (exp instanceof EArray arrayExp) return generateArray(arrayExp);
+            if (exp instanceof EArrayIndexAssign arrayIndexAssignExp) return generateArrayIndexAssign(arrayIndexAssignExp);
             if (exp instanceof EArrayIndex arrayIndexExp) return generateArrayIndex(arrayIndexExp);
             if (exp instanceof EUnary unaryExp) return generateUnary(unaryExp);
             if (exp instanceof EDInt dIntExp) return generateDInt(dIntExp);
             if (exp instanceof EStringCast sStringCast) return generateStringCast(sStringCast);
+            if (exp instanceof EAppend appendExp) return generateAppend(appendExp);
             return "0";
     }
 
@@ -64,15 +97,19 @@ public class ExpressionCodeGen extends Helper {
         rawString = handleEscapeSequences(rawString);
 
         // Convert the raw string to bytes to handle non-printable characters and escape sequences correctly
-        byte[] bytes = rawString.getBytes();
+        byte[] bytes = rawString.getBytes(StandardCharsets.UTF_8);
         String value = generatePrintableString(bytes);
 
 
         int length = bytes.length + 1; // +1 for null terminator
         String globalName = "@.str." + stringCounter++;
         String register = generateRegister();
-        globals.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
-        sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0\n");
+        globalStrings.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
+        sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0")
+        .append(", !dbg !").append(debugMetaData.getLineId(stringExp.pos().line)).append("\n");
+        
+        stringRegisterToGlobal.put(register, globalName);
+        stringGlobalToLength.put(globalName, length);
         return register;
     }
 
@@ -101,6 +138,9 @@ public class ExpressionCodeGen extends Helper {
         return rawString
                 .replace("\\n", "\n")
                 .replace("\\t", "\t")
+                .replace("\\r", "\r")
+                .replace("\\b", "\b")
+                .replace("\\f", "\f")
                 .replace("\\\"", "\"")
                 .replace("\\\\", "\\");
     }
@@ -117,7 +157,8 @@ public class ExpressionCodeGen extends Helper {
 
             String variableRegister = environment.lookup(idExp.name());
             String register = generateRegister();
-            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
+            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister)
+            .append(", !dbg !").append(debugMetaData.getLineId(idExp.pos().line)).append("\n");
             return register;
 
         } else {
@@ -129,69 +170,82 @@ public class ExpressionCodeGen extends Helper {
                     // If it does, we need to load it from memory
                     String variableRegister = environment.lookup(idExp.name());
                     String register = generateRegister();
-                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n");
+                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister)
+                    .append(", !dbg !").append(debugMetaData.getLineId(idExp.pos().line)).append("\n");
                     return register;
                 }
             }
             return "%" + idExp.name();
         }
-
     }
-    private String generateCall(ECall callExp) {
 
-        if (callExp.name().equals("print")){
+    private String generateCall(ECall callExp) {
+        if (callExp.name().equals("print")) {
             String register = generatePrintCall(callExp);
             if (register != null) return register;
-        } else {
-            if(callExp.type() instanceof Ast.TUnknown) {
-                // Should not return anything, so we can just call the function without storing the result in a register
-                sb.append("call void @").append(callExp.name()).append("(");
-                for (int i = 0; i < callExp.args().size(); i++) {
-                    Exp arg = callExp.args().get(i);
-                    String argValue = generateExpression(arg);
-                    sb.append(convertType(arg.type())).append(" ").append(argValue);
-                    if (i < callExp.args().size() - 1) {
-                        sb.append(", ");
-                    }
-                }
-                sb.append(")\n");
-                return "";
-            }
+        }
 
-            String register = generateRegister();
+        String[] argValues = new String[callExp.args().size()];
+        String[] argTypes = new String[callExp.args().size()];
 
-            sb.append(register).append(" = call ").append(convertType(callExp.type())).append(" @").append(callExp.name()).append("(");
+        // Generate all argument expressions first
+        for (int i = 0; i < callExp.args().size(); i++) {
+            Exp arg = callExp.args().get(i);
+            argValues[i] = generateExpression(arg);
+            argTypes[i] = convertType(arg.type());
+        }
+
+        // Void function call
+        if (callExp.type() instanceof Ast.TUnknown) {
+            sb.append("call void @").append(callExp.name()).append("(");
             for (int i = 0; i < callExp.args().size(); i++) {
-                Exp arg = callExp.args().get(i);
-                String argValue = generateExpression(arg);
-                sb.append(convertType(arg.type())).append(" ").append(argValue);
+                sb.append(argTypes[i]).append(" ").append(argValues[i]);
                 if (i < callExp.args().size() - 1) {
                     sb.append(", ");
                 }
             }
-            sb.append(")\n");
-
-
-            return register;
+            sb.append(")")
+                .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
+            return "";
         }
-        return "Something went wrong with function call generation";
 
+        // Function call with return value
+        String register = generateRegister();
+        sb.append(register)
+                .append(" = call ")
+                .append(convertType(callExp.type()))
+                .append(" @")
+                .append(callExp.name())
+                .append("(");
+
+        for (int i = 0; i < callExp.args().size(); i++) {
+            sb.append(argTypes[i]).append(" ").append(argValues[i]);
+            if (i < callExp.args().size() - 1) {
+                sb.append(", ");
+            }
+        }
+
+        sb.append(")")
+            .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
+            
+        return register;
     }
 
     private String generatePrintCall(ECall callExp) {
         Exp arg = callExp.args().get(0);
-        System.out.println(callExp);
         String value = generateExpression(arg); // since wrapped in EStringCast, this will give us the correct string representation of the value to print
 		String register = generateRegister();
         
-        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value).append(")\n");
+        sb.append(register).append(" = call i32 @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.fmt.string, i32 0, i32 0), i8* ").append(value)
+        .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
         return register;
     }
 
     private String generateNot(ENot notExp) {
         String value = generateExpression(notExp.exp());
         String register = generateRegister();
-        sb.append(register).append(" = xor i1 ").append(value).append(", 1\n");
+        sb.append(register).append(" = xor i1 ").append(value).append(", 1")
+        .append(", !dbg !").append(debugMetaData.getLineId(notExp.pos().line)).append("\n");
         return register;
 
     }
@@ -199,39 +253,42 @@ public class ExpressionCodeGen extends Helper {
         String base = generateExpression(powerExp.base());
         String exponent = generateExpression(powerExp.exponent());
         String register = generateRegister();
-        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent).append(")\n");
+        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent)
+        .append(", !dbg !").append(debugMetaData.getLineId(powerExp.pos().line)).append("\n");
         return register;
 
     }
     private String generateOpp(EOpp oppExp) {
         String left = generateExpression(oppExp.left());
         String right = generateExpression(oppExp.right());
+        String dbg = ", !dbg !" + debugMetaData.getLineId(oppExp.pos().line);
         String register = generateRegister();
         Ast.Type type = oppExp.type();
         switch (oppExp.op()) {
-            case ADD -> {handleEAdd(left,right,register, oppExp.type());}
+            case ADD -> {handleEAdd(left,right,register, oppExp.type(),dbg);}
             case SUB -> {
-                generateOppInstruction(type, "sub", left, right, register);
+                generateOppInstruction(type, "sub", left, right, register, dbg);
             }
             case MUL -> {
-                generateOppInstruction(type, "mul", left, right, register);
+                generateOppInstruction(type, "mul", left, right, register, dbg);
             }
             case DIV -> {
                 if(type instanceof Ast.TDouble) {
-                    generateOppInstruction(type, "div", left, right, register);
+                    generateOppInstruction(type, "div", left, right, register,dbg);
                 } else {
-                    generateOppInstruction(type, "sdiv", left, right, register);
+                    generateOppInstruction(type, "sdiv", left, right, register,dbg);
                 }
             }
             case MOD -> {
-                sb.append(register).append(" = srem ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right).append("\n");
+                sb.append(register).append(" = srem ").append(convertType(oppExp.type())).append(" ").append(left).append(", ").append(right)
+                .append(", !dbg !").append(debugMetaData.getLineId(oppExp.pos().line)).append("\n");
             }
         }
         return register;
 
     }
 
-    private String handleEAdd(String left, String right, String register, Type type) {
+    private String handleEAdd(String left, String right, String register, Type type, String dbg) {
         if(type instanceof Ast.TString) {
             sb.append("  ").append(register)
                     .append(" = call i8* @string_concat(i8* ")
@@ -240,30 +297,31 @@ public class ExpressionCodeGen extends Helper {
                     .append(right)
                     .append(")\n");
         } else {
-            generateOppInstruction(type, "add", left, right, register);
+            generateOppInstruction(type, "add", left, right, register,dbg);
         }
         return register;
     }
 
-    private void generateOppInstruction(Ast.Type type, String baseInstruction, String left, String right, String register) {
+    private void generateOppInstruction(Ast.Type type, String baseInstruction, String left, String right, String register, String dgb) {
         if(type instanceof Ast.TInt) {
-            sb.append(register).append(" = ").append(baseInstruction).append(" ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append("\n");
+            sb.append(register).append(" = ").append(baseInstruction).append(" ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append(dgb).append("\n");
         } else if(type instanceof Ast.TDouble) {
-            sb.append(register).append(" = f").append(baseInstruction).append(" ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append("\n");
+            sb.append(register).append(" = f").append(baseInstruction).append(" ").append(convertType(type)).append(" ").append(left).append(", ").append(right).append(dgb).append("\n");
         }
     }
 
     private String generateCmp(ECmp cmpExp) {
         String left = generateExpression(cmpExp.left());
         String right = generateExpression(cmpExp.right());
+        String dbg = ", !dbg !" + debugMetaData.getLineId(cmpExp.pos().line);
         String register = generateRegister();
         switch (cmpExp.op()) {
-            case LT -> {sb.append(register).append(" = icmp slt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case GT -> {sb.append(register).append(" = icmp sgt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case LE -> {sb.append(register).append(" = icmp sle ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case GE -> {sb.append(register).append(" = icmp sge ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case EQ -> {sb.append(register).append(" = icmp eq ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case NE -> {sb.append(register).append(" = icmp ne ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
+            case LT -> {sb.append(register).append(" = icmp slt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
+            case GT -> {sb.append(register).append(" = icmp sgt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
+            case LE -> {sb.append(register).append(" = icmp sle ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
+            case GE -> {sb.append(register).append(" = icmp sge ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
+            case EQ -> {sb.append(register).append(" = icmp eq ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
+            case NE -> {sb.append(register).append(" = icmp ne ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
         }
         return register;
 
@@ -273,8 +331,8 @@ public class ExpressionCodeGen extends Helper {
         String right = generateExpression(logicExp.right());
         String register = generateRegister();
         switch (logicExp.op()) {
-            case AND -> {sb.append(register).append(" = and ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}
-            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append("\n");}    
+            case AND -> {sb.append(register).append(" = and ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(", !dbg !").append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");}
+            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(", !dbg !").append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");} 
         }
         return register;
 
@@ -282,7 +340,8 @@ public class ExpressionCodeGen extends Helper {
     private String generateAss(EAss assExp) {
         String value = generateExpression(assExp.value());
         if (assExp.op() == AssOp.ASSIGN) {
-        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(value).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name()))
+        .append(", !dbg !").append(debugMetaData.getLineId(assExp.pos().line)).append("\n");
         return value; }
             
         String operation = switch (assExp.op()) {
@@ -293,55 +352,357 @@ public class ExpressionCodeGen extends Helper {
             default -> "default assignment value";
         };
         String register = generateRegister();
-        sb.append(register).append(" = load ").append(convertType(assExp.value().type())).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
+        sb.append(register).append(" = load ").append(convertType(assExp.value().type())).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name()))
+        .append(", !dbg !").append(debugMetaData.getLineId(assExp.pos().line)).append("\n");
         String returnRegister = generateRegister();
-        sb.append(returnRegister).append(" = ").append(operation).append(" ").append(convertType(assExp.value().type())).append(" ").append(register).append(", ").append(value).append("\n");
-        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(returnRegister).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name())).append("\n");
+        sb.append(returnRegister).append(" = ").append(operation).append(" ").append(convertType(assExp.value().type())).append(" ").append(register).append(", ").append(value)
+        .append(", !dbg !").append(debugMetaData.getLineId(assExp.pos().line)).append("\n");
+        sb.append("store ").append(convertType(assExp.value().type())).append(" ").append(returnRegister).append(", ").append(convertType(assExp.value().type())).append("* ").append(environment.lookup(assExp.name()))
+        .append(", !dbg !").append(debugMetaData.getLineId(assExp.pos().line)).append("\n");
         return returnRegister;    
-    }   
-        
-    // private String Eappend(Eappend array){
+    }
 
+    private String generateArray(Ast.EArray arrayExp) {
+        Ast.TArray arrayTypeAst = (Ast.TArray) arrayExp.type();
 
-
-    // }
-    
-    private String generateArray(EArray arrayExp) {
-
+        String structType = getArrayStructType(arrayExp.type());          // e.g. %array_i32
+        String elementType = getArrayElementType(arrayExp.type());        // e.g. i32
+        String dataPointerType = getArrayDataPointerType(arrayExp.type()); // e.g. i32* or i8**
+        int elementSize = getTypeSizeBytes(arrayTypeAst.elementType());
+        String dbg = ", !dbg !" + debugMetaData.getLineId(arrayExp.pos().line);
         int numElements = arrayExp.elements().size();
-        String arrayType = convertType(arrayExp.type());
+        int capacity = Math.max(1, numElements * 2);
 
-		String basePointer = generateRegister();
-		String spacePointer = generateRegister();
-        int allocatedSpace = (arrayType.equals("double")) ? numElements * 8 : numElements * 4;
-        sb.append(spacePointer).append(" = call i8* @malloc(i64 ").append(allocatedSpace).append(")\n");
-        sb.append(basePointer).append(" = bitcast i8* ").append(spacePointer).append(" to i32*\n");
+        String rawStructPtr = generateRegister();
+        String arrPtr = generateRegister();
+        String rawDataPtr = generateRegister();
+        String dataPtr = generateRegister();
 
+        // Allocate struct
+        // We hardcode 16 bytes for { i32, i32, ptr } on 64-bit
+        sb.append(rawStructPtr)
+                .append(" = call i8* @malloc(i64 16)").append(dbg).append("\n");
+        sb.append(arrPtr)
+                .append(" = bitcast i8* ")
+                .append(rawStructPtr)
+                .append(" to ")
+                .append(structType)
+                .append("*").append(dbg).append("\n");
+
+        // Allocate data buffer
+        long totalBytes = (long) capacity * elementSize;
+        sb.append(rawDataPtr)
+                .append(" = call i8* @malloc(i64 ")
+                .append(totalBytes)
+                .append(")").append(dbg).append("\n");
+        sb.append(dataPtr)
+                .append(" = bitcast i8* ")
+                .append(rawDataPtr)
+                .append(" to ")
+                .append(dataPointerType)
+                .append(dbg).append("\n");
+
+        // Store size
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 0").append(dbg).append("\n");
+        sb.append("store i32 ")
+                .append(numElements)
+                .append(", i32* ")
+                .append(sizePtr)
+                .append(dbg).append("\n");
+
+        // Store capacity
+        String capPtr = generateRegister();
+        sb.append(capPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 1").append(dbg).append("\n");
+        sb.append("store i32 ")
+                .append(capacity)
+                .append(", i32* ")
+                .append(capPtr)
+                .append(dbg).append("\n");
+
+        // Store data pointer
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 2").append(dbg).append("\n");
+        sb.append("store ")
+                .append(dataPointerType)
+                .append(" ")
+                .append(dataPtr)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append(dbg).append("\n");
+
+        // Store initial elements
         for (int i = 0; i < numElements; i++) {
-        Exp elementExp = arrayExp.elements().get(i);
-        String value = generateExpression(elementExp);
-        String elemPointer = generateRegister();
-        
-		sb.append(elemPointer).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(basePointer).append(", i32 ").append(i).append("\n");
-        sb.append("store ").append(arrayType).append(" ").append(value).append(", ").append("i32* ").append(elemPointer).append("\n");
+            String value = generateExpression(arrayExp.elements().get(i));
+
+            String elemPtr = generateRegister();
+            sb.append(elemPtr)
+                    .append(" = getelementptr inbounds ")
+                    .append(elementType)
+                    .append(", ")
+                    .append(dataPointerType)
+                    .append(" ")
+                    .append(dataPtr)
+                    .append(", i32 ")
+                    .append(i)
+                    .append(dbg).append("\n");
+
+            sb.append("store ")
+                    .append(elementType)
+                    .append(" ")
+                    .append(value)
+                    .append(", ")
+                    .append(elementType)
+                    .append("* ")
+                    .append(elemPtr)
+                    .append(dbg).append("\n");
         }
 
-        return basePointer;
+        return arrPtr;
+    }
+
+    private String generateArrayIndex(Ast.EArrayIndex arrayIndexExp) {
+        String dbg = ", !dbg !" + debugMetaData.getLineId(arrayIndexExp.pos().line);
+
+        String arrayRegister = generateExpression(arrayIndexExp.array()); // %array_i32*
+        String indexRegister = generateExpression(arrayIndexExp.index()); // i32 (index:int to value)
+        String structType = getArrayStructType(arrayIndexExp.array().type()); // e.g. %array_i32
+        String elementType = getArrayElementType(arrayIndexExp.array().type()); // e.g. i32
+        String dataPointerType = getArrayDataPointerType(arrayIndexExp.array().type()); // e.g. i32* or i8**
+
+        arrayCodeGenHelper.generateArrayBoundsCheck(arrayRegister, indexRegister);
+
+        // Get pointer to data field: &arr->data
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrayRegister)
+                .append(", i32 0, i32 2").append(dbg).append("\n");
+
+        // Load actual data pointer: arr->data
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ")
+                .append(dataPointerType)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append(dbg).append("\n");
+
+        // Get pointer to the indexed element: &data[index]
+        String elemPtr = generateRegister();
+        sb.append(elemPtr)
+                .append(" = getelementptr inbounds ")
+                .append(elementType)
+                .append(", ")
+                .append(dataPointerType)
+                .append(" ")
+                .append(dataPtr)
+                .append(", i32 ")
+                .append(indexRegister)
+                .append(dbg).append("\n");
+
+        // Load the value
+        String valueRegister = generateRegister();
+        sb.append(valueRegister)
+                .append(" = load ")
+                .append(elementType)
+                .append(", ")
+                .append(elementType)
+                .append("* ")
+                .append(elemPtr)
+                .append(dbg).append("\n");
+
+        return valueRegister;
+    }
+
+    private String generateArrayIndexAssign(Ast.EArrayIndexAssign arrayIndexAssignExp) {
+        String dbg = ", !dbg !" + debugMetaData.getLineId(arrayIndexAssignExp.pos().line);
+
+        String arrPtr = generateExpression(arrayIndexAssignExp.array()); // %array_i32*
+        String indexRegister = generateExpression(arrayIndexAssignExp.index()); // i32 (index:int to value)
+        String structType = getArrayStructType(arrayIndexAssignExp.array().type()); // e.g. %array_i32
+        String elementType = getArrayElementType(arrayIndexAssignExp.array().type()); // e.g. i32
+        String dataPointerType = getArrayDataPointerType(arrayIndexAssignExp.array().type()); // e.g. i32* or i8**
+
+        arrayCodeGenHelper.generateArrayBoundsCheck(arrPtr, indexRegister);
+
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 2").append(dbg).append("\n");
+
+        // load actual data pointer: arr->data
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ")
+                .append(dataPointerType)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append(dbg).append("\n");
+
+        // Get pointer to the indexed element: &data[index]
+        String elemPtr = generateRegister();
+        sb.append(elemPtr)
+                .append(" = getelementptr inbounds ")
+                .append(elementType)
+                .append(", ")
+                .append(dataPointerType)
+                .append(" ")
+                .append(dataPtr)
+                .append(", i32 ")
+                .append(indexRegister)
+                .append(dbg).append("\n");
+
+        String value = generateExpression(arrayIndexAssignExp.value()); // i32 (value:int to value)
+        sb.append("store ")
+                .append(elementType)
+                .append(" ")
+                .append(value)
+                .append(", ")
+                .append(elementType)
+                .append("* ")
+                .append(elemPtr)
+                .append(dbg).append("\n");
+
+        return value;
     }
 
 
-    private String generateArrayIndex(EArrayIndex arrayIndexExp) {
-    
-		String register = generateRegister();
-		String returnRegister = generateRegister();
-		String arrayType = convertType(arrayIndexExp.array().type());
-        String index = generateExpression(arrayIndexExp.index());
-		String arrayName = ((EId) arrayIndexExp.array()).name();
+    private String generateAppend(Ast.EAppend appendExp) {
+        String dbg = ", !dbg !" + debugMetaData.getLineId(appendExp.pos().line);
+        String arrPtr = generateExpression(appendExp.array());   // %array_i32*
+        String value = generateExpression(appendExp.element());  // i32
+        String structType = getArrayStructType(appendExp.array().type()); // e.g. %array_i32
+        String elementType = getArrayElementType(appendExp.array().type()); // e.g. i32
+        String dataPointerType = getArrayDataPointerType(appendExp.array().type()); // e.g. i32* or i8**
+        int elementSize = getTypeSizeBytes(appendExp.type());
 
-		sb.append(register).append(" = ").append("getelementptr inbounds ").append(arrayType).append(", ").append("i32* ").append(environment.lookup(arrayName)).append(", i32 ").append(index).append("\n");
-        sb.append(returnRegister).append(" = load ").append(arrayType).append(", ").append(arrayType).append("* ").append(register).append("\n");
-        
-		return returnRegister;
+        // &arr->size
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 0").append(dbg).append("\n");
+
+        // size
+        String sizeValue = generateRegister();
+        sb.append(sizeValue)
+                .append(" = load i32, i32* ")
+                .append(sizePtr)
+                .append(dbg).append("\n");
+
+        // &arr->capacity
+        String capPtr = generateRegister();
+        sb.append(capPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 1").append(dbg).append("\n");
+
+        // capacity
+        String capValue = generateRegister();
+        sb.append(capValue)
+                .append(" = load i32, i32* ")
+                .append(capPtr)
+                .append(dbg).append("\n");
+
+        // &arr->data
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrPtr)
+                .append(", i32 0, i32 2").append(dbg).append("\n");
+
+        // arr->data
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ")
+                .append(dataPointerType)
+                .append(", ")
+                .append(dataPointerType)
+                .append("* ")
+                .append(dataFieldPtr)
+                .append(dbg).append("\n");
+
+        // size < capacity ?
+        String hasRoom = generateRegister();
+        sb.append(hasRoom)
+                .append(" = icmp slt i32 ")
+                .append(sizeValue)
+                .append(", ")
+                .append(capValue)
+                .append(dbg).append("\n");
+
+        String appendOk = generateLabel("append_ok");
+        String appendGrow = generateLabel("append_grow");
+        String appendEnd = generateLabel("append_end");
+
+        // jump to append_ok if there is room, otherwise jump to append_grow
+        sb.append("br i1 ")
+                .append(hasRoom)
+                .append(", label %")
+                .append(appendOk)
+                .append(", label %")
+                .append(appendGrow)
+                .append("\n");
+
+        arrayCodeGenHelper.appendNotGrow(appendOk, dataPtr, sizeValue, value, sizePtr, appendEnd, structType, elementType, dataPointerType);
+
+        arrayCodeGenHelper.appendGrow(appendGrow, capValue, sizeValue, dataPtr, value, sizePtr, dataFieldPtr, capPtr, elementType, dataPointerType, elementSize,appendEnd);
+
+
+        //sb.append("br label %").append(appendEnd).append("\n");
+
+        sb.append(appendEnd).append(":\n");
+
+        return arrPtr;
     }
 
 
@@ -349,10 +710,13 @@ public class ExpressionCodeGen extends Helper {
         String value = generateExpression(unaryExp.exp());
         String register = generateRegister();
         switch (unaryExp.op()) {
-            case INC -> {sb.append(register).append(" = add ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1\n");}
-            case DEC -> {sb.append(register).append(" = sub ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1\n");}
+            case INC -> {sb.append(register).append(" = add ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1")
+            .append(", !dbg !").append(debugMetaData.getLineId(unaryExp.pos().line)).append("\n");}
+            case DEC -> {sb.append(register).append(" = sub ").append(convertType(unaryExp.type())).append(" ").append(value).append(", 1")
+            .append(", !dbg !").append(debugMetaData.getLineId(unaryExp.pos().line)).append("\n");}
         }
-         sb.append("store ").append(convertType(unaryExp.type())).append(" ").append(register).append(", ").append(convertType(unaryExp.type())).append("* ").append(environment.lookup(((EId) unaryExp.exp()).name())).append("\n");
+         sb.append("store ").append(convertType(unaryExp.type())).append(" ").append(register).append(", ").append(convertType(unaryExp.type())).append("* ").append(environment.lookup(((EId) unaryExp.exp()).name()))
+         .append(", !dbg !").append(debugMetaData.getLineId(unaryExp.pos().line)).append("\n");
  
         
         return register;
@@ -362,7 +726,8 @@ public class ExpressionCodeGen extends Helper {
     private String generateDInt(EDInt dIntExp) {
         String value = generateExpression(dIntExp.exp());
         String register = generateRegister();
-        sb.append(register).append(" = sitofp i32 ").append(value).append(" to double\n");
+        sb.append(register).append(" = sitofp i32 ").append(value).append(" to double")
+        .append(", !dbg !").append(debugMetaData.getLineId(dIntExp.pos().line)).append("\n");
         return register;
     }
 
@@ -376,14 +741,15 @@ public class ExpressionCodeGen extends Helper {
 
         String register = generateRegister();
 
+        String dbg = ", !dbg !" + debugMetaData.getLineId(sStringCast.pos().line);
         if (type instanceof TInt) {
-            generateStringCastInt(value, register);
+            generateStringCastInt(value, register, dbg);
         } else if (type instanceof TDouble) {
-            generateStringCastDouble(value, register);
+            generateStringCastDouble(value, register, dbg);
         } else if (type instanceof TBool) {
-            generateStringCastBool(value, register);
+            generateStringCastBool(value, register, dbg);
         } else if(type instanceof TArray) {
-            generateArrayString(sStringCast, register);
+            generateArrayString(sStringCast, register, dbg);
         }
         else {
             throw new IllegalArgumentException("Unsupported type for string cast " + TypeConverter.typeToString(type));
@@ -392,12 +758,39 @@ public class ExpressionCodeGen extends Helper {
 
     }
 
-    private void generateArrayString(EStringCast sStringCast, String register) {
-        String arrayRegister = generateExpression(sStringCast.exp()); // generate pointer to register
-        Ast.TArray type = (Ast.TArray) sStringCast.exp().type(); // cast to tarray
-        int size = type.arraySize();
-        Ast.Type elementType = type.elementType();
-        String elementTypeStr = convertType(elementType); // Get LLVM IR type string for the array element type
+    private void generateArrayString(EStringCast sStringCast, String register, String dbg) {
+
+        String arrayRegister = generateExpression(sStringCast.exp());
+        Ast.TArray arrayType = (Ast.TArray) sStringCast.exp().type();
+        Ast.Type elementType = arrayType.elementType();
+        String structPointer = convertType(arrayType); // e.g. %array_i32*, array_double*, etc.
+        String structType = getArrayStructType(arrayType); // e.g. %array_i32, %array_double, etc.
+        String arrayDataPointerType = getArrayDataPointerType(arrayType); // e.g. i32* for int arrays, double* for double arrays, etc.
+
+        // Load size from struct field 0
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ").append(structType).append(", ").append(structPointer)
+                .append(arrayRegister)
+                .append(", i32 0, i32 0").append(dbg).append("\n");
+
+        String sizeValue = generateRegister();
+        sb.append(sizeValue)
+                .append(" = load i32, i32* ")
+                .append(sizePtr)
+                .append(dbg).append("\n");
+
+        // Load data pointer from struct field 2
+        String dataFieldPtr = generateRegister();
+        sb.append(dataFieldPtr).append(" = getelementptr inbounds ").append(structType).append(", ").append(structPointer)
+                .append(arrayRegister)
+                .append(", i32 0, i32 2").append(dbg).append("\n");
+
+        String dataPtr = generateRegister();
+        sb.append(dataPtr)
+                .append(" = load ").append(arrayDataPointerType).append(", ").append(arrayDataPointerType).append("* ")
+                .append(dataFieldPtr)
+                .append(dbg).append("\n");
 
         String funcName;
         if(elementType instanceof Ast.TInt) {
@@ -415,26 +808,25 @@ public class ExpressionCodeGen extends Helper {
         // call runtime function to convert it to string
         sb.append("  ").append(register)
                 .append(" = call i8* ").append(funcName)
-                .append("(").append(elementTypeStr).append("* ").append(arrayRegister)
-                .append(", i32 ").append(size).append(")\n");
-
+                .append("(").append(arrayDataPointerType).append(" ").append(dataPtr)
+                .append(", i32 ").append(sizeValue).append(")").append(dbg).append("\n");
     }
 
-    private void generateStringCastInt(String value, String register) {
+    private void generateStringCastInt(String value, String register, String dbg) {
         sb.append("  ").append(register)
                 .append(" = call i8* @int_to_string(i32 ")
-                .append(value).append(")\n");
+                .append(value).append(")").append(dbg).append("\n");
     }
 
-    private void generateStringCastDouble(String value, String register) {
+    private void generateStringCastDouble(String value, String register, String dbg) {
         sb.append("  ").append(register)
                 .append(" = call i8* @double_to_string(double ")
-                .append(value).append(")\n");
+                .append(value).append(")").append(dbg).append("\n");
     }
 
-    private void generateStringCastBool(String value, String register) {
+    private void generateStringCastBool(String value, String register, String dbg) {
         sb.append("  ").append(register)
-                .append(" = call i8* @bool_to_string(i1 " ).append(value).append(")\n");
+                .append(" = call i8* @bool_to_string(i1 ").append(value).append(")").append(dbg).append("\n");
     }
 
 }

@@ -29,6 +29,12 @@
           "FIKA"
         ],
         "configuration": "./language-tools/language-configuration.json"
+      },
+      {
+        "id": "asm-preview",
+        "aliases": [
+          "Assembly Preview"
+        ]
       }
     ],
     "grammars": [
@@ -36,14 +42,19 @@
         "language": "fika",
         "scopeName": "source.fika",
         "path": "./language-tools/fika.tmLanguage.json"
+      },
+      {
+        "language": "asm-preview",
+        "scopeName": "source.asm-preview",
+        "path": "./language-tools/asm-preview.tmLanguage.json"
       }
     ],
-    "configuration":[
+    "configuration": [
       {
         "type": "object",
         "title": "fika language server and language tools",
         "properties": {
-          "languageServer.maxNumberOfProblems" : {
+          "languageServer.maxNumberOfProblems": {
             "scope": "resource",
             "type": "number",
             "default": 100,
@@ -102,46 +113,90 @@
       {
         "command": "O3",
         "title": "Max optimazation"
-      }
-    ],
-
-  "submenus":[
-    {
-      "id": "opt",
-      "label": "optimazation",
-      "icon": "$(list-selection)"
-    }
-  ],  
-
-  "menus": {
-    "editor/title": [
+      },
       {
-        "submenu": "opt",
-        "when": "true",
-        "group": "navigation"
+        "command": "asm-buttons",
+        "title": "assemblyOptions"
+      },
+      {
+        "command": "mylang.x86-64",
+        "title": "x86-64 (standard)"
+      },
+      {
+        "command": "mylang.arm64",
+        "title": "arm64"
+      },
+      {
+        "command": "mylang.x86",
+        "title": "x86"
+      },
+      {
+        "command": "mylang.arm",
+        "title": "arm32"
       }
     ],
-
-  "opt": [
-    {
-      "command": "O0",
-      "group": "navigation" 
-    },
-    {
-      "command": "O1",
-      "group": "navigation" 
-    },
-    {
-      "command": "O2",
-      "group": "navigation" 
-    },
-    {
-      "command": "O3",
-      "group": "navigation" 
+    "submenus": [
+      {
+        "id": "opt",
+        "label": "optimazation",
+        "icon": "$(dashboard)"
+      },
+      {
+        "id": "asm",
+        "label": "assemblyOptions",
+        "icon": "$(chip)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "submenu": "opt",
+          "when": "true",
+          "group": "navigation"
+        },
+        {
+          "submenu": "asm",
+          "when": "true",
+          "group": "navigation"
+        }
+      ],
+      "opt": [
+        {
+          "command": "O0",
+          "group": "navigation"
+        },
+        {
+          "command": "O1",
+          "group": "navigation"
+        },
+        {
+          "command": "O2",
+          "group": "navigation"
+        },
+        {
+          "command": "O3",
+          "group": "navigation"
+        }
+      ],
+      "asm": [
+        {
+          "command": "mylang.x86-64",
+          "group": "navigation"
+        },
+        {
+          "command": "mylang.arm64",
+          "group": "navigation"
+        },
+        {
+          "command": "mylang.x86",
+          "group": "navigation"
+        },
+        {
+          "command": "mylang.arm",
+          "group": "navigation"
+        }
+      ]
     }
-  ]
-}
-
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -157,7 +212,7 @@
   "dependencies": {
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12"
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-uri": "^3.1.0"
   }
 }
-
