@@ -51,4 +51,4 @@ target/
 *.ll
 *.s
 **/test.ml
-*/test.ml
+*/test.ml.claude/
