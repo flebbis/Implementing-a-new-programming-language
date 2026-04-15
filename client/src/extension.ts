@@ -152,7 +152,7 @@ export async function activate(context: ExtensionContext) {
       }
       
       console.log(lastPath)
-      execFileSync('java', ['-jar', JAR_PATH, filecontent, lastPath]);
+      execFileSync('java', ['-jar', JAR_PATH, lastPath, filecontent]);
 
       // run llc on the .ll file to produce assembly
       const llFile = lastPath.replace(/\.(fika)$/, '.ll');
