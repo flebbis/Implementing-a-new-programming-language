@@ -23,11 +23,23 @@ public class UnresolvedTypeHelper {
         this.currentFunction = currentFunction;
     }
 
-    /** Adds numeric conditions (int and double) to an unresolved expression, if it is not already resolved to a numeric type. */
-    protected Ast.Exp addNumericConditionToUnresolvedExp(Ast.Exp unresolved) {
-        Ast.Exp addedInt = addUnresolvedCondition(unresolved, new Ast.TInt());
-        return addUnresolvedCondition(addedInt, new Ast.TDouble());
+    /**
+     * Helper method to check if an expression of unresolved type can satisfy any of the potential conditions.
+     * If the expression is not of unresolved type, it is returned as is.
+     * If it is of unresolved type, the conditions are added to it and the expression is updated in the context.
+     * This allows us to handle cases where we have an expression of unresolved type that can satisfy multiple conditions, such as being used in both a numeric and a string context.
+     * @param exp the expression to check for unresolved type and add conditions to if needed
+     * @param potentialConditions list of potential conditions that the unresolved expression could satisfy, such as TInt, TDouble...
+     * @return
+     */
+    public Ast.Exp checkUnresolved(Ast.Exp exp, List<Ast.Type> potentialConditions) {
+        Ast.Exp result = exp;
+        for(Ast.Type condition : potentialConditions) {
+            result = addUnresolvedCondition(result, condition);
+        }
+        return result;
     }
+
 
     /** Checks if the condition type satisfies the current conditions of the unresolved type.
      * If so, adds the condition type to the conditions of the unresolved type and updates the context and function signatures accordingly. */
@@ -58,6 +70,7 @@ public class UnresolvedTypeHelper {
             unresolvedConditions.addAll(resolvedConditions);
 
             Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), unresolvedConditions);
+
             context.update(unresolvedType.id(), newType);
             List<Ast.Type> paramTypes = functionSignatures.get(currentFunction).paramTypes;
 

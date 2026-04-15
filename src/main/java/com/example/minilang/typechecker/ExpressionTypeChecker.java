@@ -115,8 +115,8 @@ public class ExpressionTypeChecker {
             return new Ast.EPower(base, exponent, new Ast.TUnknown(), ePower.pos());
         }
 
-        exponent = checkUnresolved(exponent, new ArrayList<>(Arrays.asList(base.type(), new Ast.TInt(), new Ast.TDouble())));
-        base = checkUnresolved(base, new ArrayList<>(Arrays.asList(exponent.type(), new Ast.TInt(), new Ast.TDouble())));
+        exponent = unresolvedTypeHelper.checkUnresolved(exponent, new ArrayList<>(Arrays.asList(base.type(), new Ast.TInt(), new Ast.TDouble())));
+        base = unresolvedTypeHelper.checkUnresolved(base, new ArrayList<>(Arrays.asList(exponent.type(), new Ast.TInt(), new Ast.TDouble())));
 
         if (TypeUtils.equalTypes(base.type(), new Ast.TInt()) || TypeUtils.equalTypes(base.type(), new Ast.TDouble())) {
             if (TypeUtils.equalTypes(exponent.type(), new Ast.TInt())|| TypeUtils.equalTypes(exponent.type(), new Ast.TDouble())) {
@@ -140,8 +140,8 @@ public class ExpressionTypeChecker {
             return new Ast.ECmp(left, right, eCmp.op(), new Ast.TUnknown(), eCmp.pos());
         }
 
-        left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
-        right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
+        left = unresolvedTypeHelper.checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
+        right = unresolvedTypeHelper.checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
 
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
@@ -167,8 +167,8 @@ public class ExpressionTypeChecker {
             return new Ast.ELogic(left, right, eLogic.op(), new Ast.TUnknown(), eLogic.pos());
         }
 
-        left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TBool())));
-        right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TBool())));
+        left = unresolvedTypeHelper.checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TBool())));
+        right = unresolvedTypeHelper.checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TBool())));
 
 
         if (TypeUtils.equalTypes(left.type(), new Ast.TBool()) &&
@@ -191,8 +191,8 @@ public class ExpressionTypeChecker {
         // Modulus operator only works for integers
         if (eOpp.op() == Ast.Op.MOD) {
 
-            left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt())));
-            right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt())));
+            left = unresolvedTypeHelper.checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt())));
+            right = unresolvedTypeHelper.checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt())));
 
             if (TypeUtils.equalTypes(left.type(), new Ast.TInt()) &&
                     TypeUtils.equalTypes(right.type(), new Ast.TInt())) {
@@ -207,9 +207,9 @@ public class ExpressionTypeChecker {
 
             // one is string
             if (TypeUtils.equalTypes(left.type(), new Ast.TString())|| TypeUtils.equalTypes(right.type(), new Ast.TString())) {
-
-                left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TString())));
-                right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TString())));
+                //no unresolved conditions, because it can still be of any type
+                left = unresolvedTypeHelper.checkUnresolved(left, new ArrayList<>());
+                right = unresolvedTypeHelper.checkUnresolved(right, new ArrayList<>());
 
                 // both are string
                 if (TypeUtils.equalTypes(left.type(), new Ast.TString())
@@ -229,8 +229,8 @@ public class ExpressionTypeChecker {
         }
 
         // operands can be double or int if they are unresolved
-        left = checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
-        right = checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
+        left = unresolvedTypeHelper.checkUnresolved(left, new ArrayList<>(Arrays.asList(right.type(), new Ast.TInt(), new Ast.TDouble())));
+        right = unresolvedTypeHelper.checkUnresolved(right, new ArrayList<>(Arrays.asList(left.type(), new Ast.TInt(), new Ast.TDouble())));
 
         // For other arithmetic operators, we allow int and double, with implicit conversion from int to double if needed
         if (TypeUtils.equalTypes(left.type(), new Ast.TInt()) && TypeUtils.equalTypes(right.type(), new Ast.TInt())) {
@@ -254,7 +254,7 @@ public class ExpressionTypeChecker {
             return new Ast.EUnary(exp, eUnary.op(), new Ast.TUnknown(), eUnary.pos());
         }
 
-        exp = checkUnresolved(exp, new ArrayList<>(Arrays.asList(new Ast.TInt())));
+        exp = unresolvedTypeHelper.checkUnresolved(exp, new ArrayList<>(Arrays.asList(new Ast.TInt())));
 
         if (TypeUtils.equalTypes(exp.type(), new Ast.TInt())) {
             return new Ast.EUnary(exp, eUnary.op(), exp.type(), eUnary.pos());
@@ -337,7 +337,7 @@ public class ExpressionTypeChecker {
             for (Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
 
                 // Handle Potential TUnresolved
-                args.set(i, checkUnresolved(args.get(i), new ArrayList<>(Arrays.asList(paramType))));
+                args.set(i, unresolvedTypeHelper.checkUnresolved(args.get(i), new ArrayList<>(Arrays.asList(paramType))));
 
                 // Check mismatch
                 if (!TypeUtils.equalTypes(args.get(i).type(), paramType)) {
@@ -638,22 +638,5 @@ public class ExpressionTypeChecker {
         }
 
         return new Ast.EArrayIndexAssign(array, index, value, arrayType.elementType(), eArrayIndexAssign.pos());
-    }
-
-    /**
-     * Helper method to check if an expression of unresolved type can satisfy any of the potential conditions.
-     * If the expression is not of unresolved type, it is returned as is.
-     * If it is of unresolved type, the conditions are added to it and the expression is updated in the context.
-     * This allows us to handle cases where we have an expression of unresolved type that can satisfy multiple conditions, such as being used in both a numeric and a string context.
-     * @param exp the expression to check for unresolved type and add conditions to if needed
-     * @param potentialConditions list of potential conditions that the unresolved expression could satisfy, such as TInt, TDouble...
-     * @return
-     */
-    private Ast.Exp checkUnresolved(Ast.Exp exp, List<Ast.Type> potentialConditions) {
-        Ast.Exp result = exp;
-        for(Ast.Type condition : potentialConditions) {
-            result = unresolvedTypeHelper.addUnresolvedCondition(result, condition);
-        }
-        return result;
     }
 }

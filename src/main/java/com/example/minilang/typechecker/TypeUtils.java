@@ -17,6 +17,7 @@ public class TypeUtils {
             // Compare element types recursively and ignore arraySize
             return equalTypes(aa.elementType(), bb.elementType());
         }
+
         if (a instanceof Ast.TUnresolved) {
             return unresolvedCheck((Ast.TUnresolved) a, b);
         } else if(b instanceof Ast.TUnresolved) {
@@ -28,9 +29,16 @@ public class TypeUtils {
     }
 
     private static boolean unresolvedCheck(Ast.TUnresolved a, Ast.Type b) {
+        if(b instanceof Ast.TUnresolved bUnresolved) {
+            if(a.conditions().isEmpty() && bUnresolved.conditions().isEmpty()) {
+                return true; // Both are unresolved with no conditions, consider them equal
+            }
+        }
+
         if(a.conditions().isEmpty()) {
             return false; // Unresolved with no conditions can match any type
         }
+
         for(Ast.Type condition : a.conditions()) {
             if(TypeUtils.equalTypes(condition, b)) {
                 return true; // If any condition matches, consider it equal

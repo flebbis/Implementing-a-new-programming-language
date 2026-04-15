@@ -217,7 +217,10 @@ public class StatementTypeChecker {
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {
         context.pushNewScope();
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
-        if (!(condition.type() instanceof Ast.TBool)) {
+
+        condition = unresolvedTypeHelper.checkUnresolved(condition, List.of(new Ast.TBool()));
+
+        if (!(TypeUtils.equalTypes(condition.type(), new Ast.TBool()))) {
             throw new TypeException("Condition of while loop must be of type bool", condition.pos());
         }
 
@@ -237,6 +240,8 @@ public class StatementTypeChecker {
 
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
+
+        exp = unresolvedTypeHelper.checkUnresolved(exp, List.of(new Ast.TInt()));
 
         if (!(TypeUtils.equalTypes(exp.type(), new Ast.TInt()))) {
             throw new TypeException("Expression in do statement must be of type int, type "
@@ -267,6 +272,8 @@ public class StatementTypeChecker {
             signature.isInference = false;
         }
 
+        value = unresolvedTypeHelper.checkUnresolved(value, List.of(signature.returnType));
+
         if (!TypeUtils.equalTypes(signature.returnType, value.type())) {
             // Allow implicit conversion from int to double
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
@@ -295,6 +302,7 @@ public class StatementTypeChecker {
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
 
+        condition = unresolvedTypeHelper.checkUnresolved(condition, List.of(new Ast.TBool()));
 
         if (!TypeUtils.equalTypes(condition.type(), new Ast.TBool())) {
             throw new TypeException("Condition of if statement must be of type bool", stmt.condition().pos());

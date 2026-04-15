@@ -124,10 +124,12 @@ public class TypeChecker {
 
 
                 // Inference suggestion
-                if (!(arg.type().equals(callType))) {
-                    Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
-                    addInferenceSuggestion(name, callType, pos);
-                    offSet += TypeConverter.typeToString(callType).length() + 1;
+                if (!(TypeUtils.equalTypes(arg.type(), callType))) {
+                    if(!TypeConverter.typeToString(callType).equals("unknown") && !TypeConverter.typeToString(callType).contains("or")) {
+                        Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
+                        addInferenceSuggestion(name, callType, pos);
+                        offSet += TypeConverter.typeToString(callType).length() + 1;
+                    }
                 }
 
                 context.pushToCurrentScope(arg.name(), callType);
@@ -167,7 +169,10 @@ public class TypeChecker {
         // Is inference, add type
 
         if(sig.isInference) {
-            addInferenceSuggestion(name, sig.returnType, func.pos());
+            // Add inference suggestion if the return type is not unknown or if it is a union type (contains "or")
+            if(!TypeConverter.typeToString(sig.returnType).equals("unknown") && !TypeConverter.typeToString(sig.returnType).contains("or")) {
+                addInferenceSuggestion(name, sig.returnType, func.pos());
+            }
         }
 
     }
