@@ -83,13 +83,22 @@ export const instructions: Record<string, arguments> = {
             isConst(arg3) ? `Clear bits ${val(arg3!)} in register` :
         `Bitwise AND NOT`,
         
-        // ----- JUMPS ---- 
+        // ----- JUMPS ----
     bge: (arg1) => `Jump if >= to ${arg1}`,
     bgt: (arg1) => `Jump if > to ${arg1}`,
     ble: (arg1) => `Jump if <= to ${arg1}`,
     blt: (arg1) => `Jump if < to ${arg1}`,
     beq: (arg1) => `Jump if == to ${arg1}`,
     bne: (arg1) => `Jump if != to ${arg1}`,
+
+    // arm64 
+    'b.eq': (arg1) => `Jump if == to ${arg1}`,
+    'b.ne': (arg1) => `Jump if != to ${arg1}`,
+    'b.ge': (arg1) => `Jump if >= to ${arg1}`,
+    'b.le': (arg1) => `Jump if <= to ${arg1}`,
+    'b.lt': (arg1) => `Jump if < to ${arg1}`,
+    'b.gt': (arg1) => `Jump if > to ${arg1}`,
+
 
     cmp: (arg1, arg2)        => `Compare ${arg1} and ${arg2}`,
     b:   (arg1)              => `Jump to ${arg1}`,
@@ -160,6 +169,23 @@ export const instructions: Record<string, arguments> = {
     jl: (arg1)               => `Jump if < to ${arg1}`,
     jg: (arg1)               => `Jump if > to ${arg1}`,
     idiv: (arg1)             => `Signed divide by ${arg1}`,
+
+
+    xor:  (arg1, arg2)       => `${arg1} = ${arg1} XOR ${arg2}`,
+    inc:  (arg1)             => `${arg1} += 1`,
+    leal: (arg1, _arg2)      => isVar(arg1) ? `Load address of ${arg1}` : `Load effective address`,
+    shll: (arg1, arg2)       => arg2 ? `Shift ${arg1} left by ${arg2}` : `Shift ${arg1} left by 1`,
+
+    // arm32 
+    ldm:  (arg1, arg2)       => `Load multiple registers from [${arg1}]`,
+    ldrlt: (arg1, arg2)      => isVar(arg2) ? `Load ${arg2} if <` : `Load if <`,
+    movlt: (arg1, arg2)      => isConst(arg2) ? `${arg1} = ${val(arg2!)} if <` : `Move if <`,
+
+    // arm64 jumps
+    cbz:  (arg1, arg2)       => `Jump to ${arg2} if ${arg1} == 0`,
+    cbnz: (arg1, arg2)       => `Jump to ${arg2} if ${arg1} != 0`,
+    bls:  (arg1)             => `Jump if <= (unsigned) to ${arg1}`,
+    bhi:  (arg1)             => `Jump if > (unsigned) to ${arg1}`,
 }
 
 // --------------- EXTENDED INSTRUCTIONS ---------------
@@ -365,6 +391,13 @@ export const extendedInstructions: Record<string, arguments> = {
     blt: (arg1) => jumpLesser(arg1!),
     bgt: (arg1) => jumpGreater(arg1!),
 
+    // arm64 
+    'b.eq': (arg1) => jumpEqual(arg1!),
+    'b.ne': (arg1) => jumpNotEqual(arg1!),
+    'b.ge': (arg1) => jumpGreaterThan(arg1!),
+    'b.le': (arg1) => jumpLesserThan(arg1!),
+    'b.lt': (arg1) => jumpLesser(arg1!),
+    'b.gt': (arg1) => jumpGreater(arg1!),
 
     //x86-64/86 jumps
     jmp: (arg1)   => jump(arg1!),
@@ -544,6 +577,87 @@ export const extendedInstructions: Record<string, arguments> = {
         `## idiv - Signed Integer Divide\n\n` +
         `Divides the accumulator register by the given reigster or value\n\n` +
         `- **${arg1}** — the value to divide by\n`,
+
+    xor: (arg1, arg2) =>
+        `## xor — Bitwise Exclusive OR\n\n` +
+        `Performs a bitwise XOR between two values and stores the result. When both operands are the same register, this is the fastest way to set a register to zero\n\n` +
+        `- **${arg1}** — destination register, will hold the result\n` +
+        `- **${arg2}** — second operand`,
+
+    inc: (arg1) =>
+        `## inc — Increment\n\n` +
+        `Adds 1 to a register or memory location\n\n` +
+        `- **${arg1}** — the register being incremented`,
+
+    leal: (arg1, arg2) =>
+        isVar(arg1) ?
+            `## leal — Load Effective Address\n\n` +
+            `Loads the memory address of a variable into a register\n\n` +
+            `- **${arg1}** — variable \`${arg1}\`, whose address is being loaded\n` +
+            `- **${arg2}** — destination register, will hold the address` :
+
+            `## leal — Load Effective Address\n\n` +
+            `Computes a memory address and stores it in a register\n\n` +
+            `- **${arg1}** — the memory expression being evaluated\n` +
+            `- **${arg2}** — destination register, will hold the computed address`,
+
+    shll: (arg1, arg2) =>
+        `## shll — Shift Left\n\n` +
+        `Shifts the bits of a register left by a constant amount, equivalent to multiplying by a power of 2\n\n` +
+        `- **${arg1}** — register being shifted\n` +
+        (arg2 ? `- **${arg2}** — number of bit positions to shift left` : `- shifts left by 1`),
+
+    ldm: (arg1, arg2) =>
+        `## ldm — Load Multiple\n\n` +
+        `Loads multiple registers from consecutive memory locations in one instruction\n\n` +
+        `- **${arg1}** — base address register to load from\n` +
+        `- **${arg2}** — the list of registers being loaded`,
+
+    ldrlt: (arg1, arg2) =>
+        isVar(arg2) ?
+            `## ldrlt — Load if Less Than\n\n` +
+            `Loads a variable from memory only if the last comparison was <\n\n` +
+            `- **${arg1}** — destination register\n` +
+            `- **${arg2}** — variable \`${arg2}\`, read from the stack` :
+
+            `## ldrlt — Load if Less Than\n\n` +
+            `Loads from memory only if the last comparison was <\n\n` +
+            `- **${arg1}** — destination register\n` +
+            `- **${arg2}** — source memory address`,
+
+    movlt: (arg1, arg2) =>
+        isConst(arg2) ?
+            `## movlt — Move if Less Than\n\n` +
+            `Moves a constant into a register only if the last comparison was <\n\n` +
+            `- **${arg1}** — destination register\n` +
+            `- **${arg2}** — the constant value being moved` :
+
+            `## movlt — Move if Less Than\n\n` +
+            `Moves a value into a register only if the last comparison was <\n\n` +
+            `- **${arg1}** — destination register\n` +
+            `- **${arg2}** — source register`,
+
+    cbz: (arg1, arg2) =>
+        `## cbz — Compare and Branch if Zero\n\n` +
+        `Jumps to the label if the register is zero, without needing a separate cmp instruction\n\n` +
+        `- **${arg1}** — register being tested\n` +
+        `- **${arg2}** — the label to jump to if ${arg1} == 0`,
+
+    cbnz: (arg1, arg2) =>
+        `## cbnz — Compare and Branch if Not Zero\n\n` +
+        `Jumps to the label if the register is not zero, without needing a separate cmp instruction\n\n` +
+        `- **${arg1}** — register being tested\n` +
+        `- **${arg2}** — the label to jump to if ${arg1} != 0`,
+
+    bls: (arg1) =>
+        `## bls — Branch if Lower or Same\n\n` +
+        `Jumps to the label if the last unsigned comparison was <=\n\n` +
+        `- **${arg1}** — the label to jump to`,
+
+    bhi: (arg1) =>
+        `## bhi — Branch if Higher\n\n` +
+        `Jumps to the label if the last unsigned comparison was >\n\n` +
+        `- **${arg1}** — the label to jump to`,
 
     leaq: (arg1, arg2) =>
         isVar(arg1) ? 

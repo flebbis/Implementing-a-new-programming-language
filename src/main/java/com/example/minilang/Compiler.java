@@ -94,6 +94,18 @@ public class Compiler {
         sb.append("declare i8* @array_double_to_string(double*, i32)\n");
         sb.append("declare i8* @array_bool_to_string(i1*, i32)\n");
         sb.append("declare i8* @array_string_to_string(i8*, i32)\n");
+        sb.append("declare void @array_index_out_of_bounds(i32, i32)\n");
+        sb.append("\n");
+
+        // ===== Array Struct Type Definitions =====
+        sb.append("%array_i32 = type { i32, i32, i32* }\n");
+        sb.append("%array_double = type { i32, i32, double* }\n");
+        sb.append("%array_i1 = type { i32, i32, i1* }\n");
+        sb.append("%array_i8ptr = type { i32, i32, i8** }\n");
+        sb.append("declare %array_i32* @array_int_copy(%array_i32*)\n");
+        sb.append("declare %array_double* @array_double_copy(%array_double*)\n");
+        sb.append("declare %array_i1* @array_bool_copy(%array_i1*)\n");
+        sb.append("declare %array_i8ptr* @array_string_copy(%array_i8ptr*)\n");
         sb.append("\n");
 
         // ===== Format String Constants for print() =====

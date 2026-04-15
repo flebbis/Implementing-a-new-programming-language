@@ -252,14 +252,7 @@ export async function activate(context: ExtensionContext) {
             il.tooltip = md;
             hints.push(il);
           }
-          // rawTokens, This is for extendedInstructions so i can pass in [sp, #20] for example instead of i
-          const rawTokens = trimmed
-            .replace(/\{[^}]*\}/g, m => m.replace(/\s+/g, ''))
-            .split(/\s+/)
-            .map((t: string) => t.replace(",", ""))
-            .map((t: string) => t.replace("[", "").replace("]", ""));
-
-          // Rename memory into a variable 
+          // Rename memory into a variable
           // [sp, #4] -> i
           let resolved = trimmed;
           for (const [slot, varName] of slotMap) {
@@ -272,7 +265,8 @@ export async function activate(context: ExtensionContext) {
           const tokens = resolved.split(/\s+/)
             .map((t: string) => t.replace(",", ""))
             .map((t: string) => t.replace("#", ""));
-          const clearOp = tokens[0].replace(/[lq]$/, '');
+          const stripped = tokens[0].replace(/[lq]$/, '');
+          const clearOp = (instructions[tokens[0]] || extendedInstructions[tokens[0]]) ? tokens[0] : stripped;
           const operand = instructions[clearOp];
           const extended = extendedInstructions[clearOp];
           const pos = new vscode.Position(i, document.lineAt(i).text.length);
@@ -286,7 +280,16 @@ export async function activate(context: ExtensionContext) {
             const text = operand(tokens[1], tokens[2], tokens[3], tokens[4]);
             const hint = new vscode.InlayHint(pos, text);
             if (extended) {
-              const extendedText = extended(rawTokens[1], rawTokens[2], rawTokens[3], rawTokens[4]);
+              let extendedText = extended(tokens[1], tokens[2], tokens[3], tokens[4]);
+              const memoryLines: string[] = [];
+              for (const [slot, varName] of slotMap) {
+                if (trimmed.includes(slot)) {
+                  memoryLines.push(`\`${slot}\` → \`${varName}\``);
+                }
+              }
+              if (memoryLines.length > 0) {
+                extendedText += `\n\n---\n\n**Memory:** ${memoryLines.join(', ')}`;
+              }
               const md = new vscode.MarkdownString(extendedText);
               hint.tooltip = md;
             }
