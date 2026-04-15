@@ -540,11 +540,11 @@ function isLatest(uri: string, version: number): boolean {
   return true;
 }
 
-async function inferenceAnalysis(uri: string, version: number) {
-  connection.console.log("running analysis...")
+async function inferenceAnalysis(uri: string, document: TextDocument, version: number) {
   if (isLatest(uri, version)) {
     try {
-      let result = await runJavaAnalysis(uri);
+      connection.console.log("run analysis...")
+      let result = await runJavaAnalysis(uri, document);
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
       console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
       const suggestions: InferenceSuggestion[] = result ?? [];
@@ -560,7 +560,7 @@ async function inferenceAnalysis(uri: string, version: number) {
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
-function runJavaAnalysis(uri: string): Promise<any> {
+function runJavaAnalysis(uri: string, document: TextDocument): Promise<any> {
   // connection.console.log("running java...")
 
   return new Promise((resolve, reject) => {
@@ -569,7 +569,7 @@ function runJavaAnalysis(uri: string): Promise<any> {
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
 
     
-    const java = spawn("java", ["-jar", jarPath, URI.parse(uri).fsPath]);
+    const java = spawn("java", ["-jar", jarPath, URI.parse(uri).fsPath, document.getText()]);
 
     // Capture stdout and stderr from the Java process
     let stdout = "";
@@ -606,9 +606,10 @@ function runJavaAnalysis(uri: string): Promise<any> {
 async function insertInfered(uri: string) {
   const suggestions = inferenceSuggestionMap.get(uri) ?? [];
   // Apply edit in document for each inference suggestion
-  let allSucceed: Boolean = true
   for (const s of suggestions) {
-    let res = await connection.workspace.applyEdit({
+    connection.console.log("inserting: ")
+    connection.console.log(s.name + ":" + s.inferredType)
+    await connection.workspace.applyEdit({
       changes: {
         [uri]: [
           TextEdit.insert(
@@ -622,10 +623,7 @@ async function insertInfered(uri: string) {
         ]
       }
     });
-    allSucceed = allSucceed && res.applied
   }
-  // clear suggestions after insertion
-  inferenceSuggestionMap.clear();
 }
 
 function inferedInserts(uri: string): TextEdit[] {
@@ -648,23 +646,28 @@ function inferedInserts(uri: string): TextEdit[] {
 documents.onDidChangeContent(async change => {
   const uri = change.document.uri;
   const settings = await getDocumentSettings(uri)
-  const version = change.document.version;
+  const doc = change.document
+  const version = doc.version;
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
   // Type check & inference phase
   if (isLatest(uri, version) && (settings.inlineTypeHint
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange)) {
-    await inferenceAnalysis(uri, version);
+    await inferenceAnalysis(uri, doc, version);
+    connection.console.log(inferenceSuggestionMap.size.toString())
   }
 
   // Apply on change immediately if possible
   if (isLatest(uri, version) && settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+    connection.console.log("inserting...")
     insertInfered(uri);
   }
-  // Refresh inlay hints
-  if (settings.inlineTypeHint) {
+  if (isLatest(uri, version) && settings.inlineTypeHint) { // Refresh inlay hints, unless instant insert
     connection.languages.inlayHint.refresh();
   }
+  connection.console.log("clearing...")
+  inferenceSuggestionMap.clear();
+  connection.console.log("done.")
 });
 
 
@@ -701,6 +704,7 @@ connection.languages.inlayHint.on(async (params) => {
 // analysiss occur on change, but only applied on save
 documents.onWillSaveWaitUntil(async (params) => {
   const uri = params.document.uri;
+  const doc = params.document
   const settings = await getDocumentSettings(uri)
   let changes: TextEdit[] = []
   if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
@@ -708,17 +712,20 @@ documents.onWillSaveWaitUntil(async (params) => {
     latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
     // Type check & inference phase
-    inferenceAnalysis(uri, version);
+    inferenceAnalysis(uri,doc, version);
 
     if (isLatest(uri, version)) {
+      connection.console.log("inserting...")
       changes = inferedInserts(uri);
       // clear suggestions after insertion
-      inferenceSuggestionMap.clear();
+      connection.console.log("inserting...")
+      inferenceSuggestionMap.clear(); 
     }
   }
   if (settings.inlineTypeHint) {
     connection.languages.inlayHint.refresh();
   }
+  connection.console.log("done.")
   return changes
 })
 

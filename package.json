@@ -119,19 +119,19 @@
         "title": "assemblyOptions"
       },
       {
-        "command": "mylang.x86-64",
+        "command": "fika.x86-64",
         "title": "x86-64 (standard)"
       },
       {
-        "command": "mylang.arm64",
+        "command": "fika.arm64",
         "title": "arm64"
       },
       {
-        "command": "mylang.x86",
+        "command": "fika.x86",
         "title": "x86"
       },
       {
-        "command": "mylang.arm",
+        "command": "fika.arm",
         "title": "arm32"
       }
     ],
@@ -180,19 +180,19 @@
       ],
       "asm": [
         {
-          "command": "mylang.x86-64",
+          "command": "fika.x86-64",
           "group": "navigation"
         },
         {
-          "command": "mylang.arm64",
+          "command": "fika.arm64",
           "group": "navigation"
         },
         {
-          "command": "mylang.x86",
+          "command": "fika.x86",
           "group": "navigation"
         },
         {
-          "command": "mylang.arm",
+          "command": "fika.arm",
           "group": "navigation"
         }
       ]

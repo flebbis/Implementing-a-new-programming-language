@@ -152,11 +152,11 @@ export async function activate(context: ExtensionContext) {
       }
       
       console.log(lastPath)
-      execFileSync('java', ['-jar', JAR_PATH, lastPath]);
+      execFileSync('java', ['-jar', JAR_PATH, filecontent, lastPath]);
 
       // run llc on the .ll file to produce assembly
-      const llFile = lastPath.replace('.ml', '.ll');
-      const asmFile = lastPath.replace('.ml', '.s');
+      const llFile = lastPath.replace('.fika', '.ll');
+      const asmFile = lastPath.replace('.fika', '.s');
       execFileSync('llc', [`-march=${assembly}`,'-filetype=asm', optLevel, llFile, '-o', asmFile]);
 
       // read the assembly file
@@ -297,8 +297,8 @@ export async function activate(context: ExtensionContext) {
 
     context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection(e => {
-      // check that you are in a mylang file
-      if(e.textEditor.document.languageId !== 'mylang') return;
+      // check that you are in a fika file
+      if(e.textEditor.document.languageId !== 'fika') return;
       // clear old decoration
       if(activeEditor) {
           activeEditor.setDecorations(decoration, []);
@@ -343,7 +343,7 @@ export async function activate(context: ExtensionContext) {
       // retrieve src editor if it exists
 
       const srcEditor = vscode.window.visibleTextEditors
-      .find(doc => doc.document.languageId === 'mylang');
+      .find(doc => doc.document.languageId === 'fika');
       if(!srcEditor) return;
 
       // make the source line into a range
@@ -396,28 +396,28 @@ export async function activate(context: ExtensionContext) {
   )
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('mylang.x86-64', async() => {
+    vscode.commands.registerCommand('fika.x86-64', async() => {
       assembly = 'x86-64';
       showAssembly();
     })
   )
 
    context.subscriptions.push(
-    vscode.commands.registerCommand('mylang.arm64', async() => {
+    vscode.commands.registerCommand('fika.arm64', async() => {
       assembly = 'aarch64';
       showAssembly();
     })
   )
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('mylang.x86', async() => {
+    vscode.commands.registerCommand('fika.x86', async() => {
       assembly = 'x86';
       showAssembly();
     })
   )
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('mylang.arm', async() => {
+    vscode.commands.registerCommand('fika.arm', async() => {
       assembly = 'arm';
       showAssembly();
     })

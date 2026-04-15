@@ -1,6 +1,7 @@
 package com.example.minilang;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class MiniLanguageMain {
@@ -16,6 +17,7 @@ public class MiniLanguageMain {
         System.exit(1);
         return;
     }
-    Compiler.parseFile(Path.of(path), "0");
+    Path p = Path.of(path);
+    Compiler.parseFile(p, Files.readString(p), "0");
 }
 }

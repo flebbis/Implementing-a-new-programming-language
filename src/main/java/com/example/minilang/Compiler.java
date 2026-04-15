@@ -21,14 +21,14 @@ public class Compiler {
         private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
-            System.err.println("Usage: java -jar compiler.jar <source-filepath>");
+        if (args.length < 2) {
+            System.err.println("Usage: java -jar compiler.jar <source-content> <source-filepath>");
             System.exit(1);
         }
-        String optLevel = args.length > 1 ? args[1] : "-O3";
+        String optLevel = args.length > 2 ? args[2] : "-O3";
         Path filePath = Path.of(args[0]);
         try {
-            List<InferenceSuggestion> suggestions = parseFile(filePath, optLevel);
+            List<InferenceSuggestion> suggestions = parseFile(filePath, args[1], optLevel);
             // Output as JSON to stdout for the language server to parse
             System.out.println(objectMapper.writeValueAsString(suggestions));
         } catch (Exception e) {
@@ -38,9 +38,9 @@ public class Compiler {
         }
     }
     
-    public static List<InferenceSuggestion> parseFile(Path path, String optLevel) throws IOException {
+    public static List<InferenceSuggestion> parseFile(Path path, String input, String optLevel) throws IOException {
 
-        String input = Files.readString(path);
+        // String input = Files.readString(path);
 
         // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
