@@ -31,7 +31,7 @@ public class Compiler {
         return parseFile(path, "0");
     }
 
-     public static List<InferenceSuggestion> parseFile(Path path, String optLevel) throws IOException {
+    public static List<InferenceSuggestion> parseFile(Path path, String optLevel) throws IOException {
 
         String input = Files.readString(path);
 
@@ -43,21 +43,19 @@ public class Compiler {
         // 3. Parse and create Tree
         ParseTree tree = parser.program();
 
-
         // 5. Output
 
         // 6. Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        System.out.println("AST:      " + astRoot);
+        // System.out.println("AST:      " + astRoot);
 
         TypeChecker typeChecker = new TypeChecker();
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
 
         String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
         List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
-        
-        
+
         // ===== STEP 5: Write to File =====
         String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
         Path outputPath = path.getParent().resolve(outputFileName);
@@ -65,7 +63,7 @@ public class Compiler {
         return suggestions;
     }
 
-        private static String generateLLVM(Ast.Program program, String filename) {
+    private static String generateLLVM(Ast.Program program, String filename) {
         StringBuilder sb = new StringBuilder();
         StringBuilder globals = new StringBuilder();
         StringBuilder globalStrings = new StringBuilder();
@@ -113,21 +111,23 @@ public class Compiler {
         sb.append("entry:\n");
 
         // ===== Generate Code for Global Statements =====
-        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables, debugMetaData);
+        StatementCodeGen stmtCodegen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables,
+                debugMetaData);
         for (Ast.Stmt stmt : program.stmts()) {
             stmtCodegen.generateStatement(stmt);
         }
 
-       int lastLine = program.stmts().isEmpty()
-        ? 1
-        : program.stmts().get(program.stmts().size() - 1).pos().line;
+        int lastLine = program.stmts().isEmpty()
+                ? 1
+                : program.stmts().get(program.stmts().size() - 1).pos().line;
 
         sb.append("  ret void")
-        .append(", !dbg !").append(debugMetaData.getLineId(lastLine)).append("\n");
+                .append(", !dbg !").append(debugMetaData.getLineId(lastLine)).append("\n");
         sb.append("}\n\n");
 
         // ===== Generate Code for Each Function =====
-        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtCodegen, debugMetaData);
+        FunctionCodeGen funcCodegen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables,
+                stmtCodegen, debugMetaData);
         for (Ast.Func func : program.functions()) {
             funcCodegen.generateFunction(func);
         }

@@ -540,11 +540,11 @@ function isLatest(uri: string, version: number): boolean {
   return true;
 }
 
-async function inferenceAnalysis(uri: string, text: string, version: number) {
+async function inferenceAnalysis(uri: string, version: number) {
   connection.console.log("running analysis...")
   if (isLatest(uri, version)) {
     try {
-      let result = await runJavaAnalysis(uri, text);
+      let result = await runJavaAnalysis(uri);
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
       console.error("INFERENCE-RESULT " + JSON.stringify(result)) // Debug the JSON result from java
       const suggestions: InferenceSuggestion[] = result ?? [];
@@ -560,7 +560,7 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
-function runJavaAnalysis(uri: string, text: string): Promise<any> {
+function runJavaAnalysis(uri: string): Promise<any> {
   // connection.console.log("running java...")
 
   return new Promise((resolve, reject) => {
@@ -569,7 +569,7 @@ function runJavaAnalysis(uri: string, text: string): Promise<any> {
     const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
 
     
-    const java = spawn("java", ["-jar", jarPath, text, URI.parse(uri).fsPath]);
+    const java = spawn("java", ["-jar", jarPath, URI.parse(uri).fsPath]);
 
     // Capture stdout and stderr from the Java process
     let stdout = "";
@@ -648,14 +648,13 @@ function inferedInserts(uri: string): TextEdit[] {
 documents.onDidChangeContent(async change => {
   const uri = change.document.uri;
   const settings = await getDocumentSettings(uri)
-  const text = change.document.getText();
   const version = change.document.version;
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
   // Type check & inference phase
   if (isLatest(uri, version) && (settings.inlineTypeHint
     || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange)) {
-    await inferenceAnalysis(uri, text, version);
+    await inferenceAnalysis(uri, version);
   }
 
   // Apply on change immediately if possible
@@ -705,12 +704,11 @@ documents.onWillSaveWaitUntil(async (params) => {
   const settings = await getDocumentSettings(uri)
   let changes: TextEdit[] = []
   if (settings.insertionIntensity == TypeInferenceSetting.OnSave) {
-    const text = params.document.getText();
     const version = params.document.version;
     latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
     // Type check & inference phase
-    inferenceAnalysis(uri, text, version);
+    inferenceAnalysis(uri, version);
 
     if (isLatest(uri, version)) {
       changes = inferedInserts(uri);
