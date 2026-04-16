@@ -12,6 +12,7 @@ public class Helper {
             case Ast.TArray(var elementType, var arraySize) -> getArrayStructType(type) + "*";
             case Ast.TString() -> "i8*";
             case Ast.TDouble() -> "double";
+            case Ast.TUnresolved(String id, java.util.List<Ast.Type> conditions) -> getUnresolvedType((Ast.TUnresolved) type);
             case Ast.TUnknown() -> "void"; // Default to pointer type for unknown types. UGLY! FIX LATER!
             default -> throw new IllegalArgumentException("Unsupported type: " + TypeConverter.typeToString(type));
         };
@@ -24,8 +25,17 @@ public class Helper {
             case Ast.TBool() -> "i1";
             case Ast.TString() -> "i8*";
             case Ast.TDouble() -> "double";
+            case Ast.TUnresolved(String id, java.util.List<Ast.Type> conditions) -> getUnresolvedType((Ast.TUnresolved) type);
             default -> throw new IllegalArgumentException("Unsupported type: " + TypeConverter.typeToString(type));
         };
+    }
+
+    private String getUnresolvedType(Ast.TUnresolved unresolved) {
+        if(unresolved.conditions().isEmpty()) {
+            return "i32"; // default for now
+        } else {
+            return convertType(unresolved.conditions().getFirst()); // return first
+        }
     }
 
     public String getArrayDataPointerType(Ast.Type arrayType) {

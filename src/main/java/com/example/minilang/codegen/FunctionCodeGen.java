@@ -24,9 +24,11 @@ public class FunctionCodeGen {
 
     public void generateFunction(Ast.Func function) {
 
-        if(!function.called()) {
+        /*
+                if(!function.called()) {
             return; // Skip code generation for functions that are never called
         }
+         */
 
         environment.pushNewScope();
         Helper helper = new Helper();
