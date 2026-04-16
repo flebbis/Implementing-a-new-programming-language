@@ -22,7 +22,7 @@ public class Compiler {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
-            System.err.println("Usage: java -jar compiler.jar <source-content> <source-filepath>");
+            System.err.println("Usage: java -jar compiler.jar <source-filepath> <source-content>");
             System.exit(1);
         }
         String optLevel = args.length > 2 ? args[2] : "-O3";
