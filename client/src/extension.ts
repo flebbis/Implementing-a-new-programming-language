@@ -434,6 +434,26 @@ export async function activate(context: ExtensionContext) {
       showAssembly();
     })
   )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('fika.runProgram', async () => {
+      const editor = vscode.window.activeTextEditor;
+
+      if (!editor || editor.document.languageId !== 'fika') {
+        vscode.window.showErrorMessage('No active FIKA file.');
+        return;
+      }
+
+      await editor.document.save();
+
+      const filePath = editor.document.uri.fsPath;
+      const scriptPath = context.asAbsolutePath(path.join('.', 'run-fika.ps1'));
+
+      const terminal = vscode.window.createTerminal('FIKA Run');
+      terminal.show(true);
+      terminal.sendText(`powershell -ExecutionPolicy Bypass -File "${scriptPath}" "${filePath}"`);
+    })
+  );
 }
 
 

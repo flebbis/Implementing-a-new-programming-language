@@ -3,6 +3,7 @@
 )
 
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $false
 
 $jar = ".\LLVMINI-1.0-SNAPSHOT.jar"
 $runtime = ".\runtime\runtime.c"
@@ -15,17 +16,25 @@ $ll = $Source -replace '\.fika$', '.ll'
 $exeName = [System.IO.Path]::GetFileNameWithoutExtension($Source) + ".exe"
 $exe = Join-Path "." $exeName
 
-Write-Host "Generating LLVM IR..."
-java -jar $jar $Source
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+# Hide Java stdout (JSON), but still fail if Java exits non-zero
+java -jar $jar $Source > $null
+if ($LASTEXITCODE -ne 0) {
+    throw "Java compilation failed."
+}
 
 if (!(Test-Path $ll)) {
     throw "LLVM IR file was not generated: $ll"
 }
 
-Write-Host "Compiling with clang..."
-clang $ll $runtime -o $exe
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+# Capture clang output instead of letting PowerShell treat stderr as fatal
+$clangOutput = & clang -Wno-override-module $ll $runtime -o $exe 2>&1
+$clangExit = $LASTEXITCODE
 
-Write-Host "Running $exe ..."
+if ($clangExit -ne 0) {
+    $clangOutput
+    throw "Clang compilation failed."
+}
+
+# Run program normally so prints + runtime errors are visible
 & $exe
+$programExit = $LASTEXITCODE

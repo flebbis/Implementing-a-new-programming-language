@@ -98,6 +98,12 @@
     ],
     "commands": [
       {
+        "command": "fika.runProgram",
+        "title": "Run FIKA Program",
+        "category": "FIKA",
+        "icon": "$(play)"
+      },
+      {
         "command": "assembly-preview.show",
         "title": "Show Assembly"
       },
@@ -157,14 +163,19 @@
     "menus": {
       "editor/title": [
         {
+          "command": "fika.runProgram",
+          "when": "resourceLangId == fika",
+          "group": "navigation@0"
+        },
+        {
           "submenu": "opt",
           "when": "true",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "submenu": "asm",
           "when": "true",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "opt": [

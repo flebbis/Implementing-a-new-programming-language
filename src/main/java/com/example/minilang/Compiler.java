@@ -21,8 +21,8 @@ public class Compiler {
         private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
-            System.err.println("Usage: java -jar compiler.jar <source-content> <source-filepath>");
+        if (args.length < 1) {
+            System.err.println("Usage: java -jar compiler.jar <source-filepath> <source-content>:optional");
             System.exit(1);
         }
         String optLevel = args.length > 2 ? args[2] : "-O3";
