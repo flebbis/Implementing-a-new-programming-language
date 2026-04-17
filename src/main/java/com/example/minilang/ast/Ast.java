@@ -1,8 +1,8 @@
 package com.example.minilang.ast; // AST Definition
 
-import com.example.minilang.Pos;
-
 import java.util.List;
+
+import com.example.minilang.Pos;
 
 /**
  * One file to rule them all.

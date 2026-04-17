@@ -2,6 +2,8 @@ package com.example.minilang.codegen;
 
 import java.util.HashSet;
 
+import com.example.minilang.DebugMetaData;
+
 import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
@@ -14,25 +16,22 @@ public class FunctionCodeGen {
     private HashSet<String> declaredVariables;
     private Environment environment;
     private StatementCodeGen stmtGen;
+    private DebugMetaData debugMetaData;
 
-    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen) {
+    public FunctionCodeGen(StringBuilder sb, Environment environment, StringBuilder globals, StringBuilder globalStrings, HashSet<String> functionVariables, StatementCodeGen stmtGen, DebugMetaData debugMetaData) {
 
         this.sb = sb;
         this.environment = environment;
         this.stmtGen = stmtGen;
+        this.debugMetaData = debugMetaData;
     }
 
     public void generateFunction(Ast.Func function) {
 
-        /*
-                if(!function.called()) {
-            return; // Skip code generation for functions that are never called
-        }
-         */
-
         environment.pushNewScope();
         Helper helper = new Helper();
 
+        int funcId = debugMetaData.createSubProgram(function.name(), function.pos().line);
         sb.append("define " + helper.convertType(function.returnType()) + " @" + function.name() + "(");
 
         for (int i = 0; i < function.params().size(); i++) {
@@ -46,7 +45,7 @@ public class FunctionCodeGen {
             }
         }
 
-        sb.append(") {\nentry:\n");
+        sb.append(") !dbg !").append(funcId).append(" {\nentry:\n");
 
         // For each parameter, we need to create a local copy in the function's stack frame.
         for (Ast.Arg arg : function.params()) {
@@ -65,17 +64,19 @@ public class FunctionCodeGen {
 
         stmtGen.generateStatement(function.body());
         if(function.returnType() instanceof Ast.TUnknown) {
-            sb.append("  ret void\n");
+            sb.append("  ret void")
+            .append(", !dbg !").append(debugMetaData.getLineId(function.pos().line)).append("\n");
         }
         sb.append("\n}\n");
         environment.popScope();
     }
 
     private void copyNonArrayParameter(Ast.Arg arg, String localPtr, String llvmType) {
+        String dbg = ", !dbg !" + debugMetaData.getLineId(arg.pos().line);
         sb.append(localPtr)
                 .append(" = alloca ")
                 .append(llvmType)
-                .append("\n");
+                .append(dbg).append("\n");
 
         sb.append("store ")
                 .append(llvmType)
@@ -85,10 +86,11 @@ public class FunctionCodeGen {
                 .append(llvmType)
                 .append("* ")
                 .append(localPtr)
-                .append("\n");
+                .append(dbg).append("\n");
     }
 
     private String copyArrayParameter(Ast.Arg arg, Ast.TArray arrType, String llvmType, String localPtr) {
+        String dbg = ", !dbg !" + debugMetaData.getLineId(arg.pos().line);
         String copiedArray = generateRegister();
         String copyFunc = getArrayCopyFunctionName(arrType);
 
@@ -102,13 +104,13 @@ public class FunctionCodeGen {
                 .append(llvmType)
                 .append(" %")
                 .append(arg.name())
-                .append(")\n");
+                .append(")").append(dbg).append("\n");
 
         // allocate local space for the copied array and store the result
         sb.append(localPtr)
                 .append(" = alloca ")
                 .append(llvmType)
-                .append("\n");
+                .append(dbg).append("\n");
 
         // store the copied array into the local variable
         sb.append("store ")
@@ -119,7 +121,7 @@ public class FunctionCodeGen {
                 .append(llvmType)
                 .append("* ")
                 .append(localPtr)
-                .append("\n");
+                .append(dbg).append("\n");
 
         return localPtr;
     }

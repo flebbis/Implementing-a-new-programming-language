@@ -1,6 +1,8 @@
 package com.example.minilang.codegen;
 
 import java.util.HashSet;
+
+import com.example.minilang.DebugMetaData;
 import com.example.minilang.ast.Ast;
 
 
@@ -12,12 +14,14 @@ public class CodeGenerator {
     private final StringBuilder globals;
     private final StringBuilder globalStrings;
     private final HashSet<String> functionVariables = new HashSet<>();
+    private final String fileName;
 
-    public CodeGenerator(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings) {
+    public CodeGenerator(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, String fileName) {
         this.environment = new Environment();
         this.sb = sb;
         this.globals = globals;
         this.globalStrings = globalStrings;
+        this.fileName = fileName;
         // Initialize any necessary state here (e.g., symbol tables, label generators, etc.)
     }
 
@@ -49,25 +53,25 @@ public class CodeGenerator {
         sb.append("declare %array_i8ptr* @array_string_copy(%array_i8ptr*)\n");
         sb.append("\n");
 
-        sb.append("define void @main() {\n");
+        DebugMetaData debugMetaData = new DebugMetaData(fileName);
+        int mainId = debugMetaData.createSubProgram("main", 1);
+        sb.append("define void @main() !dbg !").append(mainId).append(" {\n");
         sb.append("entry:\n");
-        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables);
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables, debugMetaData);
         for (Ast.Stmt statement : program.stmts()) {
             stmtGen.generateStatement(statement);
         }
 
-        sb.append("  ret void\n");
-        //sb.append("  ret i32 0\n");
+        sb.append("  ret void")
+        .append(", !dbg !").append(debugMetaData.getLineId(1)).append("\n");
         sb.append("}\n\n");
 
         for (Ast.Func function : program.functions()) {
             //System.out.println("Functions found: " + program.functions().size());
-            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtGen);
+            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtGen, debugMetaData);
             funcGen.generateFunction(function);
         }
-
-
-
+        sb.append(debugMetaData.emit());
     }
 
 }
