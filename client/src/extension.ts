@@ -85,12 +85,24 @@ export async function activate(context: ExtensionContext) {
 
   // Makes so you cant edit the assembly file
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(e => {
-        if (e.document.uri.toString() === AsmProvider.uri.toString()) {
-            vscode.commands.executeCommand('undo');
-        }
+    vscode.workspace.onDidChangeTextDocument(async e => {
+      if (e.document.uri.toString() !== AsmProvider.uri.toString()) {
+        return;
+      }
+
+
+      const active = vscode.window.activeTextEditor;
+      if (!active) return;
+
+      if (active.document.uri.toString() !== AsmProvider.uri.toString()) {
+        return;
+      }
+
+      await vscode.commands.executeCommand('undo');
+      
     })
-);
+  );
+
      
   // ------ Show assembly -------- 
   // ------- Kommer behöva ändras för att runna på att llc läser fil istället ----

@@ -21,15 +21,13 @@ public class Compiler {
         private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
-
-        if (args.length < 1) {
-            System.err.println("Usage: java -jar compiler.jar <source-filepath> <source-content>:optional <optimization-level>:optional");
+        if (args.length < 2) {
+            System.err.println("Usage: java -jar compiler.jar <source-content> <source-filepath>");
             System.exit(1);
         }
+        String optLevel = args.length > 2 ? args[2] : "-O3";
         Path filePath = Path.of(args[0]);
         String content = args.length >= 2 ? args[1] : Files.readString(filePath); // Use provided content or read from file if null
-
-        String optLevel = args.length > 2 ? args[2] : "-O3";
 
         try {
             List<InferenceSuggestion> suggestions = parseFile(filePath, content, optLevel);
