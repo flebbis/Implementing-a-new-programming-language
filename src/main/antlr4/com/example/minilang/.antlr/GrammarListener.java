@@ -151,6 +151,30 @@ public interface GrammarListener extends ParseTreeListener {
 	 */
 	void exitIfStmt(GrammarParser.IfStmtContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code SimpleType}
+	 * labeled alternative in {@link GrammarParser#typeAnnotation}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleType(GrammarParser.SimpleTypeContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code SimpleType}
+	 * labeled alternative in {@link GrammarParser#typeAnnotation}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleType(GrammarParser.SimpleTypeContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code ArrayType}
+	 * labeled alternative in {@link GrammarParser#typeAnnotation}.
+	 * @param ctx the parse tree
+	 */
+	void enterArrayType(GrammarParser.ArrayTypeContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code ArrayType}
+	 * labeled alternative in {@link GrammarParser#typeAnnotation}.
+	 * @param ctx the parse tree
+	 */
+	void exitArrayType(GrammarParser.ArrayTypeContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link GrammarParser#decl}.
 	 * @param ctx the parse tree
 	 */
@@ -301,15 +325,89 @@ public interface GrammarListener extends ParseTreeListener {
 	 */
 	void exitPostFixOp(GrammarParser.PostFixOpContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link GrammarParser#primary}.
+	 * Enter a parse tree produced by the {@code PrimaryParen}
+	 * labeled alternative in {@link GrammarParser#primary}.
 	 * @param ctx the parse tree
 	 */
-	void enterPrimary(GrammarParser.PrimaryContext ctx);
+	void enterPrimaryParen(GrammarParser.PrimaryParenContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link GrammarParser#primary}.
+	 * Exit a parse tree produced by the {@code PrimaryParen}
+	 * labeled alternative in {@link GrammarParser#primary}.
 	 * @param ctx the parse tree
 	 */
-	void exitPrimary(GrammarParser.PrimaryContext ctx);
+	void exitPrimaryParen(GrammarParser.PrimaryParenContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PrimaryInt}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void enterPrimaryInt(GrammarParser.PrimaryIntContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PrimaryInt}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void exitPrimaryInt(GrammarParser.PrimaryIntContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PrimaryDouble}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void enterPrimaryDouble(GrammarParser.PrimaryDoubleContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PrimaryDouble}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void exitPrimaryDouble(GrammarParser.PrimaryDoubleContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PrimaryString}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void enterPrimaryString(GrammarParser.PrimaryStringContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PrimaryString}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void exitPrimaryString(GrammarParser.PrimaryStringContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PrimaryBool}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void enterPrimaryBool(GrammarParser.PrimaryBoolContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PrimaryBool}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void exitPrimaryBool(GrammarParser.PrimaryBoolContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PrimaryId}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void enterPrimaryId(GrammarParser.PrimaryIdContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PrimaryId}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void exitPrimaryId(GrammarParser.PrimaryIdContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code PrimaryArrayLiteral}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void enterPrimaryArrayLiteral(GrammarParser.PrimaryArrayLiteralContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PrimaryArrayLiteral}
+	 * labeled alternative in {@link GrammarParser#primary}.
+	 * @param ctx the parse tree
+	 */
+	void exitPrimaryArrayLiteral(GrammarParser.PrimaryArrayLiteralContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link GrammarParser#expSeparator}.
 	 * @param ctx the parse tree

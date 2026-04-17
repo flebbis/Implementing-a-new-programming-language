@@ -69,7 +69,7 @@ public class ExpressionTypeChecker {
             return eId;
         }
         else {
-            throw new TypeException("Variable " + eId.name() + " is not declared", eId.pos());
+            throw new TypeException("Variable '" + eId.name() + "' is not declared", eId.pos());
         }
     }
 
@@ -101,10 +101,16 @@ public class ExpressionTypeChecker {
                 Ast.Type resultType = (base.type() instanceof Ast.TDouble || exponent.type() instanceof Ast.TDouble) ? new Ast.TDouble() : new Ast.TInt();
                 return new Ast.EPower(base, exponent, resultType, ePower.pos());
             } else {
-                throw new TypeException("Exponent must be of type int or double", ePower.pos());
+                throw new TypeException("Exponent must be numeric", 
+                "int or double",
+                TypeConverter.typeToString(exponent.type()),
+                ePower.pos());
             }
         }
-        throw new TypeException("Power base must be of type int or double", ePower.pos());
+        throw new TypeException("Power base must be numeric",
+        "int or double", 
+        TypeConverter.typeToString(base.type()),
+        ePower.pos());
     }
 
     public Ast.Exp typeCheck(Ast.ECmp eCmp) {
@@ -119,12 +125,20 @@ public class ExpressionTypeChecker {
         Ast.Type leftType = left.type();
         Ast.Type rightType = right.type();
 
+        boolean isNumericComparison = (leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
+                                && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt);
+        boolean isBooleanComparison = (leftType instanceof Ast.TBool && rightType instanceof Ast.TBool);
+        boolean isStringComparison = (leftType instanceof Ast.TString && rightType instanceof Ast.TString);
+
         // Int and double can be compared
-        if ((leftType instanceof Ast.TDouble || leftType instanceof Ast.TInt)
-                && (rightType instanceof Ast.TDouble || rightType instanceof Ast.TInt)) {
-            return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());
+        if (isNumericComparison || isBooleanComparison || isStringComparison) {
+            return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());    
         } else {
-            throw new TypeException("Cannot compare type " + leftType + " with type " + rightType, eCmp.pos());
+            throw new TypeException(
+                "Cannot compare types",
+                TypeConverter.typeToString(leftType),
+                TypeConverter.typeToString(rightType), 
+                eCmp.pos());
         }
     }
 
@@ -140,7 +154,11 @@ public class ExpressionTypeChecker {
         if (left.type() instanceof Ast.TBool && right.type() instanceof Ast.TBool) {
             return new Ast.ELogic(left, right, eLogic.op(), new Ast.TBool(), eLogic.pos());
         } else {
-            throw new TypeException("Logical operators require boolean operands", eLogic.pos());
+            throw new TypeException(
+                "Logical operators require boolean operands", 
+                "boolean",
+                TypeConverter.typeToString(left.type()) + " and " + TypeConverter.typeToString(right.type()),
+                eLogic.pos());
         }
     }
 
@@ -158,7 +176,11 @@ public class ExpressionTypeChecker {
             if (left.type() instanceof Ast.TInt && right.type() instanceof Ast.TInt) {
                 return new Ast.EOpp(left, right, eOpp.op(), new Ast.TInt(), eOpp.pos());
             } else {
-                throw new TypeException("Modulus operator requires integer operands", eOpp.pos());
+                throw new TypeException(
+                    "Modulus operator requires integer operands", 
+                    "int",
+                    TypeConverter.typeToString(left.type()) + " and " + TypeConverter.typeToString(right.type()),
+                    eOpp.pos());
             }
         }
 
@@ -188,7 +210,11 @@ public class ExpressionTypeChecker {
         } else if (left.type() instanceof Ast.TDouble && right.type() instanceof Ast.TInt) {
             return new Ast.EOpp(left, new Ast.EDInt(right, new Ast.TDouble(), right.pos()), eOpp.op(), new Ast.TDouble(), eOpp.pos());
         } else {
-            throw new TypeException("Arithmetic operators require numeric operands", eOpp.pos());
+            throw new TypeException(
+                "Arithmetic operators require numeric operands", 
+                "int or double",
+                TypeConverter.typeToString(left.type()) + " and " + TypeConverter.typeToString(right.type()), 
+                eOpp.pos());
         }
     }
 
@@ -203,11 +229,15 @@ public class ExpressionTypeChecker {
         if (exp.type() instanceof Ast.TInt) {
             return new Ast.EUnary(exp, eUnary.op(), exp.type(), eUnary.pos());
         }
-        if (eUnary.op() == Ast.UnaryOp.INC) {
-            throw new TypeException("Increment operator requires integer operand", eUnary.pos());
-        } else {
-            throw new TypeException("Decrement operator requires integer operand", eUnary.pos());
-        }
+
+        String opName = eUnary.op() == Ast.UnaryOp.INC ? "Increment" : "Decrement";
+
+        throw new TypeException(
+            opName + " operator requires integer operand",
+            "int",
+            TypeConverter.typeToString(exp.type()),
+            eUnary.pos()
+        );
     }
 
     public Ast.EAss typeCheck(Ast.EAss eAss) {
@@ -233,7 +263,10 @@ public class ExpressionTypeChecker {
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Cannot assign type " + TypeConverter.typeToString(value.type()) + " to variable of type " + TypeConverter.typeToString(varType), eAss.pos());
+                throw new TypeException("Cannot assign type ",
+                TypeConverter.typeToString(value.type()),
+                TypeConverter.typeToString(varType), 
+                eAss.pos());
             }
         }
         return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
@@ -262,15 +295,18 @@ public class ExpressionTypeChecker {
         // Then look up the function signature
         if (functionSignatures.containsKey(eCall.name())) {
             int i = 0;
-            if(functionSignatures.get(eCall.name()).paramTypes.size() != eCall.args().size()) {
-                throw new TypeException("Function " + eCall.name() + " expects " + functionSignatures.get(eCall.name()).paramTypes.size() + " arguments but got " + eCall.args().size(), eCall.pos());
+            Signature sig = functionSignatures.get(eCall.name());
+            if(sig.paramTypes.size() != eCall.args().size()) {
+                throw new TypeException(
+                    "Function '" + eCall.name() + "' expects " + sig.paramTypes.size() + " arguments but got " + eCall.args().size(), 
+                    eCall.pos());
             }
-            for (Ast.Type paramType : functionSignatures.get(eCall.name()).paramTypes) {
+            for (Ast.Type paramType : sig.paramTypes) {
                 // Check mismatch
                 if (!args.get(i).type().equals(paramType)) {
                     // Inference: If param is TUnknown, infer from arg
                     if ((paramType instanceof Ast.TUnknown) && !(args.get(i).type() instanceof Ast.TUnknown)) {
-                        functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
+                        sig.paramTypes.set(i, args.get(i).type());
                         paramType = args.get(i).type();
                     }
 
@@ -278,13 +314,17 @@ public class ExpressionTypeChecker {
                     if (paramType instanceof Ast.TDouble && args.get(i).type() instanceof Ast.TInt) {
                         args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
                     } else if (!paramType.equals(args.get(i).type())) {
-                        throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
+                        throw new TypeException(
+                            "Argument " + (i+1) + " of function '" + eCall.name() + "' expects wrong type ",
+                            TypeConverter.typeToString(paramType),
+                            TypeConverter.typeToString(args.get(i).type()), 
+                            eCall.pos());
                     }
                 }
                 i++;
             }
         } else {
-            throw new TypeException("Function " + eCall.name() + " is not declared", eCall.pos());
+            throw new TypeException("Function '" + eCall.name() + "' is not declared", eCall.pos());
         }
 
         return new Ast.ECall(eCall.name(), args, functionSignatures.get(eCall.name()).returnType, eCall.pos());
@@ -311,8 +351,11 @@ public class ExpressionTypeChecker {
 
         for (Ast.Exp element : checkedElements) {
             if (!element.type().equals(type.elementType())) {
-                throw new TypeException("Array elements must be of the same type. Expected " + TypeConverter.typeToString(type.elementType())
-                        + " but got " + TypeConverter.typeToString(element.type()), element.pos());
+                throw new TypeException(
+                    "Array elements must be of the same type",
+                    TypeConverter.typeToString(type.elementType()),
+                    TypeConverter.typeToString(element.type()), 
+                    element.pos());
             }
         }
 
@@ -324,11 +367,21 @@ public class ExpressionTypeChecker {
         Ast.Exp index = typeCheck(eArrayIndex.index());
 
         if(!(array.type() instanceof Ast.TArray)) {
-            throw new TypeException("Attempting to index a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
+            throw new TypeException(
+                "Attempting to index a non-array type",
+                "array type",
+                TypeConverter.typeToString(array.type()),
+                array.pos());
         }
 
         if (!(index.type() instanceof Ast.TInt)) {
-            throw new TypeException("Array index must be of type int", index.pos());
+            throw new TypeException(
+                "Array index must be of type int", 
+                "int",
+                TypeConverter.typeToString(index.type()),
+                index.pos()
+            );
+        
         }
 
         // The result type is the element type of the array

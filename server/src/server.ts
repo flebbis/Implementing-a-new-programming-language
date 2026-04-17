@@ -27,6 +27,11 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 // Syntax error collector 
 class SyntaxErrorCollector implements ANTLRErrorListener<any> {
   private diagnostics: Diagnostic[] = []
+  private documentText: string = "";
+
+  setDocumentText(text: string) {
+    this.documentText = text;
+  }
 
   syntaxError(
     recognizer: Recognizer<any, any>,
@@ -36,21 +41,82 @@ class SyntaxErrorCollector implements ANTLRErrorListener<any> {
     msg: string,
     e: RecognitionException | undefined
   ): void {
+
+    const userMessage = this.translateError(msg, offendingSymbol)
+    .replace(/\\n/g, 'line break')
+    .replace(/\\r/g, 'line break')
+    .replace(/'\n'/, "'line break'");
+
     this.diagnostics.push({
       severity: DiagnosticSeverity.Error,
       range: {
         start: { line: line - 1, character: charPositionInLine},
         end: { line: line - 1, character: charPositionInLine + (offendingSymbol?.text?.length || 1)}
       },
-      message: msg,
-      source: "mylang"
+      message: userMessage
     });
+  }
+
+  private hasUnclosedBraces(): boolean {
+    const openBraces = (this.documentText.match(/\{/g) || []).length;
+    const closeBraces = (this.documentText.match(/\}/g) || []).length;
+    return openBraces > closeBraces;
+  }
+
+  private hasUnclosedParens(): boolean {
+    const openParens = (this.documentText.match(/\(/g) || []).length;
+    const closeParens = (this.documentText.match(/\)/g) || []).length;
+    return openParens > closeParens;
+  }
+  private translateError(msg: string, offendingSymbol: any): string {
+    
+    // Missing closing brace
+    if (msg.includes("extraneous input '<EOF>'") && this.hasUnclosedBraces()) {
+      return "Missing closing brace '}'. Did you forget to close a block?";
+    }
+    
+    // Missing opening brace
+    if (msg.includes("missing '{'")) {
+      return "Missing opening brace '{' to start a block.";
+    }
+    
+    // Missing closing parenthesis
+    if (msg.includes("missing ')'")) {
+      return "Missing closing parenthesis ')'. Did you forget to close parentheses?";
+    }
+    
+    // Missing opening parenthesis
+    if (msg.includes("missing '('")) {
+      return "Missing opening parenthesis '('.";
+    }
+    
+    
+    // Missing closing bracket
+    if (msg.includes("missing ']'")) {
+      return "Missing closing bracket ']'. Did you forget to close an array?";
+    }
+    
+    // Generic incomplete statement
+    if (msg.includes("<EOF>")) {
+      return "Incomplete code. Check for unclosed braces, parentheses, or brackets.";
+    }
+    
+    // Default - simplify the message
+    return msg
+      .replace(/expecting \{.*?\}/, '')
+      .replace(/mismatched input/, 'Unexpected')
+      .substring(0, 200);
   }
 
   getDiagnostics(): Diagnostic[] {
     return this.diagnostics;
   }
+
+  
 }
+
+
+
 
 // Validate document - checks both syntax and type errors
 async function validateDocument(document: TextDocument): Promise<void> {
@@ -65,6 +131,7 @@ async function validateDocument(document: TextDocument): Promise<void> {
     const parser = new GrammarParser(tokenStream);
 
     const errorCollector = new SyntaxErrorCollector();
+    errorCollector.setDocumentText(text);
     parser.removeErrorListeners();
     parser.addErrorListener(errorCollector);
 
@@ -92,11 +159,9 @@ async function validateDocument(document: TextDocument): Promise<void> {
           severity: error.severity === 'error' ? DiagnosticSeverity.Error: DiagnosticSeverity.Warning,
           range: {
             start: { line: error.line - 1, character: error.column },
-            end: { line: error.endLine - 1, character: error.endColumn }
+            end: { line: error.endLine, character: error.endColumn }
           },
-          message: error.message,
-          source: "mylang-type",
-          code: "type-error"
+          message: error.message
         }));
 
         allDiagnostics.push(...typeDiagnostics);
@@ -106,18 +171,11 @@ async function validateDocument(document: TextDocument): Promise<void> {
         }
       } catch (typeError) {
         console.error('Type checker error:', typeError);
-        allDiagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line: 0, character: 0 },
-            end: { line: 0, character: 1 }
-          },
-          message: 'Type checker failed to run. Check server logs.',
-          source: "mylang-type"
-        });
       }
     }
-    
+    /**
+     * mismatched input '\n' expecting {'(', '{', 'return', 'while', 'do', 'if', TYPE, STRING, INT, DOUBLE, BOOL, 'not', ID, '['}
+     */
     // Send all diagnostics to the editor
     connection.sendDiagnostics({ uri: document.uri, diagnostics: allDiagnostics });
 
@@ -132,8 +190,7 @@ async function validateDocument(document: TextDocument): Promise<void> {
           start: { line: 0, character: 0 },
           end: { line: 0, character: 1 }
         },
-        message: `Fatal parser error: ${error}`,
-        source: "mylang"
+        message: `Fatal parser error: ${error}`
         
       }]
     });

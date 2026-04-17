@@ -2,6 +2,7 @@ package com.example.minilang.typechecker;
 
 import com.example.minilang.TypeConverter;
 import com.example.minilang.ast.Ast;
+import com.example.minilang.ast.Ast.SDecl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,12 +66,15 @@ public class StatementTypeChecker {
             if (typeToCheck instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
-                        " but got " + TypeConverter.typeToString(value.type()), value.pos());
+                throw new TypeException(
+                    "Incorrect initializer type", 
+                    TypeConverter.typeToString(typeToCheck), 
+                    TypeConverter.typeToString(value.type()), 
+                    value.pos());
             }
         }
 
-        context.pushToCurrentScope(sInit.name(), typeToCheck);
+        context.pushToCurrentScope(sInit.name(), typeToCheck, sInit.pos());
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
 
@@ -93,7 +97,7 @@ public class StatementTypeChecker {
         } else {
             type = sDecl.type();
         }
-        context.pushToCurrentScope(sDecl.name(), type);
+        context.pushToCurrentScope(sDecl.name(), type, sDecl.pos());
         return new Ast.SDecl(type, sDecl.name(), sDecl.pos());
     }
 
@@ -121,7 +125,12 @@ public class StatementTypeChecker {
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
         if (!(exp.type() instanceof Ast.TInt)) {
-            throw new TypeException("Expression in do statement must be of type int, type " + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
+            throw new TypeException(
+                "Expression in do statement must be of type int",
+                "int",
+                TypeConverter.typeToString(exp.type()),
+                exp.pos()
+                );
         }
 
         // Check body
@@ -150,7 +159,11 @@ public class StatementTypeChecker {
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Function returns type " + value.type() + ", does not match declared function return type " + signature.returnType, stmt.pos());
+                throw new TypeException(
+                    "Return type mismatch",
+                    TypeConverter.typeToString(value.type()),   
+                    TypeConverter.typeToString(signature.returnType), 
+                    stmt.pos());
             }
         }
 

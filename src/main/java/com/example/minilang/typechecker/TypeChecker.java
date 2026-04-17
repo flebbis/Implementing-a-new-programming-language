@@ -103,7 +103,7 @@ public class TypeChecker {
                 Ast.Type type = sig.paramTypes.get(i);
                 Ast.Arg oldArg = func.params().get(i);
 
-                context.pushToCurrentScope(oldArg.name(), type);
+                context.pushToCurrentScope(oldArg.name(), type, oldArg.pos());
                 currentParams.add(new Ast.Arg(oldArg.name(), type, oldArg.pos()));
             }
 

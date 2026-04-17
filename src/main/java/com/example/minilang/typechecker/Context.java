@@ -1,5 +1,6 @@
 package com.example.minilang.typechecker;
 
+import com.example.minilang.Pos;
 import com.example.minilang.ast.Ast;
 
 import java.util.HashMap;
@@ -18,9 +19,9 @@ public class Context {
     }
 
     /** Push a new id-type pair onto the stack, using the latest scope */
-    public void pushToCurrentScope(String id, Ast.Type type) {
+    public void pushToCurrentScope(String id, Ast.Type type, Pos pos) {
         if(contextStack.getFirst().containsKey(id)) {
-            throw new TypeException("Duplicate context id " + id);
+            throw new TypeException("Duplicate context id " + id, pos);
         } else {
             contextStack.getFirst().put(id, type);
         }
