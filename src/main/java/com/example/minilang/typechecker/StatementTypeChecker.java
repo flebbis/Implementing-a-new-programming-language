@@ -106,10 +106,10 @@ public class StatementTypeChecker {
                 if(!typeReplacementSuggestions.contains(typeReplacementSuggestion)) {
                     typeReplacementSuggestions.add(typeReplacementSuggestion);
                 }
-                throw new TypeException(
-                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
-                                " but got " + TypeConverter.typeToString(value.type()),
-                        value.pos());
+//                throw new TypeException(
+//                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(typeToCheck) +
+//                                " but got " + TypeConverter.typeToString(value.type()),
+//                        value.pos());
             }
         }
 
