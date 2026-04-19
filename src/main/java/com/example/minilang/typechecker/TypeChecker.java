@@ -58,7 +58,8 @@ public class TypeChecker {
         // Pass 1: Scan statements -> Infers Parameter Types from calls
         registerFunctionParamBindings(tempContext, rawFuncs, functionBindings);
         typeCheckStatements(program.stmts());
-        reconcileParamBindingsFromDependencies(tempContext, functionBindings);
+        reconcileParamBindingsFromDependencies(tempContext, functionBindings, rawFuncs);
+
         List<Ast.Func> checkedFuncsPass1 = checkFunctionBodies(rawFuncs);
 
 
@@ -286,17 +287,70 @@ public class TypeChecker {
     }
     private void reconcileParamBindingsFromDependencies(
             Context ctx,
-            HashMap<String, List<String>> bindingsMap
+            HashMap<String, List<String>> bindingsMap,
+            List<Ast.Func> functions
     ) {
-        for (List<String> paramIds : bindingsMap.values()) {
-            for (String paramId : paramIds) {
+        // Build quick lookup: function -> params (for source positions and names)
+        HashMap<String, List<Ast.Arg>> funcParams = new HashMap<>();
+        for (Ast.Func f : functions) {
+            funcParams.put(f.name(), f.params());
+        }
+
+        for (String funcName : bindingsMap.keySet()) {
+            List<String> paramIds = bindingsMap.get(funcName);
+            List<Ast.Arg> params = funcParams.get(funcName);
+            if (paramIds == null || params == null) continue;
+
+            for (int i = 0; i < paramIds.size() && i < params.size(); i++) {
+                String paramId = paramIds.get(i);
                 Binding param = ctx.getBinding(paramId);
-                if (param == null || param.explicit) continue;
+                if (param == null) continue;
+
+                Ast.Arg argAst = params.get(i);
+                Ast.Type currentParamType = param.inferredType;
 
                 for (String depId : param.dependencies) {
                     Binding dep = ctx.getBinding(depId);
                     if (dep == null || dep.inferredType instanceof Ast.TUnknown) continue;
-                    ctx.updateBindingType(paramId, dep.inferredType);
+
+                    Ast.Type depType = dep.inferredType;
+
+                    // Same type => nothing to do
+                    if (currentParamType.equals(depType)) {
+                        break;
+                    }
+
+                    // If param is not explicit, infer immediately
+                    if (!param.explicit) {
+                        ctx.updateBindingType(paramId, depType);
+                        functionSignatures.get(funcName).paramTypes.set(i, depType);
+                        currentParamType = depType;
+                        break;
+                    }
+
+                    // Param is explicit and mismatches a dependency:
+                    // emit replacement suggestion so server can offer/cascade edit.
+                    String currentTypeStr = TypeConverter.typeToString(currentParamType);
+                    String newTypeStr = TypeConverter.typeToString(depType);
+
+                    int line = argAst.pos().line;
+                    int col = argAst.pos().column;
+
+                    TypeReplacementSuggestion trs = new TypeReplacementSuggestion(
+                            argAst.name(),      // name shown in UI
+                            currentTypeStr,     // currently declared type
+                            line,
+                            col,
+                            line,
+                            col + currentTypeStr.length(),
+                            newTypeStr
+                    );
+
+                    if (!typeReplacementSuggestions.contains(trs)) {
+                        typeReplacementSuggestions.add(trs);
+                    }
+
+                    // Do not overwrite explicit param here; let user/server apply edit.
                     break;
                 }
             }
