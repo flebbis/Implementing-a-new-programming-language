@@ -181,6 +181,7 @@ documents.onDidChangeContent(change => {
 
 
 async function inferenceAnalysis(uri: string, text: string, version: number) {
+    connection.console.error("[DOC SNAPSHOT]\\n" + text);
     try {
         const result = (await runJavaAnalysis(text)) as AnalysisResult;
         const suggestions = result?.inferenceSuggestions ?? [];
