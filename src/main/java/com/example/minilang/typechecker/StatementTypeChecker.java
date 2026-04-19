@@ -20,6 +20,8 @@ public class StatementTypeChecker {
     private List<TypeReplacementSuggestion> typeReplacementSuggestions;
     private HashMap<String, List<String>> functionBindings;
 
+    private String currentFunctionReturnBindingId;
+
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
                                 Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions,
                                 List<TypeReplacementSuggestion> typeReplacementSuggestions, HashMap<String, List<String>> functionBindings) {
@@ -233,7 +235,12 @@ public class StatementTypeChecker {
                         + ", does not match declared function return type " + signature.returnType, stmt.pos());
             }
         }
-
+        if (currentFunctionReturnBindingId != null) {
+            String returnVarId = extractRootVariableId(value);
+            if (returnVarId != null) {
+                context.addDependency(currentFunctionReturnBindingId, returnVarId);
+            }
+        }
         return new Ast.SReturn(value, stmt.pos());
     }
 
@@ -349,5 +356,9 @@ public class StatementTypeChecker {
                 yield extractRootVariableId(ass.value());
             }
         };
+
+    }
+    public void setCurrentFunctionReturnBinding(String returnBindingId) {
+        this.currentFunctionReturnBindingId = returnBindingId;
     }
 }
