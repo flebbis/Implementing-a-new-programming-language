@@ -109,6 +109,12 @@ public class TypeChecker {
             for(Ast.Arg arg : func.params()) {
                 paramTypes.add(arg.type());
                 explicitFlags.add(!(arg.type() instanceof Ast.TUnknown));
+                System.err.println(
+                        "[EXTRACT PARAM] func=" + name
+                                + " paramName=" + arg.name()
+                                + " astType=" + TypeConverter.typeToString(arg.type())
+                                + " explicitFlag=" + (!(arg.type() instanceof Ast.TUnknown))
+                );
             }
             functionParamExplicit.put(name, explicitFlags);
 
@@ -230,7 +236,14 @@ public class TypeChecker {
                 Ast.Type inferredParamType = sig.paramTypes.get(i);
 
                 boolean explicit = functionParamExplicit.get(name).get(i);
-
+                System.err.println(
+                        "[CREATE PARAM BINDING] func=" + name
+                                + " index=" + i
+                                + " paramName=" + arg.name()
+                                + " declaredType=" + TypeConverter.typeToString(arg.type())
+                                + " inferredType=" + TypeConverter.typeToString(inferredParamType)
+                                + " explicit=" + explicit
+                );
                 String id = ctx.createBinding(
                         arg.name(),
                         Binding.Kind.PARAMETER,
@@ -238,6 +251,14 @@ public class TypeChecker {
                         arg.type(),
                         inferredParamType,
                         explicit
+                );
+                Binding created = ctx.getBinding(id);
+                System.err.println(
+                        "[CREATED PARAM BINDING] id=" + id
+                                + " name=" + created.name
+                                + " declaredType=" + TypeConverter.typeToString(created.declaredType)
+                                + " inferredType=" + TypeConverter.typeToString(created.inferredType)
+                                + " explicit=" + created.explicit
                 );
                 paramBindingIds.add(id);
             }
