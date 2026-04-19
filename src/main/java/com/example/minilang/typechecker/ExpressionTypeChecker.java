@@ -286,15 +286,15 @@ public class ExpressionTypeChecker {
                 if (!args.get(i).type().equals(paramType)) {
                     // Inference: If param is TUnknown, infer from arg
                     if ((paramType instanceof Ast.TUnknown) && !(args.get(i).type() instanceof Ast.TUnknown)) {
-                    System.err.println(
-                        "[INFER PARAM] func=" + eCall.name()
-                        + " index=" + i
-                        + " inferredType=" + TypeConverter.typeToString(args.get(i).type())
-                        + " argExp=" + args.get(i)
-                    );
-                    functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
-                    paramType = args.get(i).type();
-                }
+                        System.err.println(
+                                "[INFER PARAM] func=" + eCall.name()
+                                        + " index=" + i
+                                        + " inferredType=" + TypeConverter.typeToString(args.get(i).type())
+                                        + " argExp=" + args.get(i)
+                        );
+                        functionSignatures.get(eCall.name()).paramTypes.set(i, args.get(i).type());
+                        paramType = args.get(i).type();
+                    }
 
                     // Allow implicit conversion from int to double
                     if (paramType instanceof Ast.TDouble && args.get(i).type() instanceof Ast.TInt) {
