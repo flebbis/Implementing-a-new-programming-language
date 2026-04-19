@@ -345,7 +345,31 @@ public class TypeChecker {
                             col + currentTypeStr.length(),
                             newTypeStr
                     );
+                    System.err.println(
+                            "[TRS-CANDIDATE] func=" + funcName
+                                    + " param=" + argAst.name()
+                                    + " explicit=" + param.explicit
+                                    + " paramDeclared=" + TypeConverter.typeToString(param.declaredType)
+                                    + " paramInferred=" + TypeConverter.typeToString(currentParamType)
+                                    + " depName=" + dep.name
+                                    + " depType=" + TypeConverter.typeToString(depType)
+                                    + " pos=(" + line + ":" + col + ")-(" + line + ":" + (col + currentTypeStr.length()) + ")"
+                    );
 
+                    if (!typeReplacementSuggestions.contains(trs)) {
+                        typeReplacementSuggestions.add(trs);
+                        System.err.println(
+                                "[TRS-ADDED] name=" + trs.name()
+                                        + " current=" + trs.currentType()
+                                        + " new=" + trs.newType()
+                                        + " line=" + trs.line()
+                                        + " col=" + trs.column()
+                                        + " endLine=" + trs.endLine()
+                                        + " endCol=" + trs.endColumn()
+                        );
+                    } else {
+                        System.err.println("[TRS-SKIPPED-DUPLICATE] name=" + trs.name());
+                    }
                     if (!typeReplacementSuggestions.contains(trs)) {
                         typeReplacementSuggestions.add(trs);
                         System.err.println(

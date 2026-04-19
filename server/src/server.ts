@@ -186,6 +186,20 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
         const result = (await runJavaAnalysis(text)) as AnalysisResult;
         const suggestions = result?.inferenceSuggestions ?? [];
         const replacements = result?.typeReplacementSuggestions ?? [];
+        // server/src/server.ts
+// inside inferenceAnalysis(...) right after:
+// const replacements = result?.typeReplacementSuggestions ?? [];
+
+        connection.console.error(
+            `[ANALYSIS] suggestions=${suggestions.length}, replacements=${replacements.length}`
+        );
+
+        for (const r of replacements) {
+            connection.console.error(
+                `[REPLACEMENT] name=${r.name} current=${r.currentType} -> new=${r.newType} ` +
+                `range=(${r.line}:${r.column})-(${r.endLine}:${r.endColumn})`
+            );
+        }
         connection.console.error(
             `[ANALYSIS] suggestions=${suggestions.length}, replacements=${replacements.length}`
         );
@@ -214,6 +228,8 @@ async function inferenceAnalysis(uri: string, text: string, version: number) {
                 enableCascade = true;
             } else {
                 connection.console.error(
+                    `[PROMPT] considering replacement for ${r.name}: ${r.currentType} -> ${r.newType}`
+                );connection.console.error(
                     `[PROMPT] considering replacement for ${r.name}: ${r.currentType} -> ${r.newType}`
                 );
                 const action = await connection.window.showWarningMessage(

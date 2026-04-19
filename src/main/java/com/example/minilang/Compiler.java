@@ -60,6 +60,22 @@ public class Compiler {
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
         List<InferenceSuggestion> inf = typeChecker.getInferenceSuggestions();
         List<TypeReplacementSuggestion> repl = typeChecker.getTypeReplacementSuggestions();
+
+        System.err.println(
+                "[JSON-OUT] inferenceSuggestions=" + inf.size()
+                        + " typeReplacementSuggestions=" + repl.size()
+        );
+        for (TypeReplacementSuggestion t : repl) {
+            System.err.println(
+                    "[JSON-OUT-TRS] name=" + t.name()
+                            + " current=" + t.currentType()
+                            + " new=" + t.newType()
+                            + " line=" + t.line()
+                            + " col=" + t.column()
+                            + " endLine=" + t.endLine()
+                            + " endCol=" + t.endColumn()
+            );
+        }
         return new AnalysisResult(inf, repl);
     }
 
