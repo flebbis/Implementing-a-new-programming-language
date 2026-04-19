@@ -26,10 +26,11 @@ public class TypeChecker {
 
 
 
+
     public TypeChecker() {
         this.context = new Context();
         this.inferenceContext = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions, typeReplacementSuggestions, functionBindings);
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions, typeReplacementSuggestions, functionBindings,functionReturnBindingIds);
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -43,7 +44,7 @@ public class TypeChecker {
         // InferenceSuggestion list is the real list for inference pass, the other pass will use a temp list
 
         List<InferenceSuggestion> tempInferenceSuggestions = new ArrayList<>();
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions, typeReplacementSuggestions, functionBindings);
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions, typeReplacementSuggestions, functionBindings,  functionReturnBindingIds);
 
         // Swap to temp environment
         Context realContext = this.context;
@@ -72,6 +73,7 @@ public class TypeChecker {
         statementTypeChecker.updateInferenceContext(tempContext);
 
         registerFunctionParamBindings(rawFuncs);
+        registerFunctionReturnBindings(checkedFuncsPass1);
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
         List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
 
@@ -239,6 +241,23 @@ public class TypeChecker {
 
             functionBindings.put(name, paramBindingIds);
             context.popScope();
+        }
+    }
+    private void registerFunctionReturnBindings(List<Ast.Func> functions) {
+        for (Ast.Func func : functions) {
+            String name = func.name();
+            Signature sig = functionSignatures.get(name);
+
+            String returnBindingId = context.createBinding(
+                    name + "@return",
+                    Binding.Kind.FUNCTION_RETURN,
+                    func.pos(),
+                    func.returnType(),
+                    sig.returnType,
+                    !(func.returnType() instanceof Ast.TUnknown)
+            );
+
+            functionReturnBindingIds.put(name, returnBindingId);
         }
     }
 

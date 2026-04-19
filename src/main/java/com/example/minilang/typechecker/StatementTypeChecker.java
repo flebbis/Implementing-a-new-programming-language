@@ -19,12 +19,12 @@ public class StatementTypeChecker {
     private List<InferenceSuggestion> inferenceSuggestions;
     private List<TypeReplacementSuggestion> typeReplacementSuggestions;
     private HashMap<String, List<String>> functionBindings;
-
+    private HashMap<String, String> functionReturnBindingIds = new HashMap<>();
     private String currentFunctionReturnBindingId;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
                                 Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions,
-                                List<TypeReplacementSuggestion> typeReplacementSuggestions, HashMap<String, List<String>> functionBindings) {
+                                List<TypeReplacementSuggestion> typeReplacementSuggestions, HashMap<String, List<String>> functionBindings, HashMap<String, String> functionReturnBindingIds) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.functionBindings = functionBindings;
@@ -32,8 +32,11 @@ public class StatementTypeChecker {
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
         this.typeReplacementSuggestions = typeReplacementSuggestions;
+        this.functionReturnBindingIds = functionReturnBindingIds;
     }
-
+    private String getFunctionReturnBindingId(String functionName) {
+        return functionReturnBindingIds.get(functionName);
+    }
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
         return switch (stmt) {
             case Ast.SWhile SWhile -> typeCheck(SWhile);
@@ -124,6 +127,13 @@ public class StatementTypeChecker {
                 typeToCheck,            // inferred type
                 !(sInit.type() instanceof Ast.TUnknown)  // explicit?
         );
+        if (value instanceof Ast.ECall call) {
+            // Get return binding id for this function
+            String funcReturnBindingId = getFunctionReturnBindingId(call.name());
+            if (funcReturnBindingId != null) {
+                context.addDependency(bindingId, funcReturnBindingId);
+            }
+        }
 
         // Extract root variable from expression and add dependency
         String rootBindingId = extractRootVariableId(value);
