@@ -348,6 +348,13 @@ public class TypeChecker {
 
                     if (!typeReplacementSuggestions.contains(trs)) {
                         typeReplacementSuggestions.add(trs);
+                        System.err.println(
+                                "[ADD TYPE REPLACEMENT] func=" + funcName +
+                                        " param=" + argAst.name() +
+                                        " from=" + currentTypeStr +
+                                        " to=" + newTypeStr +
+                                        " at " + line + ":" + col
+                        );
                     }
 
                     // Do not overwrite explicit param here; let user/server apply edit.
