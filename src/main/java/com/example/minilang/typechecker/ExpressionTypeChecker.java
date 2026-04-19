@@ -295,7 +295,7 @@ public class ExpressionTypeChecker {
                     if (paramType instanceof Ast.TDouble && args.get(i).type() instanceof Ast.TInt) {
                         args.set(i, new Ast.EDInt(args.get(i), args.get(i).type(), args.get(i).pos()));
                     } else if (!paramType.equals(args.get(i).type())) {
-                        throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
+//                        throw new TypeException("Argument " + (i+1) + " of function " + eCall.name() + " expects type " + paramType + " but got type " + args.get(i).type(), eCall.pos());
                     }
                 }
                 i++;
