@@ -302,10 +302,10 @@ public class StatementTypeChecker {
                 Binding binding = context.lookupLatestBinding(id.name());
                 yield binding != null ? binding.id : null;
             }
-            case Ast.EInt _ -> null;
-            case Ast.EDouble _ -> null;
-            case Ast.EString _ -> null;
-            case Ast.EBool _ -> null;
+            case Ast.EInt ignored -> null;
+            case Ast.EDouble ignored -> null;
+            case Ast.EString ignored -> null;
+            case Ast.EBool ignored -> null;
             case Ast.EOpp opp -> {
                 // Binary operation - could have multiple dependencies
                 // For now, prioritize left side
