@@ -43,7 +43,7 @@ char* int_to_string(int x) {
 // for EStringCast double to string
 char* double_to_string(double x) {
     char* buf = malloc(64);
-    sprintf(buf, "%f", x);
+    sprintf(buf, "%g", x);
     return buf;
 }
 
