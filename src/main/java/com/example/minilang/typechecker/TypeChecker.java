@@ -43,8 +43,10 @@ public class TypeChecker {
         Context tempContext = new Context();
         // InferenceSuggestion list is the real list for inference pass, the other pass will use a temp list
 
+        HashMap<String, List<String>> tempFunctionBindings = new HashMap<>();
+        HashMap<String, String> tempFunctionReturnBindingIds = new HashMap<>();
         List<InferenceSuggestion> tempInferenceSuggestions = new ArrayList<>();
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions, typeReplacementSuggestions, functionBindings,  functionReturnBindingIds);
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions, typeReplacementSuggestions, tempFunctionBindings,  tempFunctionReturnBindingIds);
 
         // Swap to temp environment
         Context realContext = this.context;
@@ -53,13 +55,14 @@ public class TypeChecker {
         this.statementTypeChecker = tempChecker;
 
         // Pass 1: Scan statements -> Infers Parameter Types from calls
-        registerFunctionParamBindings(rawFuncs);
+        registerFunctionParamBindings(tempContext, rawFuncs, functionBindings);
         typeCheckStatements(program.stmts());
+        reconcileParamBindingsFromDependencies(tempContext, functionBindings);
         List<Ast.Func> checkedFuncsPass1 = checkFunctionBodies(rawFuncs);
 
 
 
-        // --- GENERATION PHASE ---
+        //TODO: remove???
         context.popScope();
         if(!tempInferenceSuggestions.isEmpty()) {
             inferenceSuggestions.addAll(tempInferenceSuggestions);
@@ -72,7 +75,7 @@ public class TypeChecker {
         // Update the real StatementTypeChecker with the inferred types before the final pass
         statementTypeChecker.updateInferenceContext(tempContext);
 
-        registerFunctionParamBindings(rawFuncs);
+        registerFunctionParamBindings(context, rawFuncs, functionBindings);
         registerFunctionReturnBindings(checkedFuncsPass1);
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
         List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
@@ -214,11 +217,15 @@ public class TypeChecker {
     }
     public List<TypeReplacementSuggestion> getTypeReplacementSuggestions() {return typeReplacementSuggestions;}
 
-    private void registerFunctionParamBindings(List<Ast.Func> functions) {
-        functionBindings.clear();
+    private void registerFunctionParamBindings(
+            Context ctx,
+            List<Ast.Func> functions,
+            HashMap<String, List<String>> targetBindings
+    ) {
+        targetBindings.clear();
 
         for (Ast.Func func : functions) {
-            context.pushNewScope();
+            ctx.pushNewScope();
             String name = func.name();
             Signature sig = functionSignatures.get(name);
 
@@ -227,7 +234,7 @@ public class TypeChecker {
                 Ast.Arg arg = func.params().get(i);
                 Ast.Type inferredParamType = sig.paramTypes.get(i);
 
-                String id = context.createBinding(
+                String id = ctx.createBinding(
                         arg.name(),
                         Binding.Kind.PARAMETER,
                         arg.pos(),
@@ -238,8 +245,8 @@ public class TypeChecker {
                 paramBindingIds.add(id);
             }
 
-            functionBindings.put(name, paramBindingIds);
-            context.popScope();
+            targetBindings.put(name, paramBindingIds);
+            ctx.popScope();
         }
     }
     private void registerFunctionReturnBindings(List<Ast.Func> functions) {
@@ -257,6 +264,24 @@ public class TypeChecker {
             );
 
             functionReturnBindingIds.put(name, returnBindingId);
+        }
+    }
+    private void reconcileParamBindingsFromDependencies(
+            Context ctx,
+            HashMap<String, List<String>> bindingsMap
+    ) {
+        for (List<String> paramIds : bindingsMap.values()) {
+            for (String paramId : paramIds) {
+                Binding param = ctx.getBinding(paramId);
+                if (param == null || param.explicit) continue;
+
+                for (String depId : param.dependencies) {
+                    Binding dep = ctx.getBinding(depId);
+                    if (dep == null || dep.inferredType instanceof Ast.TUnknown) continue;
+                    ctx.updateBindingType(paramId, dep.inferredType);
+                    break;
+                }
+            }
         }
     }
 
