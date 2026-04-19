@@ -120,17 +120,16 @@ public class TypeChecker {
             statementTypeChecker.setCurrentFunction(name);
             Signature sig = functionSignatures.get(name);
 
-            // === ADD THIS: Create return binding ===
-            String returnBindingId = context.createBinding(
-                    name + "@return",
-                    Binding.Kind.FUNCTION_RETURN,
-                    func.pos(),
-                    func.returnType(),              // declared return type
-                    sig.returnType,                 // inferred return type
-                    !(func.returnType() instanceof Ast.TUnknown)  // explicit?
-            );
-            functionReturnBindingIds.put(name, returnBindingId);
-            statementTypeChecker.setCurrentFunctionReturnBinding(returnBindingId);
+//            String returnBindingId = context.createBinding(
+//                    name + "@return",
+//                    Binding.Kind.FUNCTION_RETURN,
+//                    func.pos(),
+//                    func.returnType(),              // declared return type
+//                    sig.returnType,                 // inferred return type
+//                    !(func.returnType() instanceof Ast.TUnknown)  // explicit?
+//            );
+//            functionReturnBindingIds.put(name, returnBindingId);
+//            statementTypeChecker.setCurrentFunctionReturnBinding(returnBindingId);
 
             // Return type inference notification
             inferReturnType(func, sig, name);
