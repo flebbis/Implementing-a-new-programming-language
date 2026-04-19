@@ -67,7 +67,7 @@ public class TypeChecker {
         // Update the real StatementTypeChecker with the inferred types before the final pass
         statementTypeChecker.updateInferenceContext(tempContext);
 
-        registerFunctionParamBindings(checkedFuncsPass1);
+        registerFunctionParamBindings(rawFuncs);
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
         List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
 
@@ -109,42 +109,43 @@ public class TypeChecker {
         List<Ast.Func> checkedFuncs = new ArrayList<>();
 
         for (Ast.Func func : functions) {
-            List<String> paramBindings = new ArrayList<>();
             context.pushNewScope();
             String name = func.name();
             statementTypeChecker.setCurrentFunction(name);
             Signature sig = functionSignatures.get(name);
 
-
-            // TODO: check binding for infer return?
+            // Return type inference notification
             inferReturnType(func, sig, name);
 
-            // Use types from Signature (which are now updated after inference passes)
+            // Get canonical param binding IDs created in registerFunctionParamBindings(...)
+            List<String> paramBindingIds = functionBindings.get(name);
+            if (paramBindingIds == null || paramBindingIds.size() != func.params().size()) {
+                throw new TypeException("Missing parameter bindings for function " + name, func.pos());
+            }
+
             List<Ast.Arg> currentParams = new ArrayList<>();
-
-
             int offSet = 0;
 
             for (int i = 0; i < func.params().size(); i++) {
-                Ast.Type type = sig.paramTypes.get(i);
+                Ast.Arg oldArg = func.params().get(i);
+                Ast.Type inferredType = sig.paramTypes.get(i);
 
-                // Inference suggestion
-                if(!(func.params().get(i).type().equals(type))) {
-                    Ast.Arg arg = func.params().get(i);
-                    Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
-                    addInferenceSuggestion(name, type, pos);
-                    offSet += TypeConverter.typeToString(type).length() + 1;
+                // Suggest inferred type for untyped/changed params
+                if (!oldArg.type().equals(inferredType)) {
+                    Pos pos = new Pos(oldArg.pos().line, oldArg.pos().column + offSet);
+                    addInferenceSuggestion(oldArg.name(), inferredType, pos);
+                    offSet += TypeConverter.typeToString(inferredType).length() + 1;
                 }
 
-                Ast.Arg oldArg = func.params().get(i);
+                // Reuse existing binding instead of creating a duplicate binding
+                String paramBindingId = paramBindingIds.get(i);
+                context.bindExistingToCurrentScope(oldArg.name(), paramBindingId);
 
-//                context.pushToCurrentScope(oldArg.name(), type);
-                Pos pos = new Pos(oldArg.pos().line, oldArg.pos().column + offSet);
-                String parambinding = context.createBinding(oldArg.name(), Binding.Kind.PARAMETER, pos, oldArg.type(), type, false );
-                paramBindings.add(parambinding);
-                currentParams.add(new Ast.Arg(oldArg.name(), type, oldArg.pos()));
+                // Keep binding type in sync with final signature type
+                context.updateBindingType(paramBindingId, inferredType);
+
+                currentParams.add(new Ast.Arg(oldArg.name(), inferredType, oldArg.pos()));
             }
-            functionBindings.putIfAbsent(name, paramBindings);
 
             if (!(func.body() instanceof Ast.SBlock)) {
                 throw new TypeException("Function body must be a block statement", func.body().pos());
@@ -155,8 +156,14 @@ public class TypeChecker {
                 bodyStmts.add(statementTypeChecker.typeCheck(stmt));
             }
 
-            checkedFuncs.add(new Ast.Func(name, currentParams, sig.returnType,
-                    new Ast.SBlock(bodyStmts, func.body().pos()), func.pos()));
+            checkedFuncs.add(new Ast.Func(
+                    name,
+                    currentParams,
+                    sig.returnType,
+                    new Ast.SBlock(bodyStmts, func.body().pos()),
+                    func.pos()
+            ));
+
             context.popScope();
         }
 

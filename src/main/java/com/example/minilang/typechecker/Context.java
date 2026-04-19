@@ -237,6 +237,16 @@ public class Context {
     private String generateBindingId(String name) {
         return name + "_" + scopeLevel + "_" + UUID.randomUUID().toString().substring(0, 8);
     }
+    public void bindExistingToCurrentScope(String name, String bindingId) {
+        if (scopeStack.getFirst().containsKey(name)) {
+            throw new TypeException("Duplicate context id " + name);
+        }
+        if (!bindingRegistry.containsKey(bindingId)) {
+            throw new TypeException("Unknown binding id " + bindingId + " for " + name);
+        }
+        scopeStack.getFirst().put(name, bindingId);
+    }
+
 
     /**
      * Print all bindings in the registry (for testing/debugging).
