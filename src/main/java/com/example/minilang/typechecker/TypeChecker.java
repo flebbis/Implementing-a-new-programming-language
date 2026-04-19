@@ -22,6 +22,7 @@ public class TypeChecker {
     private List<TypeReplacementSuggestion> typeReplacementSuggestions = new ArrayList<>();
     private HashMap<String, List<String>> functionBindings = new HashMap<>();
     private HashMap<String, String> functionReturnBindingIds = new HashMap<>();
+    private HashMap<String, List<Boolean>> functionParamExplicit = new HashMap<>();
 
 
 
@@ -63,7 +64,7 @@ public class TypeChecker {
 
 
         //TODO: remove???
-        context.popScope();
+//        context.popScope();
         if(!tempInferenceSuggestions.isEmpty()) {
             inferenceSuggestions.addAll(tempInferenceSuggestions);
         }
@@ -103,10 +104,14 @@ public class TypeChecker {
             String name = func.name();
             Ast.Type returnType = func.returnType();
 
+            List<Boolean> explicitFlags = new ArrayList<>();
             List<Ast.Type> paramTypes = new ArrayList<>();
             for(Ast.Arg arg : func.params()) {
                 paramTypes.add(arg.type());
+                explicitFlags.add(!(arg.type() instanceof Ast.TUnknown));
             }
+            functionParamExplicit.put(name, explicitFlags);
+
 
             functionSignatures.put(name, new Signature(name, returnType, paramTypes));
             funcs.add(func);
@@ -123,16 +128,6 @@ public class TypeChecker {
             statementTypeChecker.setCurrentFunction(name);
             Signature sig = functionSignatures.get(name);
 
-//            String returnBindingId = context.createBinding(
-//                    name + "@return",
-//                    Binding.Kind.FUNCTION_RETURN,
-//                    func.pos(),
-//                    func.returnType(),              // declared return type
-//                    sig.returnType,                 // inferred return type
-//                    !(func.returnType() instanceof Ast.TUnknown)  // explicit?
-//            );
-//            functionReturnBindingIds.put(name, returnBindingId);
-//            statementTypeChecker.setCurrentFunctionReturnBinding(returnBindingId);
 
             // Return type inference notification
             inferReturnType(func, sig, name);
@@ -234,13 +229,15 @@ public class TypeChecker {
                 Ast.Arg arg = func.params().get(i);
                 Ast.Type inferredParamType = sig.paramTypes.get(i);
 
+                boolean explicit = functionParamExplicit.get(name).get(i);
+
                 String id = ctx.createBinding(
                         arg.name(),
                         Binding.Kind.PARAMETER,
                         arg.pos(),
                         arg.type(),
                         inferredParamType,
-                        !(arg.type() instanceof Ast.TUnknown)
+                        explicit
                 );
                 paramBindingIds.add(id);
             }
