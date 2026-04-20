@@ -209,9 +209,21 @@ public class ExpressionCodeGen extends Helper {
         String base = generateExpression(powerExp.base());
         String exponent = generateExpression(powerExp.exponent());
         String register = generateRegister();
-        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent).append(")")
+        String finalRegister = generateRegister();
+        String newBase = generateRegister();
+        String newExponent = generateRegister();
+        if (powerExp.base().type() instanceof Ast.TInt) {
+            sb.append(newBase).append(" = sitofp i32 ").append(base).append(" to double").append(", !dbg !").append(debugMetaData.getLineId(powerExp.base().pos().line)).append("\n");
+            sb.append(newExponent).append(" = sitofp i32 ").append(exponent).append(" to double").append(", !dbg !").append(debugMetaData.getLineId(powerExp.exponent().pos().line)).append("\n");
+            base = newBase;
+            exponent = newExponent;
+        }
+        sb.append(register).append(" = call ").append("double").append(" @pow(").append("double").append(" ").append(base).append(", ").append("double").append(" ").append(exponent).append(")")
         .append(", !dbg !").append(debugMetaData.getLineId(powerExp.pos().line)).append("\n");
-        return register;
+
+        sb.append(finalRegister).append(" = fptosi double ").append(register).append(" to i32").append(", !dbg !").append(debugMetaData.getLineId(powerExp.pos().line)).append("\n");
+
+        return finalRegister;
 
     }
     private String generateOpp(EOpp oppExp) {
