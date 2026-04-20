@@ -2,6 +2,7 @@ package com.example.minilang.codegen;
 
 import java.util.HashSet;
 
+import com.example.minilang.Compiler;
 import com.example.minilang.DebugMetaData;
 import com.example.minilang.ast.Ast.SBlock;
 import com.example.minilang.ast.Ast.SDecl;
@@ -158,6 +159,26 @@ public class StatementCodeGen extends Helper {
         environment.popScope();
     }
     private void generateDecl(SDecl declStmt) {
+        if (Compiler.isGlobal){
+                String globalName = "@" + declStmt.name();
+                String type = convertType(declStmt.type());
+                String initValue;
+                if (type.equals("i8*")) {
+                    initValue = "null";
+                } else if (type.equals("i1")) {
+                    initValue = "false";
+                } else if (type.equals("double")) {
+                    initValue = "0.0";
+                } else if (type.endsWith("*")) {
+                    initValue = "zeroinitializer";
+                } else {
+                    initValue = "0";
+                }
+                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue).append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
+                environment.pushToCurrentScope(declStmt.name(), globalName);
+                return;
+            }
+        
         String register = generateRegister();
 
         sb.append(register).append(" = alloca ").append(convertType(declStmt.type()))
@@ -165,17 +186,36 @@ public class StatementCodeGen extends Helper {
         sb.append(debugMetaData.declareVariable(declStmt.name(), convertType(declStmt.type()), register, declStmt.pos().line));
         environment.pushToCurrentScope(declStmt.name(), register);
         // }
-    }
+    
+}
     private void generateInit(SInit initStmt) {
         if (!environment.existsInCurrentScope(initStmt.name()) && !(initStmt.type() instanceof TArray)) {
             // Variable not declared yet, so we need to allocate space for it
-
+            if (Compiler.isGlobal){
+                String globalName = "@" + initStmt.name();
+                String type = convertType(initStmt.type());
+                String initValue;
+                if (type.equals("i8*")) {
+                    initValue = "null";
+                } else if (type.equals("i1")) {
+                    initValue = "false";
+                } else if (type.equals("double")) {
+                    initValue = "0.0";
+                } else if (type.endsWith("*")) {
+                    initValue = "zeroinitializer";
+                } else {
+                    initValue = "0";
+                }
+                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue).append("\n");
+                environment.pushToCurrentScope(initStmt.name(), globalName);
+            } else{
             String register = generateRegister();
 
             sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type()))
             .append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
             sb.append(debugMetaData.declareVariable(initStmt.name(), convertType(initStmt.type()), register, initStmt.pos().line));
             environment.pushToCurrentScope(initStmt.name(), register);
+            }
         }
         
         if (initStmt.type() instanceof TArray) {
@@ -183,9 +223,12 @@ public class StatementCodeGen extends Helper {
             String structType = convertType(initStmt.type());
 
             String slot = generateRegister();
-            sb.append(slot)
-                    .append(" = alloca " + structType + "*\n"); // slot holds a pointer-to-struct
-
+            if (Compiler.isGlobal) {
+                slot = "@" + initStmt.name();
+                globals.append(slot).append(" = global ").append(structType).append("* ").append("zeroinitializer").append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
+            } else {
+            sb.append(slot).append(" = alloca " + structType + "*\n"); // slot holds a pointer-to-struct
+            }
             // Store the pointer to the array struct in the allocated slot
             sb.append("store " + structType +" ")
                     .append(arrPtr)
