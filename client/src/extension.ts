@@ -116,7 +116,6 @@ export async function activate(context: ExtensionContext) {
   );
 
   let lastPath: string | undefined;
-  let fileContent: string = "";
   // keeps control for which editor is the active one 
   let activeEditor: vscode.TextEditor | undefined;
   // sets decoration to a color
@@ -146,9 +145,10 @@ export async function activate(context: ExtensionContext) {
     try {
       // get the editor and the filepath then save the file
       const editor = vscode.window.activeTextEditor;
+      let filecontent = ""
       if (editor && editor.document.uri.scheme === 'file') {
         lastPath = editor.document.uri.fsPath;
-        fileContent = editor.document.getText();
+        filecontent = editor.document.getText();
         await editor.document.save();
       }
 
@@ -164,7 +164,7 @@ export async function activate(context: ExtensionContext) {
       }
       
       console.log(lastPath)
-      execFileSync('java', ['-jar', JAR_PATH, lastPath, fileContent]);
+      execFileSync('java', ['-jar', JAR_PATH, lastPath, filecontent]);
 
       // run llc on the .ll file to produce assembly
       const llFile = lastPath.replace(/\.(fika)$/, '.ll');
@@ -211,7 +211,7 @@ export async function activate(context: ExtensionContext) {
       }
 
       for (let i = 0; i < lines.length; i++) {
-        if(lines[i].split(/\s+/)[0].endsWith(':')) {continue}
+        if(lines[i].startsWith("_")) {continue}
         lines[i] = lines[i].padEnd(maxLength + 1);
       }
 
@@ -241,8 +241,8 @@ export async function activate(context: ExtensionContext) {
         // If there is matching operand Then apply the inylayhints for the given line
         for (let i = 0; i < document.lineCount; i++) {
           const trimmed = document.lineAt(i).text.trim();
-          if(trimmed.split(/\s+/)[0].endsWith(':') && !trimmed.startsWith('LBB')){
-            const funcName = trimmed.match(/^_?([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
+          if(trimmed.startsWith('_') && trimmed.endsWith(':')){
+            const funcName = trimmed.match(/_([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
             if (!funcName) continue;
             const varStackMap = zippVarMap?.get(funcName);
             if (!varStackMap) continue;

@@ -7,9 +7,6 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
     let isFunction = false; // check if its a function or not
     let inPrologue = false;
 
-    // macOS have _function, windows have function only 
-    const isMacOSStyle = asmLines.some(l => /^_[a-zA-Z]/.test(l.trim()));
-
     for(let i = 0; i < asmLines.length; i++) {
         const line = asmLines[i];
         // For each line in .s, check that it is a real instruction for assembly output
@@ -34,16 +31,13 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
         const isLSymbol   = trimmed.startsWith('l_');
         const isHash      = trimmed.startsWith('#');
         const isBlankSpace = trimmed === '';
- 
-        const isNonLBBLabel = isMacOSStyle
-            ? (trimmed.startsWith('L') || trimmed.endsWith(':')) && !trimmed.startsWith('LBB') && !trimmed.startsWith('_')
-            : trimmed.startsWith('L') && !trimmed.startsWith('LBB');
+        // Labels that are NOT LBB labels and NOT function labels
+        const isNonLBBLabel = (trimmed.startsWith('L') || trimmed.endsWith(':'))
+                            && !trimmed.startsWith('LBB')
+                            && !trimmed.startsWith('_');
 
         const filtered = isDirective || isComment || isArmComment || isLSymbol || isHash || isBlankSpace || isNonLBBLabel;
-        const firstToken = trimmed.split(/\s+/)[0];
-        const newFunction = isMacOSStyle
-            ? firstToken.endsWith(':') && firstToken.startsWith('_')
-            : firstToken.endsWith(':') && !firstToken.startsWith('LBB') && !firstToken.startsWith('L');
+        const newFunction = trimmed.startsWith("_") && trimmed.includes(":");
 
 
         if(filtered) continue;
@@ -84,10 +78,9 @@ export function buildLineMap(asmLines: string[], profile: architecture) {
                         const next = asmLines[k].trim();
                         if (next === '' || next.startsWith('@')) continue;
                         if (next.startsWith('.') && !next.startsWith('.loc')) continue;
-                        // skip local labels same as isNonLBBLabel filter
-                        if (isMacOSStyle
-                            ? (next.startsWith('L') || next.endsWith(':')) && !next.startsWith('LBB') && !next.startsWith('_')
-                            : next.startsWith('L') && !next.startsWith('LBB')) continue;
+                        // skip Ltmp/Lfunc style labels (same as isNonLBBLabel filter)
+                        if ((next.startsWith('L') || next.endsWith(':'))
+                                && !next.startsWith('LBB') && !next.startsWith('_')) continue;
                         if (next.startsWith('.loc')) {
                             const parts = next.split(/\s+/);
                             const num = Number(parts[2]);
