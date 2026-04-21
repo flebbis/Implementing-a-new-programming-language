@@ -135,10 +135,9 @@ public class ExpressionTypeChecker {
             return new Ast.ECmp(left, right, eCmp.op(), new Ast.TBool(), eCmp.pos());    
         } else {
             throw new TypeException(
-                "Cannot compare types",
-                TypeConverter.typeToString(leftType),
-                TypeConverter.typeToString(rightType), 
-                eCmp.pos());
+                "Cannot compare " + TypeConverter.typeToString(leftType) + " with " + TypeConverter.typeToString(rightType),
+                eCmp.pos()
+            );
         }
     }
 
@@ -244,7 +243,7 @@ public class ExpressionTypeChecker {
         Ast.Exp value = typeCheck(eAss.value());
         Ast.Type varType = context.lookupLatest(eAss.name());
         if (varType == null) {
-            throw new TypeException("Variable " + eAss.name() + " is not declared", eAss.pos());
+            throw new TypeException("Variable '" + eAss.name() + "' is not declared", eAss.pos());
         }
 
         // Allow assignment if value is TUnknown (inference phase)
@@ -263,9 +262,9 @@ public class ExpressionTypeChecker {
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
-                throw new TypeException("Cannot assign type ",
-                TypeConverter.typeToString(value.type()),
-                TypeConverter.typeToString(varType), 
+                throw new TypeException("Cannot assign type",
+                TypeConverter.typeToString(varType),
+                TypeConverter.typeToString(value.type()), 
                 eAss.pos());
             }
         }
