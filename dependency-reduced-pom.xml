@@ -46,10 +46,45 @@
         <version>3.1.0</version>
       </plugin>
       <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>com.example.minilang.MiniLanguageMain</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
         <configuration>
           <source>21</source>
           <target>21</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>com.example.minilang.typechecker.TypeCheckerServer</mainClass>
+            </manifest>
+          </archive>
         </configuration>
       </plugin>
     </plugins>
@@ -78,7 +113,8 @@
   </dependencies>
   <properties>
     <maven.compiler.target>21</maven.compiler.target>
-    <maven.compiler.source>21</maven.compiler.source>
     <antlr.version>4.13.1</antlr.version>
+    <gson.version>2.10.1</gson.version>
+    <maven.compiler.source>21</maven.compiler.source>
   </properties>
 </project>

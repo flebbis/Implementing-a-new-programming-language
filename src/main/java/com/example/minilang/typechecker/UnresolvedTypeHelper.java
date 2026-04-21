@@ -59,7 +59,12 @@ public class UnresolvedTypeHelper {
 
             for(Ast.Type resolvedCondition : resolvedConditions) {
                 if(!checkUnresolvedConditionsMatch(unresolvedType, resolvedCondition)) {
-                    throw new TypeException(unresolvedType.id() + " is of type " + TypeConverter.typeToString(unresolvedType) + ", attempting to use as type " + TypeConverter.typeToString(resolvedCondition), unresolved.pos());
+                    throw new TypeException(
+                        "Unresolved type '" + unresolvedType.id() + "' cannot satisfy condition",
+                        TypeConverter.typeToString(resolvedCondition),
+                        TypeConverter.typeToString(unresolvedType),
+                        unresolved.pos()
+                    );
                 }
             }
 

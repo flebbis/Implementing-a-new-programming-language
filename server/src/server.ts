@@ -938,3 +938,6 @@ documents.listen(connection);
 
 // Listen on the connection
 connection.listen();
+
+
+//git commit -m "Merge: add type error formatting with structured messages, solved merging conflicts"

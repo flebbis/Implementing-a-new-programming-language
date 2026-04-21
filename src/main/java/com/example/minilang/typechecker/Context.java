@@ -21,7 +21,7 @@ public class Context {
     /** Push a new id-type pair onto the stack, using the latest scope */
     public void pushToCurrentScope(String id, Ast.Type type, Pos pos) {
         if(contextStack.getFirst().containsKey(id)) {
-            throw new TypeException("Duplicate context id " + id, pos);
+            throw new TypeException("Duplicate variable '" + id + "'", pos);
         } else {
             contextStack.getFirst().put(id, type);
         }
@@ -63,7 +63,7 @@ public class Context {
                 return;
             }
         }
-        throw new TypeException("Cannot update non-existent variable " + id);
+        throw new TypeException("Cannot update non-existent variable '" + id + "'");
     }
 
     public int getScopeLevel() {
