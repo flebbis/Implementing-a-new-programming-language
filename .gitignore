@@ -52,10 +52,3 @@ target/
 *.s
 **/test.ml
 */test.ml.claude/
-server/src/parser/Grammar*.ts
-src/main/antlr4/com/example/minilang/.antlr/
-**/.antlr/
-**/.antlr/**
-server/src/parser/*.interp
-server/src/parser/*.tokens
-server/src/parser/src/

@@ -1,6 +1,0 @@
-// Test type errors
-int x = "hello";    // Should show type error: string assigned to number
-
-
-string y = 3;                 // Should show type error: string assigned to int
-

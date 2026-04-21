@@ -13,7 +13,6 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <antlr.version>4.13.1</antlr.version>
-        <gson.version>2.10.1</gson.version>
     </properties>
 
     <dependencies>
@@ -24,14 +23,6 @@
             <artifactId>antlr4-runtime</artifactId>
             <version>${antlr.version}</version>
         </dependency>
-        
-        <!-- Gson for JSON processing -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${gson.version}</version>
-        </dependency>
-        
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -64,6 +55,7 @@
                     </goals>
                 </execution>
             </executions>
+
             <configuration>
                 <visitor>true</visitor>
             </configuration>
@@ -97,53 +89,15 @@
             <version>3.1.0</version>
         </plugin>
         <plugin>
-            <artifactId>maven-jar-plugin</artifactId>
-            <version>3.3.0</version>
-            <configuration>
-                <archive>
-                    <manifest>
-                        <mainClass>com.example.minilang.MiniLanguageMain</mainClass>
-                    </manifest>
-                </archive>
-            </configuration>
-        </plugin>
-            
-        <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.11.0</version>
             <configuration>
                 <source>21</source>
                 <target>21</target>
             </configuration>
         </plugin>
 
-        <!-- ADD THIS ASSEMBLY PLUGIN -->
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <version>3.6.0</version>
-            <configuration>
-                <descriptorRefs>
-                    <descriptorRef>jar-with-dependencies</descriptorRef>
-                </descriptorRefs>
-                <archive>
-                    <manifest>
-                        <mainClass>com.example.minilang.typechecker.TypeCheckerServer</mainClass>
-                    </manifest>
-                </archive>
-            </configuration>
-            <executions>
-                <execution>
-                    <id>make-assembly</id>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>single</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
+    </plugins>
+</build>
 
-        </plugins>
-    </build>
 </project>
