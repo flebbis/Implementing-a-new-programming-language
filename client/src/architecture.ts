@@ -6,7 +6,9 @@ export interface architecture {
 
 export const PROFILES = {
     "x86-64": {name: "x86-64", patterns: [
-        /^\s*retq?/
+        /^\s*retq?/,
+        /^\s*subq\s+\$\d+,\s+%rsp/,
+        /^\s*addq\s+\$\d+,\s+%rsp/,
     ],
     stackSlot: /movs?[dlqbw]\s+.*,\s*(-?\d+\(%(?:rbp|rsp|ebp|esp)\))/
     },
@@ -22,7 +24,9 @@ export const PROFILES = {
     "aarch64": {name: "aarch64",  patterns: [
         /^\s*sub\s+sp,\s+sp,/,
         /^\s*add\s+sp,\s+sp,/,
-        /^\s*ret/
+        /^\s*ret/,
+        /^\s*stp\s+x29,\s+x30,/,
+        /^\s*ldp\s+x29,\s+x30,/,
     ],
     stackSlot: /s?tr\s+(?:wzr|xzr|w\d+|x\d+|d\d+|s\d+|q\d+),\s*(\[(?:x29|sp|x\d+)(?:,\s*#?-?\d+)?\])/
     },
