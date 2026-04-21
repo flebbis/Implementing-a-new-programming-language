@@ -1,4 +1,4 @@
-// Generated from /Users/aishamohamed/Kandidatarbete/Implementing-a-new-programming-language/src/main/antlr4/com/example/minilang/Grammar.g4 by ANTLR 4.9.0-SNAPSHOT
+// Generated from src/main/antlr4/com/example/minilang/Grammar.g4 by ANTLR 4.9.0-SNAPSHOT
 
 
 import { ATN } from "antlr4ts/atn/ATN";

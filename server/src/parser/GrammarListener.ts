@@ -1,10 +1,19 @@
-// Generated from /Users/aishamohamed/Kandidatarbete/Implementing-a-new-programming-language/src/main/antlr4/com/example/minilang/Grammar.g4 by ANTLR 4.9.0-SNAPSHOT
+// Generated from src/main/antlr4/com/example/minilang/Grammar.g4 by ANTLR 4.9.0-SNAPSHOT
 
 
 import { ParseTreeListener } from "antlr4ts/tree/ParseTreeListener";
 
 import { DFuncContext } from "./GrammarParser";
 import { DStmContext } from "./GrammarParser";
+import { SimpleTypeContext } from "./GrammarParser";
+import { ArrayTypeContext } from "./GrammarParser";
+import { PrimaryParenContext } from "./GrammarParser";
+import { PrimaryIntContext } from "./GrammarParser";
+import { PrimaryDoubleContext } from "./GrammarParser";
+import { PrimaryStringContext } from "./GrammarParser";
+import { PrimaryBoolContext } from "./GrammarParser";
+import { PrimaryIdContext } from "./GrammarParser";
+import { PrimaryArrayLiteralContext } from "./GrammarParser";
 import { SeparatorContext } from "./GrammarParser";
 import { ProgramContext } from "./GrammarParser";
 import { DefContext } from "./GrammarParser";
@@ -18,6 +27,7 @@ import { ReturnStmtContext } from "./GrammarParser";
 import { WhileStmtContext } from "./GrammarParser";
 import { DoStmtContext } from "./GrammarParser";
 import { IfStmtContext } from "./GrammarParser";
+import { TypeAnnotationContext } from "./GrammarParser";
 import { DeclContext } from "./GrammarParser";
 import { InitContext } from "./GrammarParser";
 import { TerminatorContext } from "./GrammarParser";
@@ -68,6 +78,123 @@ export interface GrammarListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitDStm?: (ctx: DStmContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `SimpleType`
+	 * labeled alternative in `GrammarParser.typeAnnotation`.
+	 * @param ctx the parse tree
+	 */
+	enterSimpleType?: (ctx: SimpleTypeContext) => void;
+	/**
+	 * Exit a parse tree produced by the `SimpleType`
+	 * labeled alternative in `GrammarParser.typeAnnotation`.
+	 * @param ctx the parse tree
+	 */
+	exitSimpleType?: (ctx: SimpleTypeContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `ArrayType`
+	 * labeled alternative in `GrammarParser.typeAnnotation`.
+	 * @param ctx the parse tree
+	 */
+	enterArrayType?: (ctx: ArrayTypeContext) => void;
+	/**
+	 * Exit a parse tree produced by the `ArrayType`
+	 * labeled alternative in `GrammarParser.typeAnnotation`.
+	 * @param ctx the parse tree
+	 */
+	exitArrayType?: (ctx: ArrayTypeContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryParen`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryParen?: (ctx: PrimaryParenContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryParen`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryParen?: (ctx: PrimaryParenContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryInt`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryInt?: (ctx: PrimaryIntContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryInt`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryInt?: (ctx: PrimaryIntContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryDouble`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryDouble?: (ctx: PrimaryDoubleContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryDouble`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryDouble?: (ctx: PrimaryDoubleContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryString`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryString?: (ctx: PrimaryStringContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryString`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryString?: (ctx: PrimaryStringContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryBool`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryBool?: (ctx: PrimaryBoolContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryBool`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryBool?: (ctx: PrimaryBoolContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryId`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryId?: (ctx: PrimaryIdContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryId`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryId?: (ctx: PrimaryIdContext) => void;
+
+	/**
+	 * Enter a parse tree produced by the `PrimaryArrayLiteral`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	enterPrimaryArrayLiteral?: (ctx: PrimaryArrayLiteralContext) => void;
+	/**
+	 * Exit a parse tree produced by the `PrimaryArrayLiteral`
+	 * labeled alternative in `GrammarParser.primary`.
+	 * @param ctx the parse tree
+	 */
+	exitPrimaryArrayLiteral?: (ctx: PrimaryArrayLiteralContext) => void;
 
 	/**
 	 * Enter a parse tree produced by `GrammarParser.separator`.
@@ -211,6 +338,17 @@ export interface GrammarListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	exitIfStmt?: (ctx: IfStmtContext) => void;
+
+	/**
+	 * Enter a parse tree produced by `GrammarParser.typeAnnotation`.
+	 * @param ctx the parse tree
+	 */
+	enterTypeAnnotation?: (ctx: TypeAnnotationContext) => void;
+	/**
+	 * Exit a parse tree produced by `GrammarParser.typeAnnotation`.
+	 * @param ctx the parse tree
+	 */
+	exitTypeAnnotation?: (ctx: TypeAnnotationContext) => void;
 
 	/**
 	 * Enter a parse tree produced by `GrammarParser.decl`.
