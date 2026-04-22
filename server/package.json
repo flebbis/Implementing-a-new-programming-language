@@ -1,9 +1,9 @@
 {
   "type": "commonjs",
-  "name": "mylang-server",
-  "description": "language server server for unnamed language",
-  "version": "0.0.1",
-  "publisher": "Cole",
+  "name": "fika-server",
+  "description": "language server server for the fika programming language",
+  "version": "0.0.4",
+  "publisher": "Grupp17A",
   "license": "MIT",
   "engines": {
     "node": "*"
@@ -24,6 +24,8 @@
   },
   "devDependencies": {
     "@types/node": "^18.5.0",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "vscode-uri": "^3.1.0"
+
   }
 }

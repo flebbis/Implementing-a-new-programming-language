@@ -1,0 +1,48 @@
+{
+    "scopeName": "source.asm-preview",
+    "patterns": [
+        {"include": "#Label"},
+        {"include": "#Operation"},
+        {"include": "#Memory"},
+        {"include": "#Register"},
+        {"include": "#Data"},
+        {"include": "#JumpLabel"},
+        {"include": "#MemoryX86"}
+    ],
+    "repository": {
+        "JumpLabel": {
+            "name": "",
+            "match": "\\.?LBB\\d+_\\d:?"
+        },
+        "Label": {
+            "name": "entity.name.label",
+            "match": "^(?!.*LBB)\\w+"
+        },
+        "Operation": {
+            "name": "entity.name.tag",
+            "match": "^\\s+\\w+\\.?\\w*"
+        },
+        "Memory": {
+            "name": "meta.brackets",
+            "begin": "\\[",
+            "end": "\\]",
+            "patterns": [
+                { "include": "#Register" },
+                { "include": "#Data" }
+            ]
+        }, 
+        "Data": {
+            "name": "constant.numeric",
+            "match": "\\#-?\\d+\\w*|\\$-?\\d+?\\w*"
+        },
+        "Register": {
+            "name": "variable.language",
+            "match": "w\\d+|x\\d+|wzr|xzr|sp|lr|fp|\\%\\w+"
+        },
+        "MemoryX86": {
+            "name": "storage.type",
+            "match": "\\-\\d+"
+        }
+
+    }
+}

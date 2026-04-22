@@ -1,9 +1,11 @@
 .vscode
 .idea
 node_modules
+.claude/
 target/
 src/
 tsconfig.json
 .gitignore
 LLVMiniLanguage.iml
-pom.xml
+*.xml
+*.code-workspace

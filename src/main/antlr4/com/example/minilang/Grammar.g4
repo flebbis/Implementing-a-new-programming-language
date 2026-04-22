@@ -114,8 +114,9 @@ postfixExpr
 postFixOp
     : INC
     | DEC
-    | '[' exp ']'
-    | '(' expSeparator ')'
+    | DYNARR_START exp DYNARR_END
+    | PARAM_START expSeparator PARAM_END
+    | DOT ID PARAM_START expSeparator PARAM_END
     ;
 
 primary
@@ -135,8 +136,8 @@ paramSeparator: (param (',' param)* )?; //int x, double y, string z
 TYPE        : 'int' | 'double' | 'string' | 'bool';
 STRING      : '"'  ( '\\' . | ~["\\] )* '"' |
               '\'' ( '\\' . | ~['\\] )* '\'';
-INT         : [0-9]+; //int over double, so if i = 5 it chooses int
-DOUBLE      : [0-9]+ '.'? [0-9]*;
+INT         : '-'?[0-9]+; //int over double, so if i = 5 it chooses int
+DOUBLE      : '-'?[0-9]+ '.'? [0-9]*;
 BOOL        : 'true' | 'false';
 PLUS_ASSIGN : '+=';
 MINUS_ASSIGN: '-=';
@@ -157,10 +158,13 @@ NE          : '!=';
 AND         : 'and';
 OR          : 'or';
 NOT         : 'not';
+DOT         : '.';
 ID          : [a-zA-Z_][a-zA-Z0-9_]*; // need help
 ASSIGN      : '=';
 DYNARR_START : '[';
 DYNARR_END   : ']';
+PARAM_START : '(';
+PARAM_END   : ')';
 INC          : '++';
 DEC          : '--';
 BOM : '\uFEFF' -> skip;

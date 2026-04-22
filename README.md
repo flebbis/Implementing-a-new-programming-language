@@ -7,7 +7,7 @@ New modern programming language
  * More!
 
 ## Language server
-The extension should detect any ``.ml`` file opened in the new VSCode instance. 
+The extension should detect any ``.fika`` file opened in the new VSCode instance. 
 
 ### Development installation
 To install the language server enter ``npm install`` into the terminal at the project root directory.

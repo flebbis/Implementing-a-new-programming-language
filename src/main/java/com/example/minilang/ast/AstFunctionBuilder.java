@@ -23,8 +23,6 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
 
     @Override
     public Ast.Func visitFunc(GrammarParser.FuncContext ctx) {
-        // rule: TYPE 'func' ID '(' paramSeparator ')' block
-
         Ast.Type returnType = new Ast.TUnknown(); // Default to TUnknown if no return type is specified
         if(ctx.typeAnnotation() != null) {
             String returnTypeText = ctx.typeAnnotation().getText();
@@ -63,7 +61,7 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         }
 
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-        return new Ast.Func(name, params, returnType, body, pos);
+        return new Ast.Func(name, params, returnType, body, false, pos);
     }
 
 
