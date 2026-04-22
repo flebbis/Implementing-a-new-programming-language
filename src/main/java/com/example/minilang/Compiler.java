@@ -106,10 +106,10 @@ public class Compiler {
             suggestions = typeChecker.getInferenceSuggestions();
 
             // ===== STEP 5: Write to File =====
-            if(typeErrors.size() == 0) {
+            String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
+            Path outputPath = path.getParent().resolve(outputFileName);
+            if(typeErrors.isEmpty()) {
                 // only generate llvm if there are no type errors
-                String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
-                Path outputPath = path.getParent().resolve(outputFileName);
                 Files.writeString(outputPath, llvmCode);
             }
 
