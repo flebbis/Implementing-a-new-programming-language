@@ -37,26 +37,12 @@ export interface TypeError {
 export async function checkTypes(source: string): Promise<TypeError[]> {
   return new Promise((resolve, reject) => {
     
-    // Try out multiple possible paths to locate the JAR file
-    const possiblePaths = [
-      path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar'),
-      path.join(__dirname, '../../../target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar'),
-      path.join(__dirname, '../target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar')
-    ];
+    // Path to locate the JAR file
+    const jarPath = path.join(process.cwd(), 'target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar');
     
-    // Find the first existing JAR file path
-    let jarPath = '';
-    for (const p of possiblePaths) {
-      console.error(`[TypeChecker] Checking path: ${p}`);
-      if (fs.existsSync(p)) {
-        jarPath = p;
-        break;
-      }
-    }
-    
-    // Reject if no JAR file is found (user needs to run 'mvn package' first)
-    if (!jarPath) {
-      reject(new Error('JAR file not found. Checked: ' + possiblePaths.join(', ')));
+    if (!fs.existsSync(jarPath)) {
+      console.error(`[TypeChecker] JAR not found!`);
+      reject(new Error(`JAR file not found at: ${jarPath}. Please run 'mvn clean package -DskipTests' in the project root.`));
       return;
     }
     

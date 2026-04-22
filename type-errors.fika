@@ -1,0 +1,74 @@
+/**
+This file contains type error tests. Uncomment each test case to see
+the formatted type errors. There last test cases don't work, and I believe
+they are related to codegen and inference. 
+*/
+
+
+// Increment on non-integer
+// double d = 3.14;
+// d++;
+
+// Type mismatch in variable initialization
+//int x = "hello";
+
+// Return type mismatch
+// int func foo() {
+//     return "hello";
+// }
+
+// Function argument count mismatch
+// int func add(int a, int b) {
+//     return a + b;
+// }
+// int x = add(5);
+
+// Function argument type mismatch
+// int func add(int a, int b) {
+//     return a + b;
+// }
+// int x = add(5, "hello");
+
+// Function not declared
+//int x = multiply(2, 2)
+
+// Variable not declared 
+// print(x)
+
+// Duplicate variable declaration
+// int x = 5
+// int x = 10
+
+// Cannot compare types
+// int x = 5
+// if (x == "hello") {}
+
+// Logical operator on non-boolean
+// int x = 5
+// if (x and true) { }
+
+
+// Array element type mismatch -- FIX, because in case
+// an array got more than 2 different types
+// [int] arr = [1, "hello", 3.3];
+
+// Array index type error
+// [int] arr = [1, 2, 3];
+// string s = "hello";
+// int x = arr[s];
+
+// Assigning to array element - wrong type
+// [int] arr = [1,2,3]
+// arr[0] = "hello"
+
+// Arithmetic operator on non-numeric -- look at this more?
+// string s = "hello"
+// int x = s + 5
+
+// Append to non-array -- FIX? Something wrong with the append, unrelated 
+// int x = 5
+// x.append(10)
+
+// Append element type mismatch -- FIX? Something wrong with the append, unrelated
+//[int] arr = [1, 2, 3];
+//arr.append("hello");

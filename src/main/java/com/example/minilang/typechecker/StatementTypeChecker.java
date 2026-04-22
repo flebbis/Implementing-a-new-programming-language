@@ -329,8 +329,8 @@ public class StatementTypeChecker {
             } else {
                 throw new TypeException(
                     "Function return type mismatch",
-                    TypeConverter.typeToString(value.type()),   
-                    TypeConverter.typeToString(signature.returnType), 
+                    TypeConverter.typeToString(signature.returnType),   
+                    TypeConverter.typeToString(value.type()), 
                     stmt.pos());
             }
         }
