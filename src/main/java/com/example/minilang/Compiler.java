@@ -3,6 +3,7 @@ package com.example.minilang;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.antlr.v4.runtime.CharStreams;
@@ -16,7 +17,7 @@ import com.example.minilang.codegen.StatementCodeGen;
 import com.example.minilang.typechecker.JavaAnalysis;
 import com.example.minilang.typechecker.TypeChecker;
 import com.example.minilang.typechecker.TypeCheckerServer;
-import com.example.minilang.typechecker.TypeError;
+import com.example.minilang.typechecker.TypeException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Compiler {
@@ -33,28 +34,20 @@ public class Compiler {
         String content = args.length >= 2 ? args[1] : Files.readString(filePath); // Use provided content or read from file if null
 
         try {
-            List<TypeError> typeErrors = TypeCheckerServer.checkSource(content);
-            List<InferenceSuggestion> suggestions = null;
-            if(!TypeCheckerServer.containsErrors) {
-               suggestions = parseFile(filePath, content, optLevel);
-            } else {
-                System.err.println("CONTAINED ERRORS!");
-            }
-        
-            JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors);
-            // Output as JSON to stdout for the language server to parse
-            System.err.println("JAVA ANALYSIS: " + javaAnalysis);
-            System.out.println(objectMapper.writeValueAsString(javaAnalysis));
+
+            parseFile2(filePath, content, optLevel);
+
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace(System.err);
             System.exit(1);
         }
     }
-    
-    public static List<InferenceSuggestion> parseFile(Path path, String input, String optLevel) throws IOException {
 
-        // String input = Files.readString(path);
+
+
+    public static List<TypeError> runTypeChecker(String input) {
+        List<TypeError> typeErrors = new ArrayList<>();
 
         // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
@@ -72,6 +65,87 @@ public class Compiler {
         // System.out.println("AST:      " + astRoot);
 
         TypeChecker typeChecker = new TypeChecker();
+        try {
+            Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
+        } catch (TypeException e) {
+            System.err.println("ERROR CAUGHT: " + e);
+            typeErrors.add(TypeCheckerServer.extractErrorInfo(e));
+        } catch (Exception e) {
+            // Unexpected error (parse failture, internal error, etc)
+            TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
+            typeErrors.add(error);
+        }
+
+        return typeErrors;
+    }
+
+    public static void parseFile2(Path path, String input, String optLevel) throws IOException {
+        List<TypeError> typeErrors = new ArrayList<>();
+        List<InferenceSuggestion> suggestions = new ArrayList<>();
+        // 2. Infrastructure
+        GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        GrammarParser parser = new GrammarParser(tokens);
+
+        // 3. Parse and create Tree
+        ParseTree tree = parser.program();
+
+        // 5. Output
+
+        // 6. Build AST
+        AstBuilderVisitor astBuilder = new AstBuilderVisitor();
+        Ast.Program astRoot = astBuilder.visit(tree);
+        // System.out.println("AST:      " + astRoot);
+
+        TypeChecker typeChecker = new TypeChecker();
+
+        try {
+            Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
+
+            String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
+            // System.err.println(typeCheckedAst.toString());
+            suggestions = typeChecker.getInferenceSuggestions();
+
+            // ===== STEP 5: Write to File =====
+            String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
+            Path outputPath = path.getParent().resolve(outputFileName);
+            Files.writeString(outputPath, llvmCode);
+            
+        } catch (TypeException e) {
+            System.err.println("ERROR CAUGHT: " + e);
+            typeErrors.add(TypeCheckerServer.extractErrorInfo(e));
+        } catch (Exception e) {
+            // Unexpected error (parse failture, internal error, etc)
+            TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
+            typeErrors.add(error);
+        }
+
+        JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors);
+        // Output as JSON to stdout for the language server to parse
+        System.err.println("JAVA ANALYSIS: " + javaAnalysis.getTypeErrors() + " suggestions: " + javaAnalysis.getInferenceSuggestions());
+        System.out.println(objectMapper.writeValueAsString(javaAnalysis));
+
+    }
+    
+    public static List<InferenceSuggestion> parseFile(Path path, String input, String optLevel) throws IOException {
+
+        // 2. Infrastructure
+        GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        GrammarParser parser = new GrammarParser(tokens);
+
+        // 3. Parse and create Tree
+        ParseTree tree = parser.program();
+
+        // 5. Output
+
+        // 6. Build AST
+        AstBuilderVisitor astBuilder = new AstBuilderVisitor();
+        Ast.Program astRoot = astBuilder.visit(tree);
+        // System.out.println("AST:      " + astRoot);
+
+        TypeChecker typeChecker = new TypeChecker();
+
         Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
 
         String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());

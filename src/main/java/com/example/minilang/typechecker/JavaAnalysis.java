@@ -1,6 +1,7 @@
 package com.example.minilang.typechecker;
 
 import com.example.minilang.InferenceSuggestion;
+import com.example.minilang.TypeError;
 
 import java.util.List;
 

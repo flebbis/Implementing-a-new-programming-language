@@ -551,8 +551,7 @@ async function inferenceAnalysis(uri: string, document: TextDocument, version: n
       // connection.console.log("run analysis...")
       let result = await runJavaAnalysis(uri, document);
       // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
-      console.error("INFERENCE-RESULT " + JSON.stringify(result.inferenceSuggestions)) // Debug the JSON result from java
-      const suggestions: InferenceSuggestion[] = result.InferenceSuggestions ?? [];
+      const suggestions: InferenceSuggestion[] = result.inferenceSuggestions ?? [];
 
       if (isLatest(uri, version)) {
         inferenceSuggestionMap.set(uri, suggestions);
@@ -744,11 +743,11 @@ documents.onWillSaveWaitUntil(async (params) => {
 
 // -----------------------------------ERROR STUFF--------------------------------------------------
 // Syntax error collector
-/*
+
 documents.onDidChangeContent((change) => {
   validateDocument(change.document.uri, change.document);
 });
-*/
+
 
 documents.onDidOpen((event) => {
   validateDocument(event.document.uri, event.document);

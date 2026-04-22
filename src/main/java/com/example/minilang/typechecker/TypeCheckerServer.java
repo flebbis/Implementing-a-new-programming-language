@@ -12,6 +12,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 
 import com.example.minilang.GrammarLexer;
 import com.example.minilang.GrammarParser;
+import com.example.minilang.TypeError;
 import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 /**
@@ -77,7 +78,6 @@ public class TypeCheckerServer {
         } catch (TypeException e) {
             // Type error found - convert to structured format for LSP
             System.err.print("CAUGHT TYPE EXCEPTION! " + e);
-            containsErrors = true;
             errors.add(extractErrorInfo(e));
         } catch (Exception e) {
             // Unexpected error (parse failture, internal error, etc)
@@ -98,7 +98,7 @@ public class TypeCheckerServer {
      * @param e the TypeException thrown by the type checker
      * @return TypeError with extracted position and clean message
      */
-    private static TypeError extractErrorInfo(TypeException e) {
+    public static TypeError extractErrorInfo(TypeException e) {
         String message = e.getMessage();
         int line = 0;
         int column = 0;
