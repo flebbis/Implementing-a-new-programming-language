@@ -10,6 +10,7 @@
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { URI } from 'vscode-uri';
 
 /**
  * Represents a type error returned from the Java type checker
@@ -34,43 +35,15 @@ export interface TypeError {
  * @returns Promise that resolves to an array of TypeError objects
  * @throws Error if the JAR file cannot be found, JAVA process fails, or JSON parsing fails
  */
-export async function checkTypes(source: string): Promise<TypeError[]> {
+export async function checkTypes(uri: string, source: string): Promise<TypeError[]> {
   return new Promise((resolve, reject) => {
     
-    // Try out multiple possible paths to locate the JAR file
-    const possiblePaths = [
-      path.join(__dirname, '../../target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar'),
-      path.join(__dirname, '../../../target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar'),
-      path.join(__dirname, '../target/LLVMINI-1.0-SNAPSHOT-jar-with-dependencies.jar')
-    ];
+        const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
     
-    // Find the first existing JAR file path
-    let jarPath = '';
-    for (const p of possiblePaths) {
-      console.error(`[TypeChecker] Checking path: ${p}`);
-      if (fs.existsSync(p)) {
-        jarPath = p;
-        break;
-      }
-    }
     
-    // Reject if no JAR file is found (user needs to run 'mvn package' first)
-    if (!jarPath) {
-      reject(new Error('JAR file not found. Checked: ' + possiblePaths.join(', ')));
-      return;
-    }
-    
-    // Debug logging to help diagnose issues
-    console.error(`[TypeChecker] Source length: ${source.length}`);
-    console.error(`[TypeChecker] Source preview: ${source.substring(0, 100)}`);
-    
-    /**
-     * Spawn the Java process
-     * 
-     * The Java TypeCheckerServer expects the source code as a command-line argument
-     * and outputs JSON to stdout
-     */
-    const java = spawn('java', ['-jar', jarPath, source]);
+    //const java = spawn("java", ["-jar", jarPath, URI.parse(uri).fsPath, document.getText()]);
+    console.error("SOURCE " + source + " " + uri)
+        const java = spawn('java', ['-jar', jarPath, URI.parse(uri).fsPath, source]);
     
     let stdout = '';
     let stderr = '';
@@ -120,7 +93,7 @@ export async function checkTypes(source: string): Promise<TypeError[]> {
        * Expected format - arrsay of TypeError objects
        */
       try {
-        const errors = JSON.parse(stdout);
+        const errors = JSON.parse(stdout).typeErrors;
         console.error(`[TypeChecker] Parsed ${errors.length} errors`);
         resolve(errors);
       } catch (err) {

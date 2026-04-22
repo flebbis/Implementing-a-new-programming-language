@@ -1,8 +1,8 @@
 package com.example.minilang.ast; // AST Definition
 
-import com.example.minilang.Pos;
-
 import java.util.List;
+
+import com.example.minilang.Pos;
 
 /**
  * One file to rule them all.
@@ -12,7 +12,7 @@ public class Ast {
 
     public record Program(List<Stmt> stmts, List<Func> functions) {}
 
-    public record Func(String name, List<Arg> params, Type returnType, Stmt body, Pos pos) {}
+    public record Func(String name, List<Arg> params, Type returnType, Stmt body, boolean called, Pos pos) {}
 
     public record Arg(String name, Type type, Pos pos) {}
 
@@ -20,7 +20,7 @@ public class Ast {
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
             ECall, ENot, EPower, EOpp, ECmp, ELogic,
-            EAss, EArray, EArrayIndex, EUnary, EDInt, EStringCast {}
+            EAss, EArray, EArrayIndex, EUnary, EDInt, EStringCast, EAppend, EArrayIndexAssign {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
@@ -42,9 +42,11 @@ public class Ast {
     public record EAss(String name, Exp value, AssOp op, Type type, Pos pos) implements Exp {}
     public record EArray(List<Exp> elements, Type type, Pos pos) implements Exp {}
     public record EArrayIndex(Exp array, Exp index, Type type, Pos pos) implements Exp {}
+    public record EArrayIndexAssign(Exp array, Exp index, Exp value, Type type, Pos pos) implements Exp {}
     public record EUnary(Exp exp, UnaryOp op, Type type, Pos pos) implements Exp {}
     public record EDInt(Exp exp, Type type, Pos pos) implements Exp {}
     public record EStringCast(Exp exp, Type type, Pos pos) implements Exp {}
+    public record EAppend(Exp array, Exp element, Type type, Pos pos) implements Exp {}
 
     public enum UnaryOp { INC, DEC }
 
@@ -62,14 +64,15 @@ public class Ast {
         ADD, SUB, MUL, DIV, MOD
     }
 
-    public sealed interface Type permits TInt, TDouble, TString, TBool, TUnknown, TArray {}
+    public sealed interface Type permits TInt, TDouble, TString, TBool, TUnknown, TArray, TUnresolved {}
 
     public record TInt() implements Type {}
     public record TDouble() implements Type {}
     public record TString() implements Type {}
     public record TBool() implements Type {}
     public record TUnknown() implements Type {}
-    public record TArray(Type elementType) implements Type {}
+    public record TArray(Type elementType, int arraySize) implements Type {}
+    public record TUnresolved(String id, List<Type> conditions) implements Type {} // Used for type inference, holds a list of possible types that could be inferred. If the list is empty, it means it can be any type.
 
     public interface HasPos { Pos pos(); }
     public interface HasType { Type type(); }

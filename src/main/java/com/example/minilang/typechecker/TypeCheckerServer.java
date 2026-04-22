@@ -5,7 +5,7 @@ import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.GrammarLexer;
 import com.example.minilang.GrammarParser;
-import com.google.gson.Gson;
+//import com.google.gson.Gson;
 import org.antlr.v4.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
  * - Errors - printed to stderr for debugging
  */
 public class TypeCheckerServer {
-    private static final Gson gson = new Gson();
+    //private static final Gson gson = new Gson();
     private static final TypeChecker typeChecker = new TypeChecker();
 
     public static void main(String[] args) {
@@ -36,12 +36,12 @@ public class TypeCheckerServer {
         }
         String source = args[0];
         List<TypeError> errors = checkSource(source);
-        System.out.println(gson.toJson(errors));
+        //System.out.println(gson.toJson(errors));
     }
 
     /**
      * Type checks a source code string and returns any type errors found.
-     * 
+     *
      * The process:
      * 1. Parse source code using ANTLR to get a parse tree
      * 2. Build an AST using the AstBuilderVisitor
@@ -52,7 +52,7 @@ public class TypeCheckerServer {
      * @return List of TypeError objects (empty if no errors found)
      */
 
-    private static List<TypeError> checkSource(String source) {
+    public static List<TypeError> checkSource(String source) {
         List<TypeError> errors = new ArrayList<>();
         try {
             // Lexical analysis - convert source to tokens
@@ -69,7 +69,7 @@ public class TypeCheckerServer {
             
             // Semantic analysis - type checking
             typeChecker.typeCheck(program);
-            
+
         } catch (TypeException e) {
             // Type error found - convert to structured format for LSP
             errors.add(extractErrorInfo(e));
@@ -111,27 +111,5 @@ public class TypeCheckerServer {
         return new TypeError(cleanMessage, line, column);
     }
 
-    /**
-     * Error class for JSON serialization
-     * 
-     * This class matches the TypeError interface in TypeCheckerBridge.ts
-     * Gson automatically converts this to JSON when returned to LSP
-     * */ 
-    static class TypeError {
-        String message;
-        int line;
-        int column;
-        int endLine;
-        int endColumn;
-        String severity;
-        
-        TypeError(String message, int line, int column) {
-            this.message = message;
-            this.line = line;
-            this.column = column;
-            this.endLine = line;
-            this.endColumn = column + 1;
-            this.severity = "error";
-        }
-    }
+
 }

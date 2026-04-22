@@ -1,0 +1,77 @@
+package com.example.minilang.codegen;
+
+import java.util.HashSet;
+
+import com.example.minilang.DebugMetaData;
+import com.example.minilang.ast.Ast;
+
+
+public class CodeGenerator {
+    // This class will contain the logic to convert our AST into LLVM IR code.
+    // It will likely have methods like `generateFunction`, `generateStatement`, and `generateExpression`.
+    private final StringBuilder sb;
+    private Environment environment;
+    private final StringBuilder globals;
+    private final StringBuilder globalStrings;
+    private final HashSet<String> functionVariables = new HashSet<>();
+    private final String fileName;
+
+    public CodeGenerator(StringBuilder sb, StringBuilder globals, StringBuilder globalStrings, String fileName) {
+        this.environment = new Environment();
+        this.sb = sb;
+        this.globals = globals;
+        this.globalStrings = globalStrings;
+        this.fileName = fileName;
+        // Initialize any necessary state here (e.g., symbol tables, label generators, etc.)
+    }
+
+    public void generate(Ast.Program program) {
+        //External functions
+        sb.append("declare double @pow(double, double)\n");
+        sb.append("declare i32 @printf(i8*, ...)\n");
+        sb.append("declare i8* @malloc(i64)\n");
+        sb.append("declare void @free(i8*)\n");
+        sb.append("@.fmt.int = private constant [4 x i8] c\"%d\\0A\\00\"\n");
+        sb.append("@.fmt.double = private constant [4 x i8] c\"%f\\0A\\00\"\n");
+        sb.append("@.fmt.string = private constant [4 x i8] c\"%s\\0A\\00\"\n");
+        sb.append("declare i8* @int_to_string(i32)\n");
+        sb.append("declare i8* @double_to_string(double)\n");
+        sb.append("declare i8* @bool_to_string(i1)\n");
+        sb.append("declare i8* @string_concat(i8*, i8*)\n");
+        sb.append("declare i8* @array_int_to_string(i32*, i32)\n");
+        sb.append("declare i8* @array_double_to_string(double*, i32)\n");
+        sb.append("declare i8* @array_bool_to_string(i1*, i32)\n");
+        sb.append("declare i8* @array_string_to_string(i8*, i32)\n");
+        sb.append("declare void @array_index_out_of_bounds(i32, i32)\n");
+        sb.append("%array_i32 = type { i32, i32, i32* }\n");
+        sb.append("%array_double = type { i32, i32, double* }\n");
+        sb.append("%array_i1 = type { i32, i32, i1* }\n");
+        sb.append("%array_i8ptr = type { i32, i32, i8** }\n");
+        sb.append("declare %array_i32* @array_int_copy(%array_i32*)\n");
+        sb.append("declare %array_double* @array_double_copy(%array_double*)\n");
+        sb.append("declare %array_i1* @array_bool_copy(%array_i1*)\n");
+        sb.append("declare %array_i8ptr* @array_string_copy(%array_i8ptr*)\n");
+        sb.append("\n");
+
+        DebugMetaData debugMetaData = new DebugMetaData(fileName);
+        int mainId = debugMetaData.createSubProgram("main", 1);
+        sb.append("define void @main() !dbg !").append(mainId).append(" {\n");
+        sb.append("entry:\n");
+        StatementCodeGen stmtGen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables, debugMetaData);
+        for (Ast.Stmt statement : program.stmts()) {
+            stmtGen.generateStatement(statement);
+        }
+
+        sb.append("  ret void")
+        .append(", !dbg !").append(debugMetaData.getLineId(1)).append("\n");
+        sb.append("}\n\n");
+
+        for (Ast.Func function : program.functions()) {
+            //System.out.println("Functions found: " + program.functions().size());
+            FunctionCodeGen funcGen = new FunctionCodeGen(sb, environment, globals, globalStrings, functionVariables, stmtGen, debugMetaData);
+            funcGen.generateFunction(function);
+        }
+        sb.append(debugMetaData.emit());
+    }
+
+}

@@ -24,14 +24,6 @@ public class TypeException extends RuntimeException {
         this.pos = pos;
     }
 
-    public TypeException(String message) {
-        super(message);
-        this.errorMessage = message;
-        this.expected = null;
-        this.actual = null;
-        this.pos = null;
-    }
-
     public String getExpected() {
         return expected;
     }

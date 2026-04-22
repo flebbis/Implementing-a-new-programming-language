@@ -5,6 +5,10 @@ import com.example.minilang.GrammarParser;
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
 
+import com.example.minilang.GrammarBaseVisitor;
+import com.example.minilang.GrammarParser;
+import com.example.minilang.Pos;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,6 +42,11 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 } else if (ctx.MULT_ASSIGN() != null) {
                     return new Ast.EAss(id.name(), right, Ast.AssOp.MULT_ASSIGN, type, pos);
                 }
+            } else if(left instanceof Ast.EArrayIndex arrayIndex) {
+                Ast.Type type = arrayIndex.type();
+                Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
+                return new Ast.EArrayIndexAssign(arrayIndex.array(), arrayIndex.index(), right, type, pos);
+
             }
         }
         return left;
@@ -173,6 +182,7 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
         return new Ast.ENot(exp, exp.type() , pos);
     }
 
+
     @Override
     public Ast.Exp visitPostfixExpr(GrammarParser.PostfixExprContext ctx) {
         Ast.Exp expr = visit(ctx.primary());
@@ -182,14 +192,16 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 expr = new Ast.EUnary(expr, Ast.UnaryOp.INC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
             } else if(op.DEC() != null) {
                 expr = new Ast.EUnary(expr, Ast.UnaryOp.DEC, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else if(op.exp() != null) {
+            } else if(op.DYNARR_START() != null) {
                 Ast.Exp index = visit(op.exp());
                 expr = new Ast.EArrayIndex(expr, index, expr.type(), new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine()));
-            } else {
-                // function call
+            } else if (op.PARAM_START() != null && op.PARAM_END() != null && op.DOT() == null) {
+                // function call (no dot)
                 List<Ast.Exp> args = new ArrayList<>();
-                for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
-                    args.add(visit(expCtx));
+                if (op.expSeparator() != null && op.expSeparator().exp() != null) {
+                    for(GrammarParser.ExpContext expCtx : op.expSeparator().exp()) {
+                        args.add(visit(expCtx));
+                    }
                 }
                 // Should always be an EId if it's a function call, but we can check to be safe
                 if (expr instanceof Ast.EId id) {
@@ -197,6 +209,24 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                 } else {
                     throw new IllegalArgumentException("Function call target must be an identifier");
                 }
+            } else if (op.DOT() != null) {
+                // dotted method call: DOT ID PARAM_START expSeparator PARAM_END
+                String method = op.ID().getText();
+                Pos pos = new Pos(op.getStart().getLine(), op.getStart().getCharPositionInLine());
+                if ("append".equals(method)) {
+                    // append expects a single argument
+                    Ast.Exp arg = null;
+                    if (op.expSeparator() != null && op.expSeparator().exp() != null && !op.expSeparator().exp().isEmpty()) {
+                        arg = visit(op.expSeparator().exp(0));
+                    } else {
+                        throw new IllegalArgumentException("append requires one argument");
+                    }
+                    expr = new Ast.EAppend(expr, arg, expr.type(), pos);
+                } else {
+                    throw new IllegalArgumentException("Unknown dotted method: " + method);
+                }
+            } else {
+                throw new IllegalArgumentException("Unknown postfix operator");
             }
         }
         return expr;
@@ -248,14 +278,16 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
 
         // Collect all element expressions from the comma-separated list
         List<Ast.Exp> elements = new ArrayList<>();
+        int arraySize = 0;
         if (ctx.expSeparator() != null) {
             for (GrammarParser.ExpContext expCtx : ctx.expSeparator().exp()) {
                 elements.add(visit(expCtx));
+                arraySize++;
             }
         }
 
         // Element type is unknown until the typechecker resolves it
-        return new Ast.EArray(elements, new Ast.TArray(new Ast.TUnknown()), pos);
+        return new Ast.EArray(elements, new Ast.TArray(new Ast.TUnknown(), arraySize), pos);
     }
 
 

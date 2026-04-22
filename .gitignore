@@ -48,3 +48,7 @@ target/
 *.tokens
 /.idea/
 *.iml
+*.ll
+*.s
+**/test.ml
+*/test.ml.claude/

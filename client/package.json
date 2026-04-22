@@ -1,14 +1,9 @@
 {
-  "name": "mylang-client",
-  "description": "language server client for unnamed language",
-  "author": "Cole",
+  "name": "fika-client",
+  "description": "language server client for the fika programming language",
   "license": "MIT",
-  "version": "0.0.1",
-  "publisher": "Cole",
-  "scripts": {
-    "compile": "tsc",
-    "watch": "tsc --watch"
-  },
+  "version": "0.0.4",
+  "publisher": "Grupp17A",
   "repository": {
     "type": "git",
     "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
@@ -16,15 +11,15 @@
   "engines": {
     "vscode": "^1.75.0"
   },
-  "activationEvents": [
-    "onLanguage:mylang"
-  ],
-  "main": "./out/extension.js",
   "dependencies": {
     "vscode-languageclient": "^8.1.0"
   },
   "devDependencies": {
     "@types/node": "^25.2.1",
     "@types/vscode": "^1.81.0"
+  },
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
   }
 }

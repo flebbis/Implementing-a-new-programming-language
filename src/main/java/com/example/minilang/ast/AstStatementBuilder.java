@@ -73,12 +73,12 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
         String id = ctx.ID().getText();
 
         // Default to unknown if no type annotation is given
+        Ast.Exp exp = astExpressionBuilder.visitExp(ctx.exp());
         Ast.Type type = new Ast.TUnknown();
         if (ctx.typeAnnotation() != null) {
             type = resolveTypeAnnotation(ctx.typeAnnotation());
         }
 
-        Ast.Exp exp = astExpressionBuilder.visitExp(ctx.exp());
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
         return new Ast.SInit(type, id, exp, pos);
     }
@@ -92,7 +92,8 @@ public class AstStatementBuilder extends GrammarBaseVisitor<Ast.Stmt> {
             return TypeConverter.mapType(simple.TYPE().getText());
         } else if (ctx instanceof GrammarParser.ArrayTypeContext array) {
             Ast.Type elementType = TypeConverter.mapType(array.TYPE().getText());
-            return new Ast.TArray(elementType);
+
+            return new Ast.TArray(elementType, 0);
         }
         return new Ast.TUnknown();
     }

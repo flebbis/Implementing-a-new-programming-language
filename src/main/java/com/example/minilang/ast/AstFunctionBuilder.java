@@ -5,11 +5,6 @@ import com.example.minilang.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.example.minilang.GrammarBaseVisitor;
-import com.example.minilang.GrammarParser;
-import com.example.minilang.Pos;
-import com.example.minilang.TypeConverter;
-
 public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
 
     private final AstStatementBuilder astStatementBuilder = new AstStatementBuilder();
@@ -23,7 +18,6 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
 
     @Override
     public Ast.Func visitFunc(GrammarParser.FuncContext ctx) {
-        // rule: TYPE 'func' ID '(' paramSeparator ')' block
 
         Ast.Type returnType = new Ast.TUnknown(); // Default to TUnknown if no return type is specified
         if(ctx.typeAnnotation() != null) {
@@ -63,7 +57,7 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         }
 
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-        return new Ast.Func(name, params, returnType, body, pos);
+        return new Ast.Func(name, params, returnType, body, false, pos);
     }
 
 

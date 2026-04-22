@@ -1,9 +1,8 @@
 {
-  "type": "commonjs",
-  "name": "mylang-server",
-  "description": "language server server for unnamed language",
-  "version": "0.0.1",
-  "publisher": "Cole",
+  "name": "fika-server",
+  "description": "language server server for the fika programming language",
+  "version": "0.0.4",
+  "publisher": "Grupp17A",
   "license": "MIT",
   "engines": {
     "node": "*"
@@ -12,18 +11,9 @@
     "type": "git",
     "url": "https://github.com/flebbis/Implementing-a-new-programming-language/tree/language-server"
   },
-  "scripts": {
-    "compile": "tsc",
-    "watch": "tsc --watch",
-    "start": "node ./out/server.js"
-  },
   "dependencies": {
-    "antlr4ts": "^0.5.0-alpha.4",
     "vscode-languageserver": "^8.1.0",
-    "vscode-languageserver-textdocument": "^1.0.12"
-  },
-  "devDependencies": {
-    "@types/node": "^18.5.0",
-    "typescript": "^4.9.5"
+    "vscode-languageserver-textdocument": "^1.0.8",
+    "vscode-uri": "^3.1.0"
   }
 }
