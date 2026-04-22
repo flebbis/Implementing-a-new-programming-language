@@ -38,11 +38,11 @@ export interface TypeError {
 export async function checkTypes(uri: string, source: string): Promise<TypeError[]> {
   return new Promise((resolve, reject) => {
     
-        const jarPath = path.join(__dirname, '../../LLVMINI-1.0-SNAPSHOT.jar');
+        const jarPath = path.join(__dirname, '../../../LLVMINI-1.0-SNAPSHOT.jar');
+        console.error("jarpathh: " + jarPath)
     
     
     //const java = spawn("java", ["-jar", jarPath, URI.parse(uri).fsPath, document.getText()]);
-    console.error("SOURCE " + source + " " + uri)
         const java = spawn('java', ['-jar', jarPath, URI.parse(uri).fsPath, source]);
     
     let stdout = '';
@@ -63,7 +63,7 @@ export async function checkTypes(uri: string, source: string): Promise<TypeError
      */
     java.stderr.on('data', (data) => {
       stderr += data.toString();
-      console.error(`[TypeChecker] stderr: ${data.toString()}`);
+      //console.error(`[TypeChecker] stderr: ${data.toString()}`);
     });
     
     /**
@@ -73,7 +73,7 @@ export async function checkTypes(uri: string, source: string): Promise<TypeError
     java.on('close', (code) => {
       console.error(`[TypeChecker] Process exited with code: ${code}`);
       console.error(`[TypeChecker] Full stdout: ${stdout}`);
-      console.error(`[TypeChecker] Full stderr: ${stderr}`);
+      //console.error(`[TypeChecker] Full stderr: ${stderr}`);
       
       // Non-zero exit code indicates the Java process failed
       if (code !== 0) {
@@ -93,6 +93,7 @@ export async function checkTypes(uri: string, source: string): Promise<TypeError
        * Expected format - arrsay of TypeError objects
        */
       try {
+
         const errors = JSON.parse(stdout).typeErrors;
         console.error(`[TypeChecker] Parsed ${errors.length} errors`);
         resolve(errors);

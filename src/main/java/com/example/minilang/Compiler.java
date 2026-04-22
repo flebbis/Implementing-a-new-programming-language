@@ -5,9 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import com.example.minilang.typechecker.JavaAnalysis;
-import com.example.minilang.typechecker.TypeCheckerServer;
-import com.example.minilang.typechecker.TypeError;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -16,7 +13,10 @@ import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.codegen.FunctionCodeGen;
 import com.example.minilang.codegen.StatementCodeGen;
+import com.example.minilang.typechecker.JavaAnalysis;
 import com.example.minilang.typechecker.TypeChecker;
+import com.example.minilang.typechecker.TypeCheckerServer;
+import com.example.minilang.typechecker.TypeError;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Compiler {
@@ -33,8 +33,14 @@ public class Compiler {
         String content = args.length >= 2 ? args[1] : Files.readString(filePath); // Use provided content or read from file if null
 
         try {
-            List<InferenceSuggestion> suggestions = parseFile(filePath, content, optLevel);
             List<TypeError> typeErrors = TypeCheckerServer.checkSource(content);
+            List<InferenceSuggestion> suggestions = null;
+            if(!TypeCheckerServer.containsErrors) {
+               suggestions = parseFile(filePath, content, optLevel);
+            } else {
+                System.err.println("CONTAINED ERRORS!");
+            }
+        
             JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors);
             // Output as JSON to stdout for the language server to parse
             System.err.println("JAVA ANALYSIS: " + javaAnalysis);

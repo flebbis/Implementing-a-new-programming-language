@@ -592,7 +592,7 @@ function runJavaAnalysis(uri: string, document: TextDocument): Promise<any> {
     // Handle process exit
     java.on("close", (code) => {
       connection.console.log("OUTTT " + stdout)
-      connection.console.log("errout " + stderr)
+      //connection.console.log("errout " + stderr)
 
 
       if (code !== 0) { // code 0 is success code
@@ -691,6 +691,7 @@ connection.languages.inlayHint.on(async (params) => {
   const settings = await getDocumentSettings(uri)
   if (settings.inlineTypeHint) {
     const suggestions = inferenceSuggestionMap.get(uri) ?? [];
+    connection.console.log("Suggestiosn : " + suggestions)
     return suggestions.map((s) => ({
       position: {
         line: s.line - 1,
@@ -743,9 +744,11 @@ documents.onWillSaveWaitUntil(async (params) => {
 
 // -----------------------------------ERROR STUFF--------------------------------------------------
 // Syntax error collector
+/*
 documents.onDidChangeContent((change) => {
   validateDocument(change.document.uri, change.document);
 });
+*/
 
 documents.onDidOpen((event) => {
   validateDocument(event.document.uri, event.document);

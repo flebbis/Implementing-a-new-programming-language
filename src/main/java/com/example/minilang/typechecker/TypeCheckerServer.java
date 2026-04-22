@@ -1,16 +1,19 @@
 // src/main/java/com/example/minilang/typechecker/TypeCheckerServer.java
 package com.example.minilang.typechecker;
 
-import com.example.minilang.ast.Ast;
-import com.example.minilang.ast.AstBuilderVisitor;
-import com.example.minilang.GrammarLexer;
-import com.example.minilang.GrammarParser;
-//import com.google.gson.Gson;
-import org.antlr.v4.runtime.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+
+import com.example.minilang.GrammarLexer;
+import com.example.minilang.GrammarParser;
+import com.example.minilang.ast.Ast;
+import com.example.minilang.ast.AstBuilderVisitor;
 /**
  * This works as the bridge between TypeScript LSP and Java type checker
  * 
@@ -26,6 +29,7 @@ import java.util.regex.Pattern;
 public class TypeCheckerServer {
     //private static final Gson gson = new Gson();
     private static final TypeChecker typeChecker = new TypeChecker();
+    public static boolean containsErrors = false;
 
     public static void main(String[] args) {
 
@@ -72,6 +76,8 @@ public class TypeCheckerServer {
 
         } catch (TypeException e) {
             // Type error found - convert to structured format for LSP
+            System.err.print("CAUGHT TYPE EXCEPTION! " + e);
+            containsErrors = true;
             errors.add(extractErrorInfo(e));
         } catch (Exception e) {
             // Unexpected error (parse failture, internal error, etc)
