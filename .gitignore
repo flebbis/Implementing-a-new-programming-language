@@ -53,3 +53,5 @@ target/
 **/test.ml
 */test.ml.claude/
 target/
+*.vsix
+dependency-reduced-pom.xml
