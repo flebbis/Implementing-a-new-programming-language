@@ -7,6 +7,7 @@ import java.util.List;
 import com.example.minilang.InferenceSuggestion;
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
+import com.example.minilang.TypeError;
 import com.example.minilang.ast.Ast;
 
 public class TypeChecker {
@@ -16,6 +17,7 @@ public class TypeChecker {
     private Context context;
     private Context inferenceContext;
     private List<InferenceSuggestion> inferenceSuggestions = new ArrayList<>();
+    private List<TypeError> typeErrors = new ArrayList<>();
 
     public TypeChecker() {
         this.context = new Context();
@@ -73,7 +75,12 @@ public class TypeChecker {
             if(stmt == null) {
                 continue; // for some reason this happened
             }
-            stmts.add(statementTypeChecker.typeCheck(stmt));
+            try {
+                stmts.add(statementTypeChecker.typeCheck(stmt));
+            }
+            catch (TypeException e) {
+                addTypeError(e);
+            }
         }
         return stmts;
     }
@@ -142,7 +149,11 @@ public class TypeChecker {
 
             List<Ast.Stmt> bodyStmts = new ArrayList<>();
             for (Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
-                bodyStmts.add(statementTypeChecker.typeCheck(stmt));
+                try {
+                    bodyStmts.add(statementTypeChecker.typeCheck(stmt));
+                } catch (TypeException e) {
+                    addTypeError(e);
+                }
             }
 
             boolean calledFunc = statementTypeChecker.getCalledFunctions().contains(name);
@@ -177,6 +188,15 @@ public class TypeChecker {
 
     }
 
+    private void addTypeError(TypeException e) {
+        if(!typeErrors.contains(TypeCheckerServer.extractErrorInfo(e))) {
+            typeErrors.add(TypeCheckerServer.extractErrorInfo(e));
+        }
+    }
+
+    public List<TypeError> getTypeErrors() {
+        return typeErrors;
+    }
     public List<InferenceSuggestion> getInferenceSuggestions() {
         return inferenceSuggestions;
     }

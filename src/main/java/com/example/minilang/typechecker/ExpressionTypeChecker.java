@@ -1,12 +1,12 @@
 package com.example.minilang.typechecker;
 
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
 
 public class ExpressionTypeChecker {
 
@@ -311,7 +311,7 @@ public class ExpressionTypeChecker {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
                 throw new TypeException("Cannot assign type",
-                TypeConverter.typeToString(varType) + " to variable '" + eAss.name(),
+                TypeConverter.typeToString(varType) + " to variable '" + eAss.name()+ "'",
                 TypeConverter.typeToString(value.type()),
                 eAss.pos());
             }

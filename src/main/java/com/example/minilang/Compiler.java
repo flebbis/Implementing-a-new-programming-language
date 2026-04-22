@@ -67,9 +67,7 @@ public class Compiler {
         TypeChecker typeChecker = new TypeChecker();
         try {
             Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
-        } catch (TypeException e) {
-            System.err.println("ERROR CAUGHT: " + e);
-            typeErrors.add(TypeCheckerServer.extractErrorInfo(e));
+            typeErrors.addAll(typeChecker.getTypeErrors());
         } catch (Exception e) {
             // Unexpected error (parse failture, internal error, etc)
             TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
@@ -104,16 +102,17 @@ public class Compiler {
 
             String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
             // System.err.println(typeCheckedAst.toString());
+            typeErrors = typeChecker.getTypeErrors();
             suggestions = typeChecker.getInferenceSuggestions();
 
             // ===== STEP 5: Write to File =====
-            String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
-            Path outputPath = path.getParent().resolve(outputFileName);
-            Files.writeString(outputPath, llvmCode);
-            
-        } catch (TypeException e) {
-            System.err.println("ERROR CAUGHT: " + e);
-            typeErrors.add(TypeCheckerServer.extractErrorInfo(e));
+            if(typeErrors.size() == 0) {
+                // only generate llvm if there are no type errors
+                String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
+                Path outputPath = path.getParent().resolve(outputFileName);
+                Files.writeString(outputPath, llvmCode);
+            }
+
         } catch (Exception e) {
             // Unexpected error (parse failture, internal error, etc)
             TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
