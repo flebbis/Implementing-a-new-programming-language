@@ -121,7 +121,6 @@ public class Compiler {
 
         JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors);
         // Output as JSON to stdout for the language server to parse
-        System.err.println("JAVA ANALYSIS: " + javaAnalysis.getTypeErrors() + " suggestions: " + javaAnalysis.getInferenceSuggestions());
         System.out.println(objectMapper.writeValueAsString(javaAnalysis));
 
     }
