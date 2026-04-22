@@ -35,7 +35,7 @@ public class Compiler {
 
         try {
 
-            parseFile2(filePath, content, optLevel);
+            parseFile(filePath, content, optLevel);
 
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
@@ -44,40 +44,7 @@ public class Compiler {
         }
     }
 
-
-
-    public static List<TypeError> runTypeChecker(String input) {
-        List<TypeError> typeErrors = new ArrayList<>();
-
-        // 2. Infrastructure
-        GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        GrammarParser parser = new GrammarParser(tokens);
-
-        // 3. Parse and create Tree
-        ParseTree tree = parser.program();
-
-        // 5. Output
-
-        // 6. Build AST
-        AstBuilderVisitor astBuilder = new AstBuilderVisitor();
-        Ast.Program astRoot = astBuilder.visit(tree);
-        // System.out.println("AST:      " + astRoot);
-
-        TypeChecker typeChecker = new TypeChecker();
-        try {
-            Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
-            typeErrors.addAll(typeChecker.getTypeErrors());
-        } catch (Exception e) {
-            // Unexpected error (parse failture, internal error, etc)
-            TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
-            typeErrors.add(error);
-        }
-
-        return typeErrors;
-    }
-
-    public static void parseFile2(Path path, String input, String optLevel) throws IOException {
+    public static void parseFile(Path path, String input, String optLevel) throws IOException {
         List<TypeError> typeErrors = new ArrayList<>();
         List<InferenceSuggestion> suggestions = new ArrayList<>();
         // 2. Infrastructure
@@ -123,38 +90,6 @@ public class Compiler {
         // Output as JSON to stdout for the language server to parse
         System.out.println(objectMapper.writeValueAsString(javaAnalysis));
 
-    }
-    
-    public static List<InferenceSuggestion> parseFile(Path path, String input, String optLevel) throws IOException {
-
-        // 2. Infrastructure
-        GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        GrammarParser parser = new GrammarParser(tokens);
-
-        // 3. Parse and create Tree
-        ParseTree tree = parser.program();
-
-        // 5. Output
-
-        // 6. Build AST
-        AstBuilderVisitor astBuilder = new AstBuilderVisitor();
-        Ast.Program astRoot = astBuilder.visit(tree);
-        // System.out.println("AST:      " + astRoot);
-
-        TypeChecker typeChecker = new TypeChecker();
-
-        Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
-
-        String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
-        // System.err.println(typeCheckedAst.toString());
-        List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
-
-        // ===== STEP 5: Write to File =====
-        String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
-        Path outputPath = path.getParent().resolve(outputFileName);
-        Files.writeString(outputPath, llvmCode);
-        return suggestions;
     }
 
     private static String generateLLVM(Ast.Program program, String filename) {
