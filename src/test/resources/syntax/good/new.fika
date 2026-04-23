@@ -1,0 +1,10 @@
+func test(x) {
+    x<2
+    return x 
+}
+
+test(2)
+
+print(test(2))
+
+print("test")
