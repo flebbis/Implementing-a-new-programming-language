@@ -5,8 +5,10 @@
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $false
 
-$jar = ".\LLVMINI-1.0-SNAPSHOT.jar"
-$runtime = ".\runtime\runtime.c"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+$jar = Join-Path $scriptDir "LLVMINI-1.0-SNAPSHOT.jar"
+$runtime = Join-Path $scriptDir "runtime\runtime.c"
 
 if (!(Test-Path $Source)) {
     throw "Source file not found: $Source"

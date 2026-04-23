@@ -123,6 +123,7 @@ public class TypeChecker {
 
             int offSet = 0;
 
+            // Check parameter types and add inference suggestions if needed
             for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type callType = sig.paramTypes.get(i);
 
@@ -144,9 +145,16 @@ public class TypeChecker {
             }
 
             if (!(func.body() instanceof Ast.SBlock)) {
-                throw new TypeException("Function body must be a block statement", func.body().pos());
+                addTypeError(new TypeException("Function body must be a block statement", func.body().pos()));
             }
 
+            if(!(sig.returnType instanceof Ast.TUnknown)) {
+                if(!containsReturn(((Ast.SBlock) func.body()).statements())) {
+                    addTypeError(new TypeException("Missing return statement in function " + name, func.pos()));
+                }
+            }
+
+            // Check body of statements
             List<Ast.Stmt> bodyStmts = new ArrayList<>();
             for (Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
                 try {
@@ -187,6 +195,24 @@ public class TypeChecker {
         }
 
     }
+
+
+    private boolean containsReturn(java.util.List<Ast.Stmt> stmts) {
+        for (Ast.Stmt s : stmts) {
+            if (s instanceof Ast.SReturn) {
+                return true;
+            }
+            if (s instanceof Ast.SBlock) {
+                if (containsReturn(((Ast.SBlock) s).statements())) {
+                    return true;
+                }
+            }
+            // add more cases if your AST has constructs that can contain statements
+            // e.g. Ast.SIf, Ast.SWhile, Ast.SFor with accessible nested statements
+        }
+        return false;
+    }
+
 
     private void addTypeError(TypeException e) {
         if(!typeErrors.contains(TypeCheckerServer.extractErrorInfo(e))) {

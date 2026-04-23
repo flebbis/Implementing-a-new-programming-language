@@ -118,8 +118,8 @@ public class StatementTypeChecker {
                 // If both are known, they must match
                 if (!TypeUtils.equalTypes(sInitType.elementType(), valueType.elementType())) {
                     throw new TypeException(
-                            "Incorrect initializer type, expected array of " + TypeConverter.typeToString(sInitType.elementType()) +
-                                    " but got array of " + TypeConverter.typeToString(valueType.elementType()),
+                            "Type mismatch:", TypeConverter.typeToString(sInitType.elementType()),
+                                    TypeConverter.typeToString(valueType.elementType()),
                             value.pos());
                 } else {
                     // probably because of mismatch in size
@@ -141,8 +141,8 @@ public class StatementTypeChecker {
                 return value;
             } else {
                 throw new TypeException(
-                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(sInitType) +
-                                " but got " + TypeConverter.typeToString(value.type()),
+                        "Type mismatch:", TypeConverter.typeToString(sInitType),
+                        TypeConverter.typeToString(value.type()),
                         value.pos());
             }
         }
@@ -279,8 +279,8 @@ public class StatementTypeChecker {
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
-                throw new TypeException("Function returns type " + value.type()
-                        + ", does not match declared function return type " + signature.returnType, stmt.pos());
+                throw new TypeException("Incorrect return type in function '" + currentFunction + "'",
+                         TypeConverter.typeToString(signature.returnType), TypeConverter.typeToString(value.type()), stmt.pos());
             }
         }
 

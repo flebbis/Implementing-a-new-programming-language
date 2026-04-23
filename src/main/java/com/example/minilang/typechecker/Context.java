@@ -5,6 +5,7 @@ import com.example.minilang.ast.Ast;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 public class Context {
     HashMap<String, Ast.Type> contextMap = new HashMap<>();
@@ -13,6 +14,8 @@ public class Context {
     private final LinkedList<HashMap<String, Ast.Type>> savedContextStack = new LinkedList<>();
     private int scopeLevel = 1;
 
+    private List<String> illegalIDs = List.of("print", "append", "int", "bool", "string", "func");
+
     public Context() {
         contextStack.push(contextMap); // global context
         savedContextStack.push(contextMap); // same reference
@@ -20,6 +23,11 @@ public class Context {
 
     /** Push a new id-type pair onto the stack, using the latest scope */
     public void pushToCurrentScope(String id, Ast.Type type, Pos pos) {
+
+        if(illegalIDs.contains(id)) {
+            throw new TypeException("Illegal identifier '" + id + "'", pos);
+        }
+
         if(contextStack.getFirst().containsKey(id)) {
             throw new TypeException("Duplicate context id " + id, pos);
         } else {
@@ -77,7 +85,6 @@ public class Context {
     public Ast.Type lookupFromScopeLevel(String id, int level) {
         // savedContextStack index: index 0 is the most recently pushed scope,
         // so scope level 'n' lives at index (savedContextStack.size() - n).
-        System.out.println("saved: " + savedContextStack);
         int index = savedContextStack.size() - level;
         if (index < 0 || index >= savedContextStack.size()) {
             return null;
