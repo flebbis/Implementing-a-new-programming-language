@@ -136,7 +136,7 @@ public class TypeChecker {
                     if(!TypeConverter.typeToString(callType).equals("unknown") && !TypeConverter.typeToString(callType).contains("or")) {
                         Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
                         addInferenceSuggestion(name, callType, pos);
-                        offSet += TypeConverter.typeToString(callType).length() + 1;
+                        //offSet += TypeConverter.typeToString(callType).length() + 1;
                     }
                 }
 

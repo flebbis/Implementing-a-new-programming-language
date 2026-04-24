@@ -310,6 +310,10 @@ public class ExpressionTypeChecker {
             if (varType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, value.type(), value.pos());
             } else {
+                if(varType instanceof Ast.TUnresolved) {
+                    value = unresolvedTypeHelper.addUnresolvedCondition(eAss, value.type());
+                    return new Ast.EAss(eAss.name(), value, eAss.op(), varType, eAss.pos());
+                }
                 throw new TypeException("Cannot assign expression of type " +
                 TypeConverter.typeToString(value.type()) + " to variable '" + eAss.name()+ "'", TypeConverter.typeToString(varType),
                 TypeConverter.typeToString(value.type()),
