@@ -1,6 +1,9 @@
 .vscode
 .idea
-node_modules
+# Keep root node_modules for runtime deps used by the extension/server.
+# Exclude nested installs in subprojects to keep VSIX size reasonable.
+client/node_modules
+server/node_modules
 .claude/
 target/
 src/

@@ -71,7 +71,7 @@ public class UnresolvedTypeHelper {
 
             Ast.Type newType = new Ast.TUnresolved(unresolvedType.id(), unresolvedConditions);
 
-            context.update(unresolvedType.id(), newType);
+            context.update(unresolvedType.id(), newType, unresolved.pos());
             List<Ast.Type> paramTypes = functionSignatures.get(currentFunction).paramTypes;
 
             // Update paramtypes in signatures

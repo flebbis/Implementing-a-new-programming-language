@@ -7,6 +7,7 @@ import java.util.List;
 import com.example.minilang.InferenceSuggestion;
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
+import com.example.minilang.TypeError;
 import com.example.minilang.ast.Ast;
 
 public class TypeChecker {
@@ -16,6 +17,7 @@ public class TypeChecker {
     private Context context;
     private Context inferenceContext;
     private List<InferenceSuggestion> inferenceSuggestions = new ArrayList<>();
+    private List<TypeError> typeErrors = new ArrayList<>();
 
     public TypeChecker() {
         this.context = new Context();
@@ -73,7 +75,12 @@ public class TypeChecker {
             if(stmt == null) {
                 continue; // for some reason this happened
             }
-            stmts.add(statementTypeChecker.typeCheck(stmt));
+            try {
+                stmts.add(statementTypeChecker.typeCheck(stmt));
+            }
+            catch (TypeException e) {
+                addTypeError(e);
+            }
         }
         return stmts;
     }
@@ -116,6 +123,7 @@ public class TypeChecker {
 
             int offSet = 0;
 
+            // Check parameter types and add inference suggestions if needed
             for (int i = 0; i < func.params().size(); i++) {
                 Ast.Type callType = sig.paramTypes.get(i);
 
@@ -128,21 +136,32 @@ public class TypeChecker {
                     if(!TypeConverter.typeToString(callType).equals("unknown") && !TypeConverter.typeToString(callType).contains("or")) {
                         Pos pos = new Pos(arg.pos().line, arg.pos().column + offSet);
                         addInferenceSuggestion(name, callType, pos);
-                        offSet += TypeConverter.typeToString(callType).length() + 1;
+                        //offSet += TypeConverter.typeToString(callType).length() + 1;
                     }
                 }
 
-                context.pushToCurrentScope(arg.name(), callType);
+                context.pushToCurrentScope(arg.name(), callType, arg.pos());
                 currentParams.add(new Ast.Arg(arg.name(), callType, arg.pos()));
             }
 
             if (!(func.body() instanceof Ast.SBlock)) {
-                throw new TypeException("Function body must be a block statement", func.body().pos());
+                addTypeError(new TypeException("Function body must be a block statement", func.body().pos()));
             }
 
+            if(!(sig.returnType instanceof Ast.TUnknown)) {
+                if(!containsReturn(((Ast.SBlock) func.body()).statements())) {
+                    addTypeError(new TypeException("Missing return statement in function " + name, func.pos()));
+                }
+            }
+
+            // Check body of statements
             List<Ast.Stmt> bodyStmts = new ArrayList<>();
             for (Ast.Stmt stmt : ((Ast.SBlock) func.body()).statements()) {
-                bodyStmts.add(statementTypeChecker.typeCheck(stmt));
+                try {
+                    bodyStmts.add(statementTypeChecker.typeCheck(stmt));
+                } catch (TypeException e) {
+                    addTypeError(e);
+                }
             }
 
             boolean calledFunc = statementTypeChecker.getCalledFunctions().contains(name);
@@ -177,6 +196,33 @@ public class TypeChecker {
 
     }
 
+
+    private boolean containsReturn(java.util.List<Ast.Stmt> stmts) {
+        for (Ast.Stmt s : stmts) {
+            if (s instanceof Ast.SReturn) {
+                return true;
+            }
+            if (s instanceof Ast.SBlock) {
+                if (containsReturn(((Ast.SBlock) s).statements())) {
+                    return true;
+                }
+            }
+            // add more cases if your AST has constructs that can contain statements
+            // e.g. Ast.SIf, Ast.SWhile, Ast.SFor with accessible nested statements
+        }
+        return false;
+    }
+
+
+    private void addTypeError(TypeException e) {
+        if(!typeErrors.contains(TypeCheckerServer.extractErrorInfo(e))) {
+            typeErrors.add(TypeCheckerServer.extractErrorInfo(e));
+        }
+    }
+
+    public List<TypeError> getTypeErrors() {
+        return typeErrors;
+    }
     public List<InferenceSuggestion> getInferenceSuggestions() {
         return inferenceSuggestions;
     }
