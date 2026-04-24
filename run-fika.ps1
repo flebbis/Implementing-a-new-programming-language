@@ -18,17 +18,18 @@ $ll = $Source -replace '\.fika$', '.ll'
 $exeName = [System.IO.Path]::GetFileNameWithoutExtension($Source) + ".exe"
 $exe = Join-Path "." $exeName
 
-# Hide Java stdout (JSON), but still fail if Java exits non-zero
+# Run compiler — hide stdout (JSON for LSP), let stderr (type errors) show in terminal
 java -jar $jar $Source > $null
 if ($LASTEXITCODE -ne 0) {
-    throw "Java compilation failed."
+    Write-Host "Compilation failed." -ForegroundColor Red
+    exit 1
 }
 
 if (!(Test-Path $ll)) {
-    throw "LLVM IR file was not generated: $ll"
+    Write-Host "Cannot run: errors in $Source" -ForegroundColor Red
+    exit 1
 }
 
-# Capture clang output instead of letting PowerShell treat stderr as fatal
 $clangOutput = & clang -Wno-override-module $ll $runtime -o $exe 2>&1
 $clangExit = $LASTEXITCODE
 
@@ -37,6 +38,5 @@ if ($clangExit -ne 0) {
     throw "Clang compilation failed."
 }
 
-# Run program normally so prints + runtime errors are visible
 & $exe
-$programExit = $LASTEXITCODE
+exit $LASTEXITCODE

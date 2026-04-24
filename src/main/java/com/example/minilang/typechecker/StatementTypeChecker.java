@@ -197,7 +197,6 @@ public class StatementTypeChecker {
             if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null && !(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) instanceof Ast.TUnknown)) {
                 type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
                 // Add to suggestions for language server
-                System.err.println("Found type for " + sDecl.name() + " in inference context: " + TypeConverter.typeToString(type));
                 inferenceSuggestions.add(new InferenceSuggestion(
                         sDecl.name(),
                         TypeConverter.typeToString(type),

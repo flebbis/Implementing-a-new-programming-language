@@ -30,62 +30,6 @@ import com.example.minilang.ast.AstBuilderVisitor;
 public class TypeCheckerServer {
     //private static final Gson gson = new Gson();
     private static final TypeChecker typeChecker = new TypeChecker();
-    public static boolean containsErrors = false;
-
-    public static void main(String[] args) {
-
-        if (args.length == 0) {
-            System.err.println("Usage: java -jar typechecker.jar \\\"<source-code>\\\"\"");
-            System.exit(1);
-            return;
-        }
-        String source = args[0];
-        List<TypeError> errors = checkSource(source);
-        //System.out.println(gson.toJson(errors));
-    }
-
-    /**
-     * Type checks a source code string and returns any type errors found.
-     *
-     * The process:
-     * 1. Parse source code using ANTLR to get a parse tree
-     * 2. Build an AST using the AstBuilderVisitor
-     * 3. Run the type checker on the AST
-     * 4. Catch any TypeException and convert to structured error format
-     * 
-     * @param source The complete source code to type check
-     * @return List of TypeError objects (empty if no errors found)
-     */
-
-    public static List<TypeError> checkSource(String source) {
-        List<TypeError> errors = new ArrayList<>();
-        try {
-            // Lexical analysis - convert source to tokens
-            CharStream input = CharStreams.fromString(source);
-            GrammarLexer lexer = new GrammarLexer(input);
-            CommonTokenStream tokens = new CommonTokenStream(lexer);
-
-            // Syntactic analysis - build parse tree
-            GrammarParser parser = new GrammarParser(tokens);
-            
-            // AST construction - convert parse tree to abstract syntax tree
-            AstBuilderVisitor astBuilder = new AstBuilderVisitor();
-            Ast.Program program = astBuilder.visitProgram(parser.program());
-            
-            // Semantic analysis - type checking
-            typeChecker.typeCheck(program);
-
-        } catch (TypeException e) {
-            // Type error found - convert to structured format for LSP
-            System.err.print("CAUGHT TYPE EXCEPTION! " + e);
-            errors.add(extractErrorInfo(e));
-        } catch (Exception e) {
-            // Unexpected error (parse failture, internal error, etc)
-            errors.add(new TypeError("Internal error: " + e.getMessage(), 0, 0));
-        }
-        return errors;
-    }
-
 
     /**
      * Converts a TypeException into a structured TypeError object

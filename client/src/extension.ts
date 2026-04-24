@@ -164,7 +164,20 @@ export async function activate(context: ExtensionContext) {
       }
       
       console.log(lastPath)
-      execFileSync('java', ['-jar', JAR_PATH, lastPath, fileContent]);
+      const javaResult = execFileSync('java', ['-jar', JAR_PATH, lastPath, fileContent]);
+      const json = JSON.parse(javaResult.toString());
+      const typeErrors = json.typeErrors ?? [];
+
+      if (typeErrors.length > 0) {
+        const errorText = typeErrors
+          .map((e: any) => `${e.message} (line ${e.line}, col ${e.column})`)
+          .join('\n');
+        const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
+        await vscode.languages.setTextDocumentLanguage(doc, 'asm-preview');
+        asmProvider.setContent(`Type errors — assembly not updated\n\n${errorText}`);
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
+        return; // dont proceed to llc
+      }
 
       // run llc on the .ll file to produce assembly
       const llFile = lastPath.replace(/\.(fika)$/, '.ll');
@@ -452,6 +465,24 @@ export async function activate(context: ExtensionContext) {
       const terminal = vscode.window.createTerminal('FIKA Run');
       terminal.show(true);
       terminal.sendText(`powershell -ExecutionPolicy Bypass -File "${scriptPath}" "${filePath}"`);
+    })
+  );
+
+  // Auto-run on save for .fika files
+  let debounceTimer: NodeJS.Timeout | undefined;
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      if (document.languageId !== 'fika') return;
+
+      // Only run if the assembly panel is already open
+      const asmOpen = vscode.window.visibleTextEditors
+        .some(e => e.document.uri.scheme === 'asm-preview');
+      if (!asmOpen) return;
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        showAssembly();
+      }, 300);
     })
   );
 }

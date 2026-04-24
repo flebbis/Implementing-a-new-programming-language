@@ -47,37 +47,42 @@ public class Compiler {
     public static void parseFile(Path path, String input, String optLevel) throws IOException {
         List<TypeError> typeErrors = new ArrayList<>();
         List<InferenceSuggestion> suggestions = new ArrayList<>();
-        // 2. Infrastructure
+
+        // Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         GrammarParser parser = new GrammarParser(tokens);
 
-        // 3. Parse and create Tree
+        // Parse and create Tree
         ParseTree tree = parser.program();
 
-        // 5. Output
-
-        // 6. Build AST
+        // Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        // System.out.println("AST:      " + astRoot);
 
+        // Output path
+        String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
+        Path outputPath = path.getParent().resolve(outputFileName);
+
+        // Type check
         TypeChecker typeChecker = new TypeChecker();
 
         try {
             Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
 
-            String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
-            // System.err.println(typeCheckedAst.toString());
             typeErrors = typeChecker.getTypeErrors();
             suggestions = typeChecker.getInferenceSuggestions();
 
-            // ===== STEP 5: Write to File =====
-            String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
-            Path outputPath = path.getParent().resolve(outputFileName);
             if(typeErrors.isEmpty()) {
                 // only generate llvm if there are no type errors
+                String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
                 Files.writeString(outputPath, llvmCode);
+            } else {
+                Files.deleteIfExists(outputPath);
+                for (TypeError error : typeErrors) {
+                    String fileName = path.getFileName().toString();
+                    System.err.println(fileName + ":" + error.getLine() + ":" + error.getColumn() + ": error: " + error.getMessage());
+                }
             }
 
         } catch (Exception e) {
