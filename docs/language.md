@@ -316,12 +316,12 @@ Example:
 print("Hello, FIKA!")
 print(42)
 print([1, 2, 3])
-print("1 + 2 = " + (1 + 2)")
+print("1 + 2 = " + (1 + 2))
 ```
 will output:
 ```
 Hello, FIKA!
 42
 [1, 2, 3]
-1+2 = 3
+1 + 2 = 3
 ```
