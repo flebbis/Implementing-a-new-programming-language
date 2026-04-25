@@ -9,7 +9,7 @@ public class MiniLanguageMain {
     String path;
 
     if (args.length == 0) {
-        path = "src/test/resources/syntax/good/good-1.ml";
+        path = "src/test/resources/syntax/good/good.fika";
     } else if (args.length == 1) {
         path = args[0];
     } else {

@@ -17,14 +17,22 @@ public class StatementTypeChecker {
     private HashMap<String, Signature> functionSignatures;
     private Context inferenceContext; // For tracking variable types during inference phase
     private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
+    private List<String> calledFunctions = new ArrayList<>(); // For tracking called functions during inference phase
+    private UnresolvedTypeHelper unresolvedTypeHelper;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
             Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
-        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures);
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
+        this.unresolvedTypeHelper = new UnresolvedTypeHelper(context, currentFunction, functionSignatures);
+        this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures, unresolvedTypeHelper);
+
+    }
+
+    public List<String> getCalledFunctions() {
+        return expressionTypeChecker.getCalledFunctions();
     }
 
     public Ast.Stmt typeCheck(Ast.Stmt stmt) {
@@ -92,7 +100,7 @@ public class StatementTypeChecker {
             value = checkTypeCompatabilityNonArrays(typeToCheck, value);
         }
 
-        context.pushToCurrentScope(sInit.name(), typeToCheck);
+        context.pushToCurrentScope(sInit.name(), typeToCheck, sInit.pos());
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
     
@@ -110,8 +118,8 @@ public class StatementTypeChecker {
                 // If both are known, they must match
                 if (!TypeUtils.equalTypes(sInitType.elementType(), valueType.elementType())) {
                     throw new TypeException(
-                            "Incorrect initializer type, expected array of " + TypeConverter.typeToString(sInitType.elementType()) +
-                                    " but got array of " + TypeConverter.typeToString(valueType.elementType()),
+                            "Type mismatch:", TypeConverter.typeToString(sInitType.elementType()),
+                                    TypeConverter.typeToString(valueType.elementType()),
                             value.pos());
                 } else {
                     // probably because of mismatch in size
@@ -133,8 +141,8 @@ public class StatementTypeChecker {
                 return value;
             } else {
                 throw new TypeException(
-                        "Incorrect initializer type, expected type " + TypeConverter.typeToString(sInitType) +
-                                " but got " + TypeConverter.typeToString(value.type()),
+                        "Type mismatch:", TypeConverter.typeToString(sInitType),
+                        TypeConverter.typeToString(value.type()),
                         value.pos());
             }
         }
@@ -189,7 +197,6 @@ public class StatementTypeChecker {
             if (inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) != null && !(inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl) instanceof Ast.TUnknown)) {
                 type = inferenceContext.lookupFromScopeLevel(sDecl.name(), scopeLvl);
                 // Add to suggestions for language server
-                System.err.println("Found type for " + sDecl.name() + " in inference context: " + TypeConverter.typeToString(type));
                 inferenceSuggestions.add(new InferenceSuggestion(
                         sDecl.name(),
                         TypeConverter.typeToString(type),
@@ -202,14 +209,17 @@ public class StatementTypeChecker {
         } else {
             type = sDecl.type();
         }
-        context.pushToCurrentScope(sDecl.name(), type);
+        context.pushToCurrentScope(sDecl.name(), type, sDecl.pos());
         return new Ast.SDecl(type, sDecl.name(), sDecl.pos());
     }
 
     public Ast.Stmt typeCheck(Ast.SWhile stmt) {
         context.pushNewScope();
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
-        if (!(condition.type() instanceof Ast.TBool)) {
+
+        condition = unresolvedTypeHelper.checkUnresolved(condition, List.of(new Ast.TBool()));
+
+        if (!(TypeUtils.equalTypes(condition.type(), new Ast.TBool()))) {
             throw new TypeException("Condition of while loop must be of type bool", condition.pos());
         }
 
@@ -229,7 +239,10 @@ public class StatementTypeChecker {
 
         // Check times expression, should be int
         Ast.Exp exp = expressionTypeChecker.typeCheck(stmt.times());
-        if (!(exp.type() instanceof Ast.TInt)) {
+
+        exp = unresolvedTypeHelper.checkUnresolved(exp, List.of(new Ast.TInt()));
+
+        if (!(TypeUtils.equalTypes(exp.type(), new Ast.TInt()))) {
             throw new TypeException("Expression in do statement must be of type int, type "
                     + TypeConverter.typeToString(exp.type()) + " was provided", exp.pos());
         }
@@ -258,13 +271,15 @@ public class StatementTypeChecker {
             signature.isInference = false;
         }
 
+        value = unresolvedTypeHelper.checkUnresolved(value, List.of(signature.returnType));
+
         if (!TypeUtils.equalTypes(signature.returnType, value.type())) {
             // Allow implicit conversion from int to double
             if (signature.returnType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
             } else {
-                throw new TypeException("Function returns type " + value.type()
-                        + ", does not match declared function return type " + signature.returnType, stmt.pos());
+                throw new TypeException("Incorrect return type in function '" + currentFunction + "'",
+                         TypeConverter.typeToString(signature.returnType), TypeConverter.typeToString(value.type()), stmt.pos());
             }
         }
 
@@ -286,7 +301,9 @@ public class StatementTypeChecker {
     public Ast.Stmt typeCheck(Ast.SIf stmt) {
         Ast.Exp condition = expressionTypeChecker.typeCheck(stmt.condition());
 
-        if (!(condition.type() instanceof Ast.TBool)) {
+        condition = unresolvedTypeHelper.checkUnresolved(condition, List.of(new Ast.TBool()));
+
+        if (!TypeUtils.equalTypes(condition.type(), new Ast.TBool())) {
             throw new TypeException("Condition of if statement must be of type bool", stmt.condition().pos());
         }
 
@@ -302,7 +319,6 @@ public class StatementTypeChecker {
 
         Ast.Stmt elseStmt = null;
         if(stmt.elseBranch() != null) {
-            System.out.println(stmt.elseBranch());
             if (!(stmt.elseBranch() instanceof Ast.SBlock || stmt.elseBranch() instanceof Ast.SIf)) {
                 throw new TypeException("Else branch of if statement must be a block statement",
                         stmt.elseBranch().pos());
@@ -328,6 +344,7 @@ public class StatementTypeChecker {
 
     public void setCurrentFunction(String currentFunction) {
         this.currentFunction = currentFunction;
+        expressionTypeChecker.setCurrentFunction(currentFunction);
     }
 
     public void updateInferenceContext(Context context) {

@@ -3,6 +3,7 @@ package com.example.minilang;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.antlr.v4.runtime.CharStreams;
@@ -13,62 +14,88 @@ import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.codegen.FunctionCodeGen;
 import com.example.minilang.codegen.StatementCodeGen;
+import com.example.minilang.typechecker.JavaAnalysis;
 import com.example.minilang.typechecker.TypeChecker;
+import com.example.minilang.typechecker.TypeCheckerServer;
+import com.example.minilang.typechecker.TypeException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Compiler {
 
         private static final ObjectMapper objectMapper = new ObjectMapper();
+        public static boolean isGlobal = false;
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 2) {
-            System.err.println("Usage: java -jar compiler.jar <source-content> <source-filepath>");
+        if (args.length < 1) {
+            System.err.println("Usage: java -jar compiler.jar <source-filepath> <source-content>:optional");
             System.exit(1);
         }
         String optLevel = args.length > 2 ? args[2] : "-O3";
         Path filePath = Path.of(args[0]);
+        String content = args.length >= 2 ? args[1] : Files.readString(filePath); // Use provided content or read from file if null
+
         try {
-            List<InferenceSuggestion> suggestions = parseFile(filePath, args[1], optLevel);
-            // Output as JSON to stdout for the language server to parse
-            System.out.println(objectMapper.writeValueAsString(suggestions));
+
+            parseFile(filePath, content, optLevel);
+
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace(System.err);
             System.exit(1);
         }
     }
-    
-    public static List<InferenceSuggestion> parseFile(Path path, String input, String optLevel) throws IOException {
 
-        // String input = Files.readString(path);
+    public static void parseFile(Path path, String input, String optLevel) throws IOException {
+        List<TypeError> typeErrors = new ArrayList<>();
+        List<InferenceSuggestion> suggestions = new ArrayList<>();
 
-        // 2. Infrastructure
+        // Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         GrammarParser parser = new GrammarParser(tokens);
 
-        // 3. Parse and create Tree
+        // Parse and create Tree
         ParseTree tree = parser.program();
 
-        // 5. Output
-
-        // 6. Build AST
+        // Build AST
         AstBuilderVisitor astBuilder = new AstBuilderVisitor();
         Ast.Program astRoot = astBuilder.visit(tree);
-        // System.out.println("AST:      " + astRoot);
 
-        TypeChecker typeChecker = new TypeChecker();
-        Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
-
-        String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
-        // System.err.println(typeCheckedAst.toString());
-        List<InferenceSuggestion> suggestions = typeChecker.getInferenceSuggestions();
-
-        // ===== STEP 5: Write to File =====
+        // Output path
         String outputFileName = path.getFileName().toString().replace(".fika", ".ll");
         Path outputPath = path.getParent().resolve(outputFileName);
-        Files.writeString(outputPath, llvmCode);
-        return suggestions;
+
+        // Type check
+        TypeChecker typeChecker = new TypeChecker();
+
+        try {
+            Ast.Program typeCheckedAst = typeChecker.typeCheck(astRoot);
+
+            typeErrors = typeChecker.getTypeErrors();
+            suggestions = typeChecker.getInferenceSuggestions();
+
+            if(typeErrors.isEmpty()) {
+                // only generate llvm if there are no type errors
+                String llvmCode = generateLLVM(typeCheckedAst, path.getFileName().toString());
+                Files.writeString(outputPath, llvmCode);
+            } else {
+                Files.deleteIfExists(outputPath);
+                for (TypeError error : typeErrors) {
+                    String fileName = path.getFileName().toString();
+                    System.err.println(fileName + ":" + error.getLine() + ":" + error.getColumn() + ": error: " + error.getMessage());
+                }
+            }
+
+        } catch (Exception e) {
+            // Unexpected error (parse failture, internal error, etc)
+            TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
+            typeErrors.add(error);
+        }
+
+        JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors);
+        // Output as JSON to stdout for the language server to parse
+        System.out.println(objectMapper.writeValueAsString(javaAnalysis));
+
     }
 
     private static String generateLLVM(Ast.Program program, String filename) {
@@ -121,9 +148,12 @@ public class Compiler {
         // ===== Generate Code for Global Statements =====
         StatementCodeGen stmtCodegen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables,
                 debugMetaData);
+        isGlobal = true;
         for (Ast.Stmt stmt : program.stmts()) {
             stmtCodegen.generateStatement(stmt);
         }
+        isGlobal = false;
+
 
         int lastLine = program.stmts().isEmpty()
                 ? 1
@@ -139,7 +169,6 @@ public class Compiler {
         for (Ast.Func func : program.functions()) {
             funcCodegen.generateFunction(func);
         }
-
         // Append globals and global strings before the rest
         sb.insert(0, globalStrings.toString());
         sb.insert(0, globals.toString());

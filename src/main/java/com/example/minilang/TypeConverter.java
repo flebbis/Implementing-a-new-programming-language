@@ -33,6 +33,22 @@ public class TypeConverter {
             }
             return "[" + typeToString(arr.elementType()) + "]";
         }
+        if(type instanceof Ast.TUnresolved) return unresolvedToString((Ast.TUnresolved) type);
         return "unknown";
+    }
+
+    private static String unresolvedToString(Ast.TUnresolved type) {
+        if(type.conditions().isEmpty()) {
+            return "unknown";
+        }
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < type.conditions().size(); i++) {
+            if(i > 0) {
+                sb.append(" or ");
+            }
+             sb.append(typeToString(type.conditions().get(i)));
+        }
+
+        return sb.toString();
     }
 }

@@ -85,12 +85,24 @@ export async function activate(context: ExtensionContext) {
 
   // Makes so you cant edit the assembly file
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(e => {
-        if (e.document.uri.toString() === AsmProvider.uri.toString()) {
-            vscode.commands.executeCommand('undo');
-        }
+    vscode.workspace.onDidChangeTextDocument(async e => {
+      if (e.document.uri.toString() !== AsmProvider.uri.toString()) {
+        return;
+      }
+
+
+      const active = vscode.window.activeTextEditor;
+      if (!active) return;
+
+      if (active.document.uri.toString() !== AsmProvider.uri.toString()) {
+        return;
+      }
+
+      await vscode.commands.executeCommand('undo');
+      
     })
-);
+  );
+
      
   // ------ Show assembly -------- 
   // ------- Kommer behöva ändras för att runna på att llc läser fil istället ----
@@ -104,6 +116,7 @@ export async function activate(context: ExtensionContext) {
   );
 
   let lastPath: string | undefined;
+  let fileContent: string = "";
   // keeps control for which editor is the active one 
   let activeEditor: vscode.TextEditor | undefined;
   // sets decoration to a color
@@ -133,10 +146,9 @@ export async function activate(context: ExtensionContext) {
     try {
       // get the editor and the filepath then save the file
       const editor = vscode.window.activeTextEditor;
-      let filecontent = ""
       if (editor && editor.document.uri.scheme === 'file') {
         lastPath = editor.document.uri.fsPath;
-        filecontent = editor.document.getText();
+        fileContent = editor.document.getText();
         await editor.document.save();
       }
 
@@ -152,7 +164,20 @@ export async function activate(context: ExtensionContext) {
       }
       
       console.log(lastPath)
-      execFileSync('java', ['-jar', JAR_PATH, lastPath, filecontent]);
+      const javaResult = execFileSync('java', ['-jar', JAR_PATH, lastPath, fileContent]);
+      const json = JSON.parse(javaResult.toString());
+      const typeErrors = json.typeErrors ?? [];
+
+      if (typeErrors.length > 0) {
+        const errorText = typeErrors
+          .map((e: any) => `${e.message} (line ${e.line}, col ${e.column})`)
+          .join('\n');
+        const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
+        await vscode.languages.setTextDocumentLanguage(doc, 'asm-preview');
+        asmProvider.setContent(`Type errors — assembly not updated\n\n${errorText}`);
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
+        return; // dont proceed to llc
+      }
 
       // run llc on the .ll file to produce assembly
       const llFile = lastPath.replace(/\.(fika)$/, '.ll');
@@ -199,7 +224,7 @@ export async function activate(context: ExtensionContext) {
       }
 
       for (let i = 0; i < lines.length; i++) {
-        if(lines[i].startsWith("_")) {continue}
+        if(lines[i].split(/\s+/)[0].endsWith(':')) {continue}
         lines[i] = lines[i].padEnd(maxLength + 1);
       }
 
@@ -229,8 +254,8 @@ export async function activate(context: ExtensionContext) {
         // If there is matching operand Then apply the inylayhints for the given line
         for (let i = 0; i < document.lineCount; i++) {
           const trimmed = document.lineAt(i).text.trim();
-          if(trimmed.startsWith('_') && trimmed.endsWith(':')){
-            const funcName = trimmed.match(/_([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
+          if(trimmed.split(/\s+/)[0].endsWith(':') && !trimmed.startsWith('LBB')){
+            const funcName = trimmed.match(/^_?([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
             if (!funcName) continue;
             const varStackMap = zippVarMap?.get(funcName);
             if (!varStackMap) continue;
@@ -422,6 +447,44 @@ export async function activate(context: ExtensionContext) {
       showAssembly();
     })
   )
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('fika.runProgram', async () => {
+      const editor = vscode.window.activeTextEditor;
+
+      if (!editor || editor.document.languageId !== 'fika') {
+        vscode.window.showErrorMessage('No active FIKA file.');
+        return;
+      }
+
+      await editor.document.save();
+
+      const filePath = editor.document.uri.fsPath;
+      const scriptPath = context.asAbsolutePath(path.join('.', 'run-fika.ps1'));
+
+      const terminal = vscode.window.createTerminal('FIKA Run');
+      terminal.show(true);
+      terminal.sendText(`powershell -ExecutionPolicy Bypass -File "${scriptPath}" "${filePath}"`);
+    })
+  );
+
+  // Auto-run on save for .fika files
+  let debounceTimer: NodeJS.Timeout | undefined;
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      if (document.languageId !== 'fika') return;
+
+      // Only run if the assembly panel is already open
+      const asmOpen = vscode.window.visibleTextEditors
+        .some(e => e.document.uri.scheme === 'asm-preview');
+      if (!asmOpen) return;
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        showAssembly();
+      }, 300);
+    })
+  );
 }
 
 
@@ -432,5 +495,3 @@ export function deactivate(): Thenable<void> | undefined {
   }
   return client.stop();
 }
-
-

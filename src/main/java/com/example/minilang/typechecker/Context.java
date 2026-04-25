@@ -1,9 +1,11 @@
 package com.example.minilang.typechecker;
 
+import com.example.minilang.Pos;
 import com.example.minilang.ast.Ast;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 public class Context {
     HashMap<String, Ast.Type> contextMap = new HashMap<>();
@@ -12,15 +14,22 @@ public class Context {
     private final LinkedList<HashMap<String, Ast.Type>> savedContextStack = new LinkedList<>();
     private int scopeLevel = 1;
 
+    private List<String> illegalIDs = List.of("print", "append", "int", "bool", "string", "func");
+
     public Context() {
         contextStack.push(contextMap); // global context
         savedContextStack.push(contextMap); // same reference
     }
 
     /** Push a new id-type pair onto the stack, using the latest scope */
-    public void pushToCurrentScope(String id, Ast.Type type) {
+    public void pushToCurrentScope(String id, Ast.Type type, Pos pos) {
+
+        if(illegalIDs.contains(id)) {
+            throw new TypeException("Illegal identifier '" + id + "'", pos);
+        }
+
         if(contextStack.getFirst().containsKey(id)) {
-            throw new TypeException("Duplicate context id " + id);
+            throw new TypeException("Duplicate context id " + id, pos);
         } else {
             contextStack.getFirst().put(id, type);
         }
@@ -55,14 +64,14 @@ public class Context {
     }
 
     /** Update the type of an existing variable in the context stack */
-    public void update(String id, Ast.Type newType) {
+    public void update(String id, Ast.Type newType, Pos pos) {
         for(int i = 0; i < contextStack.size(); i++) {
             if (contextStack.get(i).containsKey(id)) {
                 contextStack.get(i).put(id, newType);
                 return;
             }
         }
-        throw new TypeException("Cannot update non-existent variable " + id);
+        throw new TypeException("Cannot update non-existent variable " + id, pos);
     }
 
     public int getScopeLevel() {

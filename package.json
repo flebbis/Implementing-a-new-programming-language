@@ -58,29 +58,36 @@
             "scope": "resource",
             "type": "number",
             "default": 100,
-            "description": 
-              "Sets the maximum number of problems that can be produced/highlighted by the language server"
+            "description": "Sets the maximum number of problems that can be produced/highlighted by the language server"
           },
           "assemblyExtension.showAssemblyOnSave": {
             "scope": "resource",
             "type": "boolean",
             "default": "true",
-            "description": 
-              "``Show Assembly`` will run every time the document is saved"
+            "description": "``Show Assembly`` will run every time the document is saved"
           },
-          "languageServer.insertionIntensity" :{
+          "languageServer.insertionIntensity": {
             "scope": "resource",
             "type": "string",
-            "enum": ["nill", "onSave", "insertOnChange"],
-            "enumItemLabels": ["None", "On save", "Immediate"],
+            "enum": [
+              "nill",
+              "onSave",
+              "insertOnChange"
+            ],
+            "enumItemLabels": [
+              "None",
+              "On save",
+              "Immediate"
+            ],
             "markdownEnumDescriptions": [
-              "No insertion", 
-              "Whenever the document is saved", 
-              "Immediately when valid syntax allows inference"],
+              "No insertion",
+              "Whenever the document is saved",
+              "Immediately when valid syntax allows inference"
+            ],
             "default": "nill",
             "description": "The currently avaliabe type inference insertion options"
           },
-          "languageServer.inlineTypeHint" :{
+          "languageServer.inlineTypeHint": {
             "scope": "resource",
             "type": "boolean",
             "default": "true",
@@ -90,6 +97,12 @@
       }
     ],
     "commands": [
+      {
+        "command": "fika.runProgram",
+        "title": "Run FIKA Program",
+        "category": "FIKA",
+        "icon": "$(play)"
+      },
       {
         "command": "assembly-preview.show",
         "title": "Show Assembly"
@@ -150,14 +163,19 @@
     "menus": {
       "editor/title": [
         {
+          "command": "fika.runProgram",
+          "when": "resourceLangId == fika",
+          "group": "navigation@0"
+        },
+        {
           "submenu": "opt",
           "when": "true",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "submenu": "asm",
           "when": "true",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "opt": [
@@ -210,9 +228,14 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "vsce": "^2.15.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12",
-    "vscode-uri": "^3.1.0"
+    "vscode-uri": "^3.1.0",
+    "@types/node": "^20.19.37",
+    "antlr4ts": "^0.5.0-alpha.4",
+    "antlr4ts-cli": "^0.5.0-alpha.4",
+    "typescript": "^6.0.3"
   }
 }

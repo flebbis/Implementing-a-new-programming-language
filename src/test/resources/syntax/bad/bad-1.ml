@@ -1,3 +1,0 @@
-int i == 2; // not a valid assignment, should be a single =
-
-int x = 5;

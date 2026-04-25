@@ -57,7 +57,7 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
         }
 
         Pos pos = new Pos(ctx.getStart().getLine(), ctx.getStart().getCharPositionInLine());
-        return new Ast.Func(name, params, returnType, body, pos);
+        return new Ast.Func(name, params, returnType, body, false, pos);
     }
 
 

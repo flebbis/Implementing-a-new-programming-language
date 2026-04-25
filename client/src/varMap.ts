@@ -63,9 +63,10 @@ export function buildStackMap(asmLines: string[],profile: architecture) {
     asmLines.forEach(line => {
         const trimmed = line.trim();
         const splitLine = trimmed.split(/\s+/)[0];
-        const isFunction = splitLine.startsWith('_') && splitLine.endsWith(':')
+        const isFunction = splitLine.endsWith(':') &&
+            !splitLine.startsWith('LBB') && !splitLine.startsWith('L') && !splitLine.startsWith('.');
         if(isFunction) {
-            functionName = trimmed.match(/_([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
+            functionName = trimmed.match(/_?([a-zA-Z_][a-zA-Z0-9_]*):/)?.[1];
         }
         
         if(functionName) {

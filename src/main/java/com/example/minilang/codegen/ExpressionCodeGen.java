@@ -1,46 +1,23 @@
 package com.example.minilang.codegen;
 
+import com.example.minilang.DebugMetaData;
+import com.example.minilang.TypeConverter;
+import com.example.minilang.ast.Ast;
+import com.example.minilang.ast.Ast.*;
+
+import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
-import com.example.minilang.DebugMetaData;
-import com.example.minilang.TypeConverter;
-import com.example.minilang.ast.Ast;
-import com.example.minilang.ast.Ast.AssOp;
-import com.example.minilang.ast.Ast.EAppend;
-import com.example.minilang.ast.Ast.EArray;
-import com.example.minilang.ast.Ast.EArrayIndex;
-import com.example.minilang.ast.Ast.EArrayIndexAssign;
-import com.example.minilang.ast.Ast.EAss;
-import com.example.minilang.ast.Ast.EBool;
-import com.example.minilang.ast.Ast.ECall;
-import com.example.minilang.ast.Ast.ECmp;
-import com.example.minilang.ast.Ast.EDInt;
-import com.example.minilang.ast.Ast.EDouble;
-import com.example.minilang.ast.Ast.EId;
-import com.example.minilang.ast.Ast.EInt;
-import com.example.minilang.ast.Ast.ELogic;
-import com.example.minilang.ast.Ast.ENot;
-import com.example.minilang.ast.Ast.EOpp;
-import com.example.minilang.ast.Ast.EPower;
-import com.example.minilang.ast.Ast.EString;
-import com.example.minilang.ast.Ast.EStringCast;
-import com.example.minilang.ast.Ast.EUnary;
-import com.example.minilang.ast.Ast.Exp;
-import com.example.minilang.ast.Ast.TArray;
-import com.example.minilang.ast.Ast.TBool;
-import com.example.minilang.ast.Ast.TDouble;
-import com.example.minilang.ast.Ast.TInt;
-import com.example.minilang.ast.Ast.Type;
 import static com.example.minilang.codegen.LabelGenerator.generateLabel;
 import static com.example.minilang.codegen.RegisterGenerator.generateRegister;
+
 
 public class ExpressionCodeGen extends Helper {
     private static Map<String, String> stringRegisterToGlobal = new HashMap<>();
     private static Map<String, Integer> stringGlobalToLength = new HashMap<>();
-    private static Map<String, ArrayValue> arrayNameToValue = new HashMap<>();
     private StringBuilder sb;
     private StringBuilder globals;
     private StringBuilder globalStrings;
@@ -58,6 +35,8 @@ public class ExpressionCodeGen extends Helper {
         this.debugMetaData = debugMetadata;
         this.arrayCodeGenHelper = new ArrayCodeGenHelper(sb);
     }
+
+
 
     public String generateExpression(Exp exp) {
             if (exp instanceof EInt intExp) return generateInt(intExp);
@@ -106,7 +85,7 @@ public class ExpressionCodeGen extends Helper {
         globalStrings.append(globalName).append(" = private constant [").append(length).append(" x i8] c\"").append(value).append("\\00\"\n");
         sb.append(register).append(" = getelementptr inbounds [").append(length).append(" x i8], [").append(length).append(" x i8]* ").append(globalName).append(", i32 0, i32 0")
         .append(", !dbg !").append(debugMetaData.getLineId(stringExp.pos().line)).append("\n");
-        
+
         stringRegisterToGlobal.put(register, globalName);
         stringGlobalToLength.put(globalName, length);
         return register;
@@ -149,33 +128,11 @@ public class ExpressionCodeGen extends Helper {
     }
 
     private String generateId(EId idExp) {
-        if (!functionVariables.contains(idExp.name())){
-            if(idExp.type() instanceof Ast.TArray) {
-                return environment.lookup(idExp.name());
-            }
-
-            String variableRegister = environment.lookup(idExp.name());
-            String register = generateRegister();
-            sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister)
-            .append(", !dbg !").append(debugMetaData.getLineId(idExp.pos().line)).append("\n");
-            return register;
-
-        } else {
-            // If we are not currently in the base scope,
-            // we need to check if the variable exists in the current scope and load it if it does.
-            if(!environment.isInBaseScope()) {
-                // Check if the variable exists in the current scope
-                if(environment.existsInCurrentScope(idExp.name())) {
-                    // If it does, we need to load it from memory
-                    String variableRegister = environment.lookup(idExp.name());
-                    String register = generateRegister();
-                    sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister)
+        String variableRegister = environment.lookup(idExp.name());
+        String register = generateRegister();
+        sb.append(register).append(" = load ").append(convertType(idExp.type())).append(", ").append(convertType(idExp.type())).append("* ").append(variableRegister).append("\n")
                     .append(", !dbg !").append(debugMetaData.getLineId(idExp.pos().line)).append("\n");
-                    return register;
-                }
-            }
-            return "%" + idExp.name();
-        }
+        return register;
     }
 
     private String generateCall(ECall callExp) {
@@ -225,8 +182,8 @@ public class ExpressionCodeGen extends Helper {
         }
 
         sb.append(")")
-            .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
-            
+                .append(", !dbg !").append(debugMetaData.getLineId(callExp.pos().line)).append("\n");
+
         return register;
     }
 
@@ -252,7 +209,7 @@ public class ExpressionCodeGen extends Helper {
         String base = generateExpression(powerExp.base());
         String exponent = generateExpression(powerExp.exponent());
         String register = generateRegister();
-        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent)
+        sb.append(register).append(" = call ").append(convertType(powerExp.type())).append(" @pow(").append(convertType(powerExp.base().type())).append(" ").append(base).append(", ").append(convertType(powerExp.exponent().type())).append(" ").append(exponent).append(")")
         .append(", !dbg !").append(debugMetaData.getLineId(powerExp.pos().line)).append("\n");
         return register;
 
@@ -314,16 +271,51 @@ public class ExpressionCodeGen extends Helper {
         String right = generateExpression(cmpExp.right());
         String dbg = ", !dbg !" + debugMetaData.getLineId(cmpExp.pos().line);
         String register = generateRegister();
-        switch (cmpExp.op()) {
-            case LT -> {sb.append(register).append(" = icmp slt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
-            case GT -> {sb.append(register).append(" = icmp sgt ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
-            case LE -> {sb.append(register).append(" = icmp sle ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
-            case GE -> {sb.append(register).append(" = icmp sge ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
-            case EQ -> {sb.append(register).append(" = icmp eq ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
-            case NE -> {sb.append(register).append(" = icmp ne ").append(convertType(cmpExp.left().type())).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");}
+        String type = convertType(cmpExp.left().type());
+        if (type.equals("double")) {
+            switch (cmpExp.op()) {
+                case LT -> {
+                    sb.append(register).append(" = fcmp olt ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case GT -> {
+                    sb.append(register).append(" = fcmp ogt ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case LE -> {
+                    sb.append(register).append(" = fcmp ole ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case GE -> {
+                    sb.append(register).append(" = fcmp oge ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case EQ -> {
+                    sb.append(register).append(" = fcmp oeq ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case NE -> {
+                    sb.append(register).append(" = fcmp one ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+            }
+        } else {
+            switch (cmpExp.op()) {
+                case LT -> {
+                    sb.append(register).append(" = icmp slt ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case GT -> {
+                    sb.append(register).append(" = icmp sgt ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case LE -> {
+                    sb.append(register).append(" = icmp sle ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case GE -> {
+                    sb.append(register).append(" = icmp sge ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case EQ -> {
+                    sb.append(register).append(" = icmp eq ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+                case NE -> {
+                    sb.append(register).append(" = icmp ne ").append(type).append(" ").append(left).append(", ").append(right).append(dbg).append("\n");
+                }
+            }
         }
         return register;
-
     }
     private String generateLogic(ELogic logicExp) {
         String left = generateExpression(logicExp.left());
@@ -331,7 +323,7 @@ public class ExpressionCodeGen extends Helper {
         String register = generateRegister();
         switch (logicExp.op()) {
             case AND -> {sb.append(register).append(" = and ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(", !dbg !").append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");}
-            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(", !dbg !").append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");} 
+            case OR -> {sb.append(register).append(" = or ").append(convertType(logicExp.left().type())).append(" ").append(left).append(", ").append(right).append(", !dbg !").append(debugMetaData.getLineId(logicExp.pos().line)).append("\n");}
         }
         return register;
 
@@ -531,6 +523,7 @@ public class ExpressionCodeGen extends Helper {
 
         // Load the value
         String valueRegister = generateRegister();
+
         sb.append(valueRegister)
                 .append(" = load ")
                 .append(elementType)
