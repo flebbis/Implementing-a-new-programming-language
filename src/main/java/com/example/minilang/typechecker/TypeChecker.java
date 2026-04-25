@@ -13,7 +13,7 @@ import com.example.minilang.InferenceSuggestion;
 import com.sun.source.doctree.DocTree;
 
 public class TypeChecker {
-
+    //
     private HashMap<String, Signature> functionSignatures = new HashMap<>();
     private StatementTypeChecker statementTypeChecker;
     private Context context;
