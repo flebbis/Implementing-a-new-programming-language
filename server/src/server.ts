@@ -29,6 +29,7 @@ import { checkTypes } from "./typechecker/TypeCheckerBridge.js"
 
 import { spawn } from 'child_process';
 import * as path from 'path';
+import {MessageActionItem} from "vscode-languageclient";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -528,6 +529,25 @@ type InferenceSuggestion = {
   endColumn: number;
   replacement: string;
 };
+type TypeReplacementSuggestion = {
+    name: string;
+    currentType: string;
+    line: number;
+    column: number;
+    endLine: number;
+    endColumn: number;
+    newType: string;
+};
+
+type AnalysisResult = {
+    inferenceSuggestions?: InferenceSuggestion[];
+    typeErrors?: any[];
+    typeReplacementSuggestions?: TypeReplacementSuggestion[];
+};
+
+const autoAcceptCascade = new Map<string, boolean>();
+const cascadePassCount = new Map<string, number>();
+const MAX_CASCADE_PASSES = 10;
 
 const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 
@@ -545,22 +565,29 @@ function isLatest(uri: string, version: number): boolean {
   return true;
 }
 
-async function inferenceAnalysis(uri: string, document: TextDocument, version: number) {
-  if (isLatest(uri, version)) {
-    try {
-      // connection.console.log("run analysis...")
-      let result = await runJavaAnalysis(uri, document);
-      // Inference suggestions are returned as part of the analysis result, extract and store them in a map for later retrieval when applying edits
-      const suggestions: InferenceSuggestion[] = result.inferenceSuggestions ?? [];
 
-      if (isLatest(uri, version)) {
-        inferenceSuggestionMap.set(uri, suggestions);
-      }
+
+async function inferenceAnalysis(uri: string, document: TextDocument, version: number) {
+    if (!isLatest(uri, version)) return;
+
+    try {
+        const result = (await runJavaAnalysis(uri, document)) as AnalysisResult;
+
+        const suggestions: InferenceSuggestion[] = result.inferenceSuggestions ?? [];
+        const replacements: TypeReplacementSuggestion[] = result.typeReplacementSuggestions ?? [];
+
+        // Handle replacement popup/edit first
+        if (isLatest(uri, version) && replacements.length > 0) {
+            await handleReplacementSuggestions(uri, replacements);
+        }
+
+        // Then store inference suggestions for existing infer insert/inlay flows
+        if (isLatest(uri, version)) {
+            inferenceSuggestionMap.set(uri, suggestions);
+        }
+    } catch (error) {
+        connection.console.error("Error running Java analysis: " + error);
     }
-    catch (error) {
-      connection.console.error("Error running Java analysis: " + error);
-    }
-  }
 }
 
 // Run the Java analysis as a child process, return a promise that resolves with the parsed JSON result from Java
@@ -608,6 +635,88 @@ function runJavaAnalysis(uri: string, document: TextDocument): Promise<any> {
       }
     });
   });
+}
+// --- ADD these helpers (place below runJavaAnalysis or near inference helpers) ---
+
+async function applyReplacement(uri: string, r: TypeReplacementSuggestion): Promise<boolean> {
+    const editResult = await connection.workspace.applyEdit({
+        changes: {
+            [uri]: [
+                TextEdit.replace(
+                    {
+                        start: { line: r.line - 1, character: r.column },
+                        end: { line: r.endLine - 1, character: r.endColumn }
+                    },
+                    r.newType
+                )
+            ]
+        }
+    });
+    return !!editResult.applied;
+}
+
+async function handleReplacementSuggestions(
+    uri: string,
+    replacements: TypeReplacementSuggestion[]
+): Promise<boolean> {
+    const acceptOnce: MessageActionItem = { title: "Accept" };
+    const acceptCascade: MessageActionItem = { title: "Accept & cascade" };
+    const ignore: MessageActionItem = { title: "Ignore" };
+
+    let autoMode = autoAcceptCascade.get(uri) === true;
+    let appliedAny = false;
+
+    if ((cascadePassCount.get(uri) ?? 0) > MAX_CASCADE_PASSES) {
+        autoAcceptCascade.delete(uri);
+        cascadePassCount.delete(uri);
+        return false;
+    }
+
+    for (const r of replacements) {
+        let shouldApply = false;
+        let enableCascade = false;
+
+        if (autoMode) {
+            shouldApply = true;
+            enableCascade = true;
+        } else {
+            const action = await connection.window.showWarningMessage(
+                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}.`,
+                acceptOnce,
+                acceptCascade,
+                ignore
+            );
+
+            if (action?.title === acceptOnce.title) {
+                shouldApply = true;
+            } else if (action?.title === acceptCascade.title) {
+                shouldApply = true;
+                enableCascade = true;
+            } else {
+                shouldApply = false;
+            }
+        }
+
+        if (!shouldApply) continue;
+
+        const applied = await applyReplacement(uri, r);
+        if (applied) {
+            appliedAny = true;
+            if (enableCascade) {
+                autoAcceptCascade.set(uri, true);
+                autoMode = true;
+            }
+        }
+    }
+
+    if (appliedAny) {
+        cascadePassCount.set(uri, (cascadePassCount.get(uri) ?? 0) + 1);
+    } else {
+        autoAcceptCascade.delete(uri);
+        cascadePassCount.delete(uri);
+    }
+
+    return appliedAny;
 }
 
 

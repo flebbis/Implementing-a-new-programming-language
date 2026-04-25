@@ -7,6 +7,7 @@ import java.util.List;
 import com.example.minilang.InferenceSuggestion;
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
+import com.example.minilang.TypeReplacementSuggestion;
 import com.example.minilang.ast.Ast;
 
 public class StatementTypeChecker {
@@ -19,16 +20,17 @@ public class StatementTypeChecker {
     private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
     private List<String> calledFunctions = new ArrayList<>(); // For tracking called functions during inference phase
     private UnresolvedTypeHelper unresolvedTypeHelper;
+    private List<TypeReplacementSuggestion>  typeReplacementSuggestions;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
-            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
+            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions, List<TypeReplacementSuggestion>  typeReplacementSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
         this.unresolvedTypeHelper = new UnresolvedTypeHelper(context, currentFunction, functionSignatures);
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures, unresolvedTypeHelper);
-
+        this.typeReplacementSuggestions = typeReplacementSuggestions;
     }
 
     public List<String> getCalledFunctions() {
@@ -97,7 +99,8 @@ public class StatementTypeChecker {
         if (typeToCheck instanceof Ast.TArray) {
             typeToCheck = checkTypeCompatabilityArrays((Ast.TArray) typeToCheck, value);
         } else {
-            value = checkTypeCompatabilityNonArrays(typeToCheck, value);
+            value = checkTypeCompatabilityNonArrays(typeToCheck, value, sInit);
+
         }
 
         context.pushToCurrentScope(sInit.name(), typeToCheck, sInit.pos());
@@ -134,12 +137,21 @@ public class StatementTypeChecker {
         return sInitType;
     }
     
-    private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value) {
+    private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value,  Ast.SInit sInit) {
         if (!compareTypes(sInitType, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
             if (sInitType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
                 return value;
             } else {
+                typeReplacementSuggestions.add(new TypeReplacementSuggestion(
+                        sInit.name(),
+                        TypeConverter.typeToString(sInitType),
+                        sInit.pos().line,
+                        sInit.pos().column,
+                        sInit.pos().line,
+                        sInit.pos().column - sInitType.toString().length(),
+                        TypeConverter.typeToString(value.type())
+                ));
                 throw new TypeException(
                         "Type mismatch:", TypeConverter.typeToString(sInitType),
                         TypeConverter.typeToString(value.type()),

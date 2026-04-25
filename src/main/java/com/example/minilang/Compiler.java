@@ -48,6 +48,7 @@ public class Compiler {
     public static void parseFile(Path path, String input, String optLevel) throws IOException {
         List<TypeError> typeErrors = new ArrayList<>();
         List<InferenceSuggestion> suggestions = new ArrayList<>();
+        List<TypeReplacementSuggestion> typeReplacementSuggestions = new ArrayList<>();
 
         // Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
@@ -73,6 +74,7 @@ public class Compiler {
 
             typeErrors = typeChecker.getTypeErrors();
             suggestions = typeChecker.getInferenceSuggestions();
+            typeReplacementSuggestions = typeChecker.getTypeReplacementSuggestions();
 
             if(typeErrors.isEmpty()) {
                 // only generate llvm if there are no type errors
@@ -92,7 +94,7 @@ public class Compiler {
             typeErrors.add(error);
         }
 
-        JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors);
+        JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors, typeReplacementSuggestions);
         // Output as JSON to stdout for the language server to parse
         System.out.println(objectMapper.writeValueAsString(javaAnalysis));
 
