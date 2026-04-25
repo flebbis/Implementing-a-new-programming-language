@@ -29,7 +29,7 @@ import { checkTypes } from "./typechecker/TypeCheckerBridge.js"
 
 import { spawn } from 'child_process';
 import * as path from 'path';
-import {MessageActionItem} from "vscode-languageclient";
+import {MessageActionItem} from "vscode-languageclient/node";
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.

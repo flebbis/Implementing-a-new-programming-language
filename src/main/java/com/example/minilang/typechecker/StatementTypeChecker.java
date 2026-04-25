@@ -149,7 +149,7 @@ public class StatementTypeChecker {
                         sInit.pos().line,
                         sInit.pos().column,
                         sInit.pos().line,
-                        sInit.pos().column - sInitType.toString().length(),
+                        sInit.pos().column + TypeConverter.typeToString(sInitType).length(),
                         TypeConverter.typeToString(value.type())
                 ));
                 throw new TypeException(
