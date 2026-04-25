@@ -71,7 +71,7 @@ public class TypeChecker {
         List<Ast.Stmt> stmts = typeCheckStatements(program.stmts());
         List<Ast.Func> checkedFuncs = checkFunctionBodies(checkedFuncsPass1);
 
-        context.printBindings();
+//        context.printBindings();
 
 
         return new Ast.Program(stmts, checkedFuncs);
@@ -185,7 +185,7 @@ public class TypeChecker {
         // Is inference, add type
 
         if(sig.isInference) {
-            System.err.println("Inferred return type of function '" + name + "' as " + TypeConverter.typeToString(sig.returnType));
+//            System.err.println("Inferred return type of function '" + name + "' as " + TypeConverter.typeToString(sig.returnType));
             addInferenceSuggestion(name, sig.returnType, func.pos());
         }
 

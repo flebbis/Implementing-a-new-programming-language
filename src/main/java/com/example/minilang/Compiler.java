@@ -40,9 +40,7 @@ public class Compiler {
     public static AnalysisResult parseFile(String input, String optLevel) throws IOException {
 
  
-        // For debugging, needs to be error so not interference with JSON output
-        System.err.println("=== COMPILATION START ===");
-        System.err.println("Reading: " + input);
+
 
         // 2. Infrastructure
         GrammarLexer lexer = new GrammarLexer(CharStreams.fromString(input));
