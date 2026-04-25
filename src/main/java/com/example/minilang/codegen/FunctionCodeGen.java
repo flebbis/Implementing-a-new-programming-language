@@ -28,6 +28,8 @@ public class FunctionCodeGen {
 
     public void generateFunction(Ast.Func function) {
 
+        
+
         environment.pushNewScope();
         Helper helper = new Helper();
 
@@ -66,6 +68,20 @@ public class FunctionCodeGen {
         if(function.returnType() instanceof Ast.TUnknown) {
             sb.append("  ret void")
             .append(", !dbg !").append(debugMetaData.getLineId(function.pos().line)).append("\n");
+        }
+
+        switch (function.returnType()) {
+            case Ast.TInt() -> sb.append("  ret i32 0");
+            case Ast.TDouble() -> sb.append("  ret double 0.0");
+            case Ast.TBool() -> sb.append("  ret i1 0");
+            case Ast.TString() -> sb.append("  ret i8* null");
+            case Ast.TArray arrType -> {
+                String llvmType = helper.convertType(function.returnType());
+                sb.append("  ret ").append(llvmType).append(" null");
+            }
+            default -> throw new IllegalArgumentException(
+                    "Unsupported return type in function: " +
+                            TypeConverter.typeToString(function.returnType()));
         }
         sb.append("\n}\n");
         environment.popScope();

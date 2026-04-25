@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class Compiler {
 
         private static final ObjectMapper objectMapper = new ObjectMapper();
+        public static boolean isGlobal = false;
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
@@ -147,9 +148,12 @@ public class Compiler {
         // ===== Generate Code for Global Statements =====
         StatementCodeGen stmtCodegen = new StatementCodeGen(sb, environment, globals, globalStrings, functionVariables,
                 debugMetaData);
+        isGlobal = true;
         for (Ast.Stmt stmt : program.stmts()) {
             stmtCodegen.generateStatement(stmt);
         }
+        isGlobal = false;
+
 
         int lastLine = program.stmts().isEmpty()
                 ? 1
@@ -165,7 +169,6 @@ public class Compiler {
         for (Ast.Func func : program.functions()) {
             funcCodegen.generateFunction(func);
         }
-
         // Append globals and global strings before the rest
         sb.insert(0, globalStrings.toString());
         sb.insert(0, globals.toString());
