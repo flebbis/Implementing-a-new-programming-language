@@ -47,10 +47,10 @@ connection.onInitialize((params: InitializeParams) => {
     capabilities.workspace &&
     !!capabilities.workspace.configuration
   ),
-    hasWorkspaceFolderCapability = !!(
-      capabilities.workspace &&
-      !!capabilities.workspace.workspaceFolders
-    );
+  hasWorkspaceFolderCapability = !!(
+    capabilities.workspace &&
+    !!capabilities.workspace.workspaceFolders
+  );
   hasDiagnosticRelatedInformationCapability = !!(
     capabilities.textDocument &&
     capabilities.textDocument.publishDiagnostics &&
@@ -209,14 +209,16 @@ connection.languages.diagnostics.on(async (params) => {
   }
 })
 
+
+const alternatingCaps = /\b(([a-z][A-Z]){2,}|([A-Z][a-z]){2,})\b/g
+const notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
+const doInf = /do *(inf|\(inf\))/g
+const whileTrue = /\bwhile *(true|\(true\))/g
+
 async function validateTextDocument(document: TextDocument): Promise<Diagnostic[]> {
   //lookup document settings
   let settings = await getDocumentSettings(document.uri);
 
-  let alternatingCaps = /\b(([a-z][A-Z]){2,}|([A-Z][a-z]){2,})\b/g
-  let notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
-  let doInf = /do *(inf|\(inf\))/g
-  let whileTrue = /\bwhile *(true|\(true\))/g
   let diagnostics: Diagnostic[] = [];
 
   diagnostics = diagnosePattern(alternatingCaps, 'alternating upper/lower-case test', DiagnosticSeverity.Warning, settings, document, diagnostics);
