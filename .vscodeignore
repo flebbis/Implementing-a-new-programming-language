@@ -1,5 +1,6 @@
 .vscode
 .idea
+.github
 # Keep root node_modules for runtime deps used by the extension/server.
 # Exclude nested installs in subprojects to keep VSIX size reasonable.
 client/node_modules
@@ -7,8 +8,11 @@ server/node_modules
 .claude/
 target/
 src/
+runtime/
 tsconfig.json
 .gitignore
-LLVMiniLanguage.iml
+*.iml
 *.xml
 *.code-workspace
+*.vsix
+*.exe
