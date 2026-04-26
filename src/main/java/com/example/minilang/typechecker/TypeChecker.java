@@ -149,7 +149,7 @@ public class TypeChecker {
             }
 
             if(!(sig.returnType instanceof Ast.TUnknown)) {
-                if(!containsReturn(((Ast.SBlock) func.body()).statements())) {
+                if(!definitelyReturnsStmt(func.body())) {
                     addTypeError(new TypeException("Missing return statement in function " + name, func.pos()));
                 }
             }
@@ -197,21 +197,34 @@ public class TypeChecker {
     }
 
 
-    private boolean containsReturn(java.util.List<Ast.Stmt> stmts) {
-        for (Ast.Stmt s : stmts) {
-            if (s instanceof Ast.SReturn) {
-                return true;
-            }
-            if (s instanceof Ast.SBlock) {
-                if (containsReturn(((Ast.SBlock) s).statements())) {
-                    return true;
-                }
-            }
-            // add more cases if your AST has constructs that can contain statements
-            // e.g. Ast.SIf, Ast.SWhile, Ast.SFor with accessible nested statements
+private boolean definitelyReturns(List<Ast.Stmt> statements) {
+    for (Ast.Stmt stmt : statements) {
+        if (definitelyReturnsStmt(stmt)) {
+            return true; // once we hit a definite return, we're done
         }
-        return false;
     }
+    return false;
+}
+
+private boolean definitelyReturnsStmt(Ast.Stmt stmt) {
+    if (stmt instanceof Ast.SReturn) {
+        return true;
+    }
+    
+    if (stmt instanceof Ast.SIf ifStmt) {
+        // only definite if BOTH branches exist AND both definitely return
+        return ifStmt.elseBranch() != null
+            && definitelyReturnsStmt(ifStmt.thenBranch())
+            && definitelyReturnsStmt(ifStmt.elseBranch());
+    }
+    
+    if (stmt instanceof Ast.SBlock block) {
+        return definitelyReturns(block.statements());
+    }
+    
+    // loops, assignments, prints etc — don't guarantee a return
+    return false;
+}
 
 
     private void addTypeError(TypeException e) {
