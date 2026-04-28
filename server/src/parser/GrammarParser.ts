@@ -410,10 +410,10 @@ export class GrammarParser extends Parser {
 			this.state = 113;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la === GrammarParser.TYPE) {
+			if (_la === GrammarParser.TYPE || _la === GrammarParser.DYNARR_START) {
 				{
 				this.state = 112;
-				this.match(GrammarParser.TYPE);
+				this.typeAnnotation();
 				}
 			}
 
@@ -1766,7 +1766,7 @@ export class GrammarParser extends Parser {
 			this.state = 341;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la === GrammarParser.TYPE || _la === GrammarParser.ID) {
+			if (((((_la - 10)) & ~0x1F) === 0 && ((1 << (_la - 10)) & ((1 << (GrammarParser.TYPE - 10)) | (1 << (GrammarParser.ID - 10)) | (1 << (GrammarParser.DYNARR_START - 10)))) !== 0)) {
 				{
 				this.state = 333;
 				this.param();
@@ -1873,7 +1873,7 @@ export class GrammarParser extends Parser {
 		"fe\x03\x02\x02\x02g\x07\x03\x02\x02\x02hj\x05\x1C\x0F\x02ih\x03\x02\x02" +
 		"\x02ij\x03\x02\x02\x02jk\x03\x02\x02\x02kl\x07\x03\x02\x02lm\x07%\x02" +
 		"\x02mn\x07)\x02\x02no\x05@!\x02op\x07*\x02\x02pq\x05\x12\n\x02q\t\x03" +
-		"\x02\x02\x02rt\x07\f\x02\x02sr\x03\x02\x02\x02st\x03\x02\x02\x02tu\x03" +
+		"\x02\x02\x02rt\x05\x1C\x0F\x02sr\x03\x02\x02\x02st\x03\x02\x02\x02tu\x03" +
 		"\x02\x02\x02uv\x07%\x02\x02v\v\x03\x02\x02\x02wz\x05\x0E\b\x02xz\x05\x10" +
 		"\t\x02yw\x03\x02\x02\x02yx\x03\x02\x02\x02z\r\x03\x02\x02\x02{\x80\x05" +
 		"\x1E\x10\x02|\x80\x05 \x11\x02}\x80\x05\x14\v\x02~\x80\x05$\x13\x02\x7F" +
@@ -2190,7 +2190,9 @@ export class FuncContext extends ParserRuleContext {
 
 export class ParamContext extends ParserRuleContext {
 	public ID(): TerminalNode { return this.getToken(GrammarParser.ID, 0); }
-	public TYPE(): TerminalNode | undefined { return this.tryGetToken(GrammarParser.TYPE, 0); }
+	public typeAnnotation(): TypeAnnotationContext | undefined {
+		return this.tryGetRuleContext(0, TypeAnnotationContext);
+	}
 	constructor(parent: ParserRuleContext | undefined, invokingState: number) {
 		super(parent, invokingState);
 	}

@@ -1,9 +1,12 @@
 package com.example.minilang.ast;
 
-import com.example.minilang.*;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.example.minilang.GrammarBaseVisitor;
+import com.example.minilang.GrammarParser;
+import com.example.minilang.Pos;
+import com.example.minilang.TypeConverter;
 
 public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
 
@@ -18,7 +21,6 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
 
     @Override
     public Ast.Func visitFunc(GrammarParser.FuncContext ctx) {
-
         Ast.Type returnType = new Ast.TUnknown(); // Default to TUnknown if no return type is specified
         if(ctx.typeAnnotation() != null) {
             String returnTypeText = ctx.typeAnnotation().getText();
@@ -35,9 +37,9 @@ public class AstFunctionBuilder extends GrammarBaseVisitor<Ast.Func> {
             // Loop through each parameter and build the corresponding AST nodes
             for (GrammarParser.ParamContext p : parameterContext.param()) {
                 Pos pos = new Pos(p.getStart().getLine(), p.getStart().getCharPositionInLine());
-                //TODO: idk om denna if checken e helt rätt men något måste checkas iaf
-                if (p.TYPE() != null) {
-                    String pTypeText = p.TYPE().getText(); // Parameter type for param p
+
+                if (p.typeAnnotation() != null) {
+                    String pTypeText = p.typeAnnotation().getText(); // Parameter type for param p
                     Ast.Type pType = TypeConverter.mapType(pTypeText); // Map the parameter type string to our Ast.Type enum
                     String id = p.ID().getText();
                     params.add(new Ast.Arg(id, pType, pos));

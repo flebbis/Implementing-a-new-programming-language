@@ -42,6 +42,10 @@ public class Context {
         savedContextStack.push(newScope); // save the same reference — never removed
     }
 
+    public boolean isInCurrentScope(String id) {
+        return contextStack.getFirst().containsKey(id);
+    }
+
     /** Lookup the variable in the context */
     public Ast.Type lookupLatest(String id) {
         for(int i = 0; i < contextStack.size(); i++) {
