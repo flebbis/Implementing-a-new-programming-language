@@ -22,7 +22,6 @@ export const instructions: Record<string, arguments> = {
         isReg(arg1) && isConst(arg2) ? `Load ${val(arg2!)} into register`:
         `Copy register into register`,
 
-// In instructions:
     movl: (arg1, arg2) => {
         const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
         const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
@@ -30,7 +29,8 @@ export const instructions: Record<string, arguments> = {
         if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
         if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
         return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
-            isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                isConst(arg1) && isReg(arg2)  ? `Load ${val(arg1!)} into register` :
+                isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
                 isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
                     `Copy register into register`;
     },
@@ -42,10 +42,39 @@ export const instructions: Record<string, arguments> = {
         if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
         if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
         return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+            isConst(arg1) && isReg(arg2)  ? `Load ${val(arg1!)} into register` :
             isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
                 isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
                     `Copy register into register`;
     },
+
+    movb: (arg1, arg2) => {
+        const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
+        const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
+        if (ripDst && isConst(arg1))  return `${ripDst[1]} = ${val(arg1!)}`;
+        if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
+        if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
+        return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+            isConst(arg1) && isReg(arg2)  ? `Load ${val(arg1!)} into register` :
+                isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                    isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
+                        `Copy register into register`;
+    },
+
+    test:  (arg1, arg2) => `Test ${arg2} against ${arg1} (set flags)`,
+    testb: (arg1, arg2) => `Test boolean value (set flags for branch)`,
+    testw: (arg1, arg2) => `Test ${arg2} against ${arg1} (set flags)`,
+    testl: (arg1, arg2) => `Test ${arg2} against ${arg1} (set flags)`,
+
+    callq: (arg1) =>
+        arg1 === 'int_to_string'    ? `Convert int to string` :
+            arg1 === 'double_to_string' ? `Convert double to string` :
+                arg1 === 'bool_to_string'   ? `Convert bool to string` :
+                    arg1 === 'string_concat'    ? `Concatenate strings` :
+                        arg1 === 'printf'           ? `Print to console` :
+                            arg1 === 'malloc'           ? `Allocate heap memory` :
+                                arg1 === 'free'             ? `Free heap memory` :
+                                    `Call ${arg1}`,
 
     // arm/arm64: ldr r0, [sp, #4]
     // arm/arm64: ldr r0, x       
@@ -647,6 +676,22 @@ export const extendedInstructions: Record<string, arguments> = {
         `## call - Call Function\n\n` +
         `Calls a function and saves the return adress on the stack\n\n` +
         `- **${arg1}** — the name of the function being called\n`,
+
+    callq: (arg1) =>
+        arg1 === 'int_to_string' ?
+            `## int_to_string — Runtime Function\n\n` +
+            `Converts an integer value to its string representation\n\n` +
+            `- Takes the integer in the argument register\n` +
+            `- Returns a pointer to the string in \`%rax\`\n\n` +
+            `This is a built-in runtime function, not defined in your source code` :
+            arg1 === 'printf' ?
+                `## printf — Print to Console\n\n` +
+                `Prints a formatted string to standard output\n\n` +
+                `- **arg1** — format string pointer\n` +
+                `- **arg2** — value to print\n\n` +
+                `This is a C standard library function` :
+                // fall through to generic call extended
+                extendedInstructions.call(arg1),
 
     idiv: (arg1) =>
         `## idiv - Signed Integer Divide\n\n` +
