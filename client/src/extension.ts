@@ -174,7 +174,7 @@ export async function activate(context: ExtensionContext) {
           .join('\n');
         const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
         await vscode.languages.setTextDocumentLanguage(doc, 'asm-preview');
-        asmProvider.setContent(`Type errors — assembly not updated\n\n${errorText}`);
+        asmProvider.setContent(`Errors — assembly not updated\n\n${errorText}`);
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
         return; // dont proceed to llc
       }
