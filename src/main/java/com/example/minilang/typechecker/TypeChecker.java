@@ -88,7 +88,18 @@ public class TypeChecker {
     private List<Ast.Func> extractFunctionSignatures(List<Ast.Func> functions) {
         List<Ast.Func> funcs = new ArrayList<>();
         for (Ast.Func func : functions) {
+
             String name = func.name();
+            if(functionSignatures.containsKey(name)) {
+                addTypeError(new TypeException("Duplicate function name: " + name, func.pos()));
+                continue;
+            }
+
+            if(IllegalIDs.illegalIDs.contains(name)) {
+                addTypeError(new TypeException("Illegal function name: " + name, func.pos()));
+                continue;
+            }
+
             Ast.Type returnType = func.returnType();
 
             List<Ast.Type> paramTypes = new ArrayList<>();
