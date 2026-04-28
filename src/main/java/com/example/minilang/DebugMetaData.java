@@ -116,14 +116,45 @@ public class DebugMetaData {
     // It runs end of code generation. It takes what the maps have 
     // collected and turns into metaData text so LLVM understands
     public String emit() {
+                
+
         int moduleFlagsId = IdCounter++;
         StringBuilder sb = new StringBuilder();
+
         sb.append("!llvm.dbg.cu = !{!0}\n");
         sb.append("!llvm.module.flags = !{!").append(moduleFlagsId).append("}\n");
-        sb.append("!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)\n");
+
+        StringBuilder globalsList = new StringBuilder("!{");
+        for (int i = 0; i < globalVarEntries.size(); i++) {
+            if (i > 0) globalsList.append(", ");
+            globalsList.append("!").append(globalVarEntries.get(i)[0]); // exprId
+        }
+        globalsList.append("}");
+
+        sb.append("!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: \"mylang\", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug");
+        if (!globalVarEntries.isEmpty()) {
+            sb.append(", globals: ").append(globalsList);
+        }
+        sb.append(")\n");
+
         sb.append("!1 = !DIFile(filename: \"")
-        .append(fileName)
-        .append("\", directory: \".\")\n");
+                .append(fileName)
+                .append("\", directory: \".\")\n");
+
+
+        for (int[] entry : globalVarEntries) {
+            int exprId = entry[0], varId = entry[1], line = entry[2], typeId = entry[3];
+            sb.append("!").append(exprId)
+            .append(" = !DIGlobalVariableExpression(var: !")
+            .append(varId).append(", expr: !DIExpression())\n");
+            sb.append("!").append(varId)
+            .append(" = distinct !DIGlobalVariable(name: \"")
+            .append(globalVarNames.get(varId))
+            .append("\", scope: !0, file: !1, line: ").append(line)
+            .append(", type: !").append(typeId)  // ← add this
+            .append(", isLocal: false, isDefinition: true)\n");
+        }
+
 
         // Go through each function and its line and print out
         for (Map.Entry<String, Integer> entry : funcNameIds.entrySet()) {
@@ -131,20 +162,20 @@ public class DebugMetaData {
             // !2 = distinct !DISubprogram(name: "helloWorld", scope: !1, 
             // file: !1, line: 3, type: !DISubroutineType(types: !{}), unit: !0)
             sb.append("!").append(entry.getValue())
-            .append(" = distinct !DISubprogram(name: \"")
-            .append(entry.getKey())
-            .append("\", scope: !1, file: !1, line: ")
-            .append(funcLine)
-            .append(", type: !DISubroutineType(types: !{}), spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !{})\n");
+                    .append(" = distinct !DISubprogram(name: \"")
+                    .append(entry.getKey())
+                    .append("\", scope: !1, file: !1, line: ")
+                    .append(funcLine)
+                    .append(", type: !DISubroutineType(types: !{}), spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !{})\n");
 
             Map<Integer, Integer> innerMap = locationIds.get(entry.getKey());
             for (Map.Entry<Integer, Integer> innerEntry : innerMap.entrySet()) {
                 //!18 = !DILocation(line: 5, column: 11, scope: !17) example
                 Integer funcId = entry.getValue();
                 sb.append("!").append(innerEntry.getValue())
-                .append(" = !DILocation(line: ")
-                .append(innerEntry.getKey()).append(", scope: !")
-                .append(funcId).append(")\n");
+                        .append(" = !DILocation(line: ")
+                        .append(innerEntry.getKey()).append(", scope: !")
+                        .append(funcId).append(")\n");
             }
         }
         // Go trough each variable and print out, the name or var, funciton id, file, line number, typeID -> IDCounter 
@@ -152,19 +183,32 @@ public class DebugMetaData {
         for (int[] entry1 : localVarEntries) {
             int varId = entry1[0], funcId = entry1[1], line = entry1[2], typeId = entry1[3];
             sb.append("!").append(varId)
-            .append(" = !DILocalVariable(name: \"").append(localVarNames.get(varId))
-            .append("\", scope: !").append(funcId)
-            .append(", file: !1, line: ").append(line)
-            .append(", type: !").append(typeId).append(")\n");
+                    .append(" = !DILocalVariable(name: \"").append(localVarNames.get(varId))
+                    .append("\", scope: !").append(funcId)
+                    .append(", file: !1, line: ").append(line)
+                    .append(", type: !").append(typeId).append(")\n");
         }
         // for each type convert type to string 
         // 9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
         for (Map.Entry<String, Integer> typeEntry : typeIds.entrySet()) {
             sb.append("!").append(typeEntry.getValue())
-            .append(" = ").append(llvmTypeToDIType(typeEntry.getKey())).append("\n");
+                    .append(" = ").append(llvmTypeToDIType(typeEntry.getKey())).append("\n");
         }
         sb.append("!").append(moduleFlagsId).append(" = !{i32 2, !\"Debug Info Version\", i32 3}\n");
         return sb.toString();
+    }
+    
+    // Add these two new lists at the top of the class
+    List<int[]> globalVarEntries = new ArrayList<>();   // [exprId, varId, line]
+    Map<Integer, String> globalVarNames = new HashMap<>();
+
+    public String declareGlobalVariable(String name, String llvmType, int line) {
+        int exprId = IdCounter++;
+        int varId = IdCounter++;
+        int typeId = getOrCreateTypeId(llvmType); // reuse your existing method
+        globalVarEntries.add(new int[]{exprId, varId, line, typeId});
+        globalVarNames.put(varId, name);
+        return String.valueOf(exprId);
     }
 
 }

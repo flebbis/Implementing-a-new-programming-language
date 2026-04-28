@@ -1,6 +1,9 @@
-func add (a , b ) {
-return a + b
+x = 2
+y = 3
+
+func test() {
+    print(x)
+    z = 2
 }
 
-result = add (5 , 10)
-print ( result )
+test()
