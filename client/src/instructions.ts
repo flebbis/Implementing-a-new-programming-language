@@ -22,6 +22,31 @@ export const instructions: Record<string, arguments> = {
         isReg(arg1) && isConst(arg2) ? `Load ${val(arg2!)} into register`:
         `Copy register into register`,
 
+// In instructions:
+    movl: (arg1, arg2) => {
+        const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
+        const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
+        if (ripDst && isConst(arg1))  return `${ripDst[1]} = ${val(arg1!)}`;
+        if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
+        if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
+        return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+            isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
+                    `Copy register into register`;
+    },
+
+    movq: (arg1, arg2) => {
+        const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
+        const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
+        if (ripDst && isConst(arg1))  return `${ripDst[1]} = ${val(arg1!)}`;
+        if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
+        if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
+        return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+            isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
+                    `Copy register into register`;
+    },
+
     // arm/arm64: ldr r0, [sp, #4]
     // arm/arm64: ldr r0, x       
     ldr: (_arg1, arg2) =>
@@ -235,6 +260,8 @@ export const extendedInstructions: Record<string, arguments> = {
             `Copies data between registers during a computation\n\n` +
             `- **${arg1}** — source register\n` +
             `- **${arg2}** — destination register`,
+    movl: (arg1, arg2) => extendedInstructions.mov(arg1, arg2),
+    movq: (arg1, arg2) => extendedInstructions.mov(arg1, arg2),
 
     ldr: (arg1, arg2, arg3) =>
         isReg(arg1) && isVar(arg2) ? 
