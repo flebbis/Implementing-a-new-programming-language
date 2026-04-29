@@ -56,10 +56,11 @@ public class StatementTypeChecker {
         // Logical Check: Is this a redeclaration or an assignment?
         // We look up if the variable exists in the current scope chain.
         Ast.Type existingType = context.lookupLatest(sInit.name());
+        boolean variableExistsInCurrentScope = context.isInCurrentScope(sInit.name());
 
         // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
         // treat it as an Assignment to the existing variable.
-        if (existingType != null && typeToCheck instanceof Ast.TUnknown) {
+        if(variableExistsInCurrentScope && typeToCheck instanceof Ast.TUnknown) {
             // Transform to an expression
             Ast.EAss assign = new Ast.EAss(sInit.name(), value, Ast.AssOp.ASSIGN, existingType, sInit.pos());
             return new Ast.SExp(expressionTypeChecker.typeCheck(assign), sInit.pos());

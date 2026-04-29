@@ -493,7 +493,7 @@ export async function activate(context: ExtensionContext) {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         showAssembly();
-      }, 300);
+      }, 500);
     })
   );
 }

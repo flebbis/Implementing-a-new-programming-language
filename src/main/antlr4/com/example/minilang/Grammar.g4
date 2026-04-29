@@ -13,7 +13,7 @@ def
 func: typeAnnotation? 'func' ID '(' paramSeparator ')' block
     ;
 
-param: TYPE? ID;
+param: typeAnnotation? ID;
 
 stmt
     : simpleStmt

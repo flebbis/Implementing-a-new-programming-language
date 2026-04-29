@@ -14,8 +14,6 @@ public class Context {
     private final LinkedList<HashMap<String, Ast.Type>> savedContextStack = new LinkedList<>();
     private int scopeLevel = 1;
 
-    private List<String> illegalIDs = List.of("print", "append", "int", "bool", "string", "func");
-
     public Context() {
         contextStack.push(contextMap); // global context
         savedContextStack.push(contextMap); // same reference
@@ -24,7 +22,7 @@ public class Context {
     /** Push a new id-type pair onto the stack, using the latest scope */
     public void pushToCurrentScope(String id, Ast.Type type, Pos pos) {
 
-        if(illegalIDs.contains(id)) {
+        if(IllegalIDs.illegalIDs.contains(id)) {
             throw new TypeException("Illegal identifier '" + id + "'", pos);
         }
 
@@ -40,6 +38,10 @@ public class Context {
         HashMap<String, Ast.Type> newScope = new HashMap<>();
         contextStack.push(newScope);
         savedContextStack.push(newScope); // save the same reference — never removed
+    }
+
+    public boolean isInCurrentScope(String id) {
+        return contextStack.getFirst().containsKey(id);
     }
 
     /** Lookup the variable in the context */
