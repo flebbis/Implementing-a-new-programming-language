@@ -30,6 +30,11 @@ In the following sections, we will explore the syntax and features of FIKA in mo
 - [Types](#types)
 - [Basic Syntax](#basic-syntax)
   - [Variables](#variables)
+  - [Arithmetic Operations] (#arithmetic-operations)
+    - [Basic Arithmetic] (#basic-arithmetic)
+    - [Exponentiation] (#exponentiation)
+    - [Increment and Decrement Operators] (#increment-and-decrement-operators)
+  - [Logical Operators] (#logical-operators)
   - [Control Flow](#control-flow)
     - [If Statements](#if-statements)
     - [While Loops](#while-loops)
@@ -77,6 +82,93 @@ Example of variable declarations (both are valid):
 ```
 x;
 int x;
+```
+### Arithmetic Operations
+FIKA supports a full range of arithmetic operators for numeric types `int` and `double`.
+
+#### Basic arithmetic
+
+The standard arithmetic operators are available for performing calculations: 
+
+| Operator | Description        | Example | Result |
+|----------|--------------------|-----------|--------|
+| `+`      | Addition           | `15 + 10` | `25` |
+| `-`      | Subtraction        | `20 - 8`  | `12` |
+| `*`      | Multiplication     | `7 * 6`   | `42` |
+| `/`      | Division           | `10 / 3`  | `3`  |
+| `%`      | Modulo (remainder) | `10 % 3`  | `1`  |
+
+#### Exponentiation
+
+FIKA also supports exponentiation using the `**` operator:
+
+| Operator | Description            | Example  | Result |
+|----------|------------------------|----------|--------|
+| `**`     | Exponentiation (power) | `2 ** 3` | `8`    |
+
+#### Increment and Decrement Operators
+
+FIKA provides increment and decrement operators for increasing or decreasing a variable by 1.
+
+Example: 
+```
+x = 3
+x++
+print(x)
+
+y = 4
+y--
+print(y) 
+```
+will output:
+```
+4
+3
+```
+
+These operators can be used within any control flow construct, including `do` loops, 
+`while` loops, and `if` statements.
+
+### Logical Operators
+FIKA provides two logical operators for combining boolean expressions: `and` (logical AND) and `or` (logical OR).
+
+`and` is true only if both operands are true. 
+
+Example:
+```
+print(true and true)
+print(true and false)
+```
+will output:
+```
+true
+false
+```
+
+`or` is true if at least one operand is true.
+
+Example:
+```
+print(true or false)
+print(false or false)
+```
+will output:
+```
+true
+false
+```
+
+These operators are commonly used in conditions for `if` statements and `while` loops.
+Example:
+```
+x = 5
+if (x < 10 and x > 3) {
+    print(x)
+}
+```
+will output:
+```
+5
 ```
 
 ### Control Flow
@@ -136,18 +228,20 @@ will output:
 ```
 
 #### Do Loops
-The `do` loop is a unique control flow construct in FIKA that allows for executing a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block.
+The `do` loop is a unique control flow construct in FIKA that allows for executing a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block. The `<number>` is evaluated once when the loop is first encountered. Changing the variable
+inside the loop body does not affect the number of iterations.
 
 Example:
+
 ```
-do 5 {
+n = 3 
+do n {
+    n++
     print("Hello, FIKA!")
 }
 ```
 will output:
 ```
-Hello, FIKA!
-Hello, FIKA!
 Hello, FIKA!
 Hello, FIKA!
 Hello, FIKA!
