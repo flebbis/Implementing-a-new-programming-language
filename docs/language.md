@@ -1,11 +1,11 @@
-﻿# The FIKA Language
+﻿# The Fika Language
 
-FIKA is a modern programming language designed to make low-level concepts more accessible through a simple and readable syntax. It combines a clean, minimal design with a strong type system and interactive tooling such as live compilation and type inference feedback.
+Fika is a modern programming language designed to make low-level concepts more accessible through a simple and readable syntax. It combines a clean, minimal design with a strong type system and interactive tooling such as live compilation and type inference feedback.
 
 The language is particularly focused on education, allowing users to understand how high-level code maps to lower-level representations.
 
 ## Basic Code Example
-The following example demonstrates the basic syntax of FIKA, including variable declaration, function definition, and the use of a `do` loop to repeat an action multiple times. The types of variables and expressions are inferred automatically by the language, providing immediate feedback on the types being used.
+The following example demonstrates the basic syntax of Fika, including variable declaration, function definition, and the use of a `do` loop to repeat an action multiple times. The types of variables and expressions are inferred automatically by the language, providing immediate feedback on the types being used.
 ```
 x = 5
 
@@ -26,7 +26,7 @@ Output:
 ```
 
 ## Table of Contents
-In the following sections, we will explore the syntax and features of FIKA in more detail, including its type system, control flow constructs, functions, arrays, comments, and more on type inference. The limited standard library will also be covered.
+In the following sections, we will explore the syntax and features of Fika in more detail, including its type system, control flow constructs, functions, arrays, comments, and more on type inference. The limited standard library will also be covered.
 - [Types](#types)
 - [Basic Syntax](#basic-syntax)
   - [Variables](#variables)
@@ -52,17 +52,17 @@ In the following sections, we will explore the syntax and features of FIKA in mo
 - [Standard Library](#standard-library)
 
 ## Types
-FIKA has four primitive types: `int`, `double`, `bool`, and `string`. 
+Fika has four primitive types: `int`, `double`, `bool`, and `string`. 
 
 Dynamic arrays are also supported, and can be declared putting a primitive type inside of squared brackets. For example, `[int]` represents an array of integers, and `[string]` represents an array of strings.
-The size of the array does not need to be specified when declaring the array, as FIKA will automatically manage the memory for you.
+The size of the array does not need to be specified when declaring the array, as Fika will automatically manage the memory for you.
 
 
 ## Basic Syntax
-In the following section, the basic syntax of FIKA is explained, including variable declarations, control flow constructs, function definitions and calls, array usage, and comments. Additionally, the powerful type inference system of FIKA is discussed in more detail.
+In the following section, the basic syntax of Fika is explained, including variable declarations, control flow constructs, function definitions and calls, array usage, and comments. Additionally, the powerful type inference system of Fika is discussed in more detail.
 
 ### Variables
-Variables in FIKA are declared using a simple assignment syntax. The type of the variable is inferred from the assigned value, 
+Variables in Fika are declared using a simple assignment syntax. The type of the variable is inferred from the assigned value, 
 but can also be explicitly specified if desired.
 
 For instance, both of the following examples are valid variable initializations of an integer variable named `x`:
@@ -84,7 +84,7 @@ x;
 int x;
 ```
 ### Arithmetic Operations
-FIKA supports a full range of arithmetic operators for numeric types `int` and `double`.
+Fika supports a full range of arithmetic operators for numeric types `int` and `double`.
 
 #### Basic arithmetic
 
@@ -100,7 +100,7 @@ The standard arithmetic operators are available for performing calculations:
 
 #### Exponentiation
 
-FIKA also supports exponentiation using the `**` operator:
+Fika also supports exponentiation using the `**` operator:
 
 | Operator | Description            | Example  | Result |
 |----------|------------------------|----------|--------|
@@ -108,7 +108,7 @@ FIKA also supports exponentiation using the `**` operator:
 
 #### Increment and Decrement Operators
 
-FIKA provides increment and decrement operators for increasing or decreasing a variable by 1.
+Fika provides increment and decrement operators for increasing or decreasing a variable by 1.
 
 Example: 
 ```
@@ -130,7 +130,7 @@ These operators can be used within any control flow construct, including `do` lo
 `while` loops, and `if` statements.
 
 ### Logical Operators
-FIKA provides two logical operators for combining boolean expressions: `and` (logical AND) and `or` (logical OR).
+Fika provides two logical operators for combining boolean expressions: `and` (logical AND) and `or` (logical OR).
 
 `and` is true only if both operands are true. 
 
@@ -172,7 +172,7 @@ will output:
 ```
 
 ### Control Flow
-FIKA supports standard control flow constructs such as `if`, `else`, `while`, and a unique `do` loop that executes a block of code a specified number of times.
+Fika supports standard control flow constructs such as `if`, `else`, `while`, and a unique `do` loop that executes a block of code a specified number of times.
 
 #### If Statements
 If statements are used for conditional execution of code blocks. The syntax is straightforward, with the condition enclosed in parentheses and the code block enclosed in curly braces.
@@ -228,7 +228,7 @@ will output:
 ```
 
 #### Do Loops
-The `do` loop is a unique control flow construct in FIKA that allows for executing a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block. The `<number>` is evaluated once when the loop is first encountered. Changing the variable
+The `do` loop is a unique control flow construct in Fika that allows for executing a block of code a specified number of times. The syntax is `do <number> { ... }`, where `<number>` is the number of times to execute the block. The `<number>` is evaluated once when the loop is first encountered. Changing the variable
 inside the loop body does not affect the number of iterations.
 
 Example:
@@ -237,14 +237,14 @@ Example:
 n = 3 
 do n {
     n++
-    print("Hello, FIKA!")
+    print("Hello, Fika!")
 }
 ```
 will output:
 ```
-Hello, FIKA!
-Hello, FIKA!
-Hello, FIKA!
+Hello, Fika!
+Hello, Fika!
+Hello, Fika!
 ```
 
 ### Functions
@@ -310,7 +310,7 @@ Elements are accessed using index notation with square brackets. For example, `n
 
 
 ### Comments
-Comments in FIKA are denoted by `//` for single-line comments and `/* ... */` for multi-line comments. Comments are ignored by the compiler and are used to provide explanations or annotations within the code.
+Comments in Fika are denoted by `//` for single-line comments and `/* ... */` for multi-line comments. Comments are ignored by the compiler and are used to provide explanations or annotations within the code.
 ```
 // This is a single-line comment
 
@@ -320,18 +320,18 @@ This is a multi-line comment
 ```
 
 ### Type system and inference
-The following section explains the type system of FIKA in more detail, with a focus on its powerful type inference capabilities. The language is a statically typed language, which means that the types of variables and expressions are determined at compile time. However, FIKA also has a powerful type inference system that allows for a more concise and readable code, while still maintaining the benefits of a strongly typed language.
+The following section explains the type system of Fika in more detail, with a focus on its powerful type inference capabilities. The language is a statically typed language, which means that the types of variables and expressions are determined at compile time. However, Fika also has a powerful type inference system that allows for a more concise and readable code, while still maintaining the benefits of a strongly typed language.
 
 
 #### Simple inference example
-To understand how type inference works in FIKA, consider the following example:
+To understand how type inference works in Fika, consider the following example:
 ```
 x
 x = 5
 ```
 In this example, we declare a variable `x` without specifying its type. When we assign the value `5` to `x`, the language automatically infers that `x` is of type `int`. This means that we can use `x` in any context where an integer is expected, and the language will treat it as an integer.
 
-It is important to note that once a variable as been assigned a type, it cannot change type automatically. If x is later on assigned a value of a different type, such as a string, the language will raise a static type error inside the IDE, since `x` has already been inferred to be of type `int`. This is one of the key features of FIKA's type system, which combines the benefits of static typing with the flexibility of dynamic typing.
+It is important to note that once a variable as been assigned a type, it cannot change type automatically. If x is later on assigned a value of a different type, such as a string, the language will raise a static type error inside the IDE, since `x` has already been inferred to be of type `int`. This is one of the key features of Fika's type system, which combines the benefits of static typing with the flexibility of dynamic typing.
 
 #### int to double promotion
 Although the language is statically typed, it provides a lot of flexibility. For instance, ints are automatically promoted to doubles when used in an expression with a double, and the result will be inferred as a double. This allows for seamless integration of different types without the need for explicit type conversions.
@@ -352,13 +352,13 @@ Where result will automatically be inferred as a double, since it is the result 
 Similarly to int to double promotion, when using the `+` operator with strings, the language will automatically concatenate them into a result of type `string`. For example:
 ```
 greeting = "Hello, "
-name = "FIKA"
+name = "Fika"
 message = greeting + name
 print(message)
 ```
 will output:
 ```
-Hello, FIKA
+Hello, Fika
 ```
 
 When using the `+` operator with a string and a non-string type, the non-string type will be converted to a string before concatenation. For example:
@@ -374,7 +374,7 @@ The answer is: 42
 with `message` being inferred as a string automatically.
 
 #### Function type inference
-FIKA also supports inference of function return types. If a function does not have an explicitly specified return type, the language will infer the return type based on the types of the values returned by the function. For example:
+Fika also supports inference of function return types. If a function does not have an explicitly specified return type, the language will infer the return type based on the types of the values returned by the function. For example:
 ```
 func add(a, b) {
     return a + b
@@ -407,14 +407,14 @@ The language has a limited standard library, that includes one basic function fo
 
 Example:
 ```
-print("Hello, FIKA!")
+print("Hello, Fika!")
 print(42)
 print([1, 2, 3])
 print("1 + 2 = " + (1 + 2))
 ```
 will output:
 ```
-Hello, FIKA!
+Hello, Fika!
 42
 [1, 2, 3]
 1 + 2 = 3
