@@ -117,13 +117,16 @@ interface ServerSettings {
   maxNumberOfProblems: number;
   insertionIntensity: TypeInferenceSetting;
   inlineTypeHint: boolean;
+  autoAcceptCascade?: boolean;
 }
 
 // default settings if client does not support 
+
 const defaultSettings: ServerSettings = {
-  maxNumberOfProblems: 1000,
-  insertionIntensity: TypeInferenceSetting.Nill,
-  inlineTypeHint: false,
+    maxNumberOfProblems: 1000,
+    insertionIntensity: TypeInferenceSetting.Nill,
+    inlineTypeHint: false,
+    autoAcceptCascade: false,
 }
 
 let globalSettings: ServerSettings = defaultSettings;
@@ -665,7 +668,10 @@ async function handleReplacementSuggestions(
     const acceptCascade: MessageActionItem = { title: "Accept & cascade" };
     const ignore: MessageActionItem = { title: "Ignore" };
 
-    let autoMode = autoAcceptCascade.get(uri) === true;
+    // Read per-document/server settings; this falls back to global/default settings if client doesn't provide them
+    const docSettings = await getDocumentSettings(uri);
+    // If user enabled the setting, always auto-accept & cascade (no popup)
+    let autoMode = !!docSettings.autoAcceptCascade || autoAcceptCascade.get(uri) === true;
     let appliedAny = false;
 
     if ((cascadePassCount.get(uri) ?? 0) > MAX_CASCADE_PASSES) {
