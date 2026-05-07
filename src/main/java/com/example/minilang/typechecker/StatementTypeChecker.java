@@ -279,9 +279,7 @@ public class StatementTypeChecker {
         if (isUnkownType(signature.returnType) && !isUnkownType(value.type())) {
             signature.setReturnType(value.type());
             signature.isInference = true;
-        } else {
-            signature.isInference = false;
-        }
+        } 
 
         value = unresolvedTypeHelper.checkUnresolved(value, List.of(signature.returnType));
 

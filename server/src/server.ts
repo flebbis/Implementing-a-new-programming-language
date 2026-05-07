@@ -997,14 +997,25 @@ async function validateDocument(uri: string, document: TextDocument): Promise<vo
         const typeErrors = await checkTypes(uri, text);
         console.log(`Type checker returned ${typeErrors.length} errors`);
 
-        const typeDiagnostics = typeErrors.map((error: any) => ({
+      const typeDiagnostics = typeErrors.map((error: any) => {
+        const startLine = error.line - 1;
+        const startChar = error.column;
+
+        // Get the actual line text to find where it ends
+        const lineText = documents.get(document.uri)?.getText({
+          start: { line: startLine, character: 0 },
+          end: { line: startLine, character: 999 }
+        }) ?? '';
+
+        return {
           severity: error.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
           range: {
-            start: { line: error.line - 1, character: error.column },
-            end: { line: error.endLine, character: error.endColumn }
+            start: { line: startLine, character: startChar },
+            end: { line: startLine, character: lineText.trimEnd().length }
           },
           message: error.message
-        }));
+        };
+      });
 
         allDiagnostics.push(...typeDiagnostics);
 

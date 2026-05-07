@@ -174,7 +174,7 @@ export async function activate(context: ExtensionContext) {
           .join('\n');
         const doc = await vscode.workspace.openTextDocument(AsmProvider.uri);
         await vscode.languages.setTextDocumentLanguage(doc, 'asm-preview');
-        asmProvider.setContent(`Type errors — assembly not updated\n\n${errorText}`);
+        asmProvider.setContent(`Errors — assembly not updated\n\n${errorText}`);
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Two, true);
         return; // dont proceed to llc
       }
@@ -192,7 +192,13 @@ export async function activate(context: ExtensionContext) {
 
       // filter away lines. that start with (. or ends with :) ,l_, ;, !==, 
       // take away the comments from the assembly output
-       const filtered = asm.split('\n')
+        const globalNames = new Set(
+            (llContent.match(/^@([a-zA-Z_][a-zA-Z0-9_]*)\s*=/gm) ?? [])
+                .map((m: string) => m.match(/^@([a-zA-Z_][a-zA-Z0-9_]*)/)?.[1])
+                .filter(Boolean)
+        );
+
+        const filtered = asm.split('\n')
       .filter((line: string) => !line.trim().startsWith('.') || line.trim().startsWith('.LBB'))
       .filter((line: string) => !line.trim().startsWith(';'))
       .filter((line: string) => !line.trim().startsWith('l_'))
@@ -200,6 +206,11 @@ export async function activate(context: ExtensionContext) {
       .filter((line: string) => line.trim() !== '')
       .filter((line: string) => !line.trim().startsWith('@'))
       .filter((line: string) => (!line.trim().startsWith('L') && !line.endsWith(':')) || line.startsWith('LBB'))
+            .filter((line: string) => {
+                const trimmed = line.trim();
+                if (!trimmed.endsWith(':')) return true;
+                const labelName = trimmed.slice(0, -1); // remove trailing colon
+                return !globalNames.has(labelName) && !globalNames.has('_' + labelName);})
       .map((line: string) => line.split(";")[0].split('  #')[0].split(' @')[0].trimEnd())
       .join('\n');
 
