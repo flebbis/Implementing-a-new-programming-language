@@ -53,6 +53,7 @@ public class ExpressionTypeChecker {
             case Ast.EStringCast eStringCast -> typeCheck(eStringCast);
             case Ast.EAppend eAppend -> typeCheck(eAppend);
             case Ast.EArrayIndexAssign eArrayIndexAssign -> typeCheck(eArrayIndexAssign);
+            case Ast.EArraySize eArraySize -> typeCheck(eArraySize);
 
             // More to be implemented
             default -> throw new TypeException("Unknown expression type: " + exp.getClass().getSimpleName(), exp.pos());
@@ -686,5 +687,22 @@ public class ExpressionTypeChecker {
         }
 
         return new Ast.EArrayIndexAssign(array, index, value, arrayType.elementType(), eArrayIndexAssign.pos());
+    }
+
+    public Ast.Exp typeCheck(Ast.EArraySize eArrayLength) {
+        Ast.Exp array = typeCheck(eArrayLength.array()); // Type check the array expression
+
+        if (array.type() instanceof Ast.TUnknown) {
+            //simply return the array as is with TUnknown, we're in first pass
+            Ast.TUnknown resultType = new Ast.TUnknown();
+            return new Ast.EArraySize(array, resultType, eArrayLength.pos());
+        }
+
+        if (!(array.type() instanceof Ast.TArray)) {
+            throw new TypeException("Attempting to get length of a non-array type: " + TypeConverter.typeToString(array.type()), array.pos());
+        }
+
+        // The result type of length is always int
+        return new Ast.EArraySize(array, new Ast.TInt(), eArrayLength.pos());
     }
 }

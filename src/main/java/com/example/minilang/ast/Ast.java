@@ -20,7 +20,7 @@ public class Ast {
     // 'sealed' = only the specific records listed below can implement this.
     public sealed interface Exp extends HasPos, HasType permits EInt, EDouble, EString, EBool, EId,
             ECall, ENot, EPower, EOpp, ECmp, ELogic,
-            EAss, EArray, EArrayIndex, EUnary, EDInt, EStringCast, EAppend, EArrayIndexAssign {}
+            EAss, EArray, EArrayIndex, EUnary, EDInt, EStringCast, EAppend, EArrayIndexAssign, EArraySize {}
 
     public sealed interface Stmt extends HasPos permits BlockStmt, SimpleStmt  {}
     public sealed interface BlockStmt extends Stmt permits SWhile, SDo, SIf, SBlock {}
@@ -47,6 +47,7 @@ public class Ast {
     public record EDInt(Exp exp, Type type, Pos pos) implements Exp {}
     public record EStringCast(Exp exp, Type type, Pos pos) implements Exp {}
     public record EAppend(Exp array, Exp element, Type type, Pos pos) implements Exp {}
+    public record EArraySize(Exp array, Type type, Pos pos) implements Exp {}
 
     public enum UnaryOp { INC, DEC }
 

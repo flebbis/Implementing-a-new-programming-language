@@ -58,6 +58,7 @@ public class ExpressionCodeGen extends Helper {
             if (exp instanceof EDInt dIntExp) return generateDInt(dIntExp);
             if (exp instanceof EStringCast sStringCast) return generateStringCast(sStringCast);
             if (exp instanceof EAppend appendExp) return generateAppend(appendExp);
+            if (exp instanceof EArraySize arraySizeExp) return generateArraySize(arraySizeExp);
             return "0";
     }
 
@@ -819,6 +820,28 @@ public class ExpressionCodeGen extends Helper {
     private void generateStringCastBool(String value, String register, String dbg) {
         sb.append("  ").append(register)
                 .append(" = call i8* @bool_to_string(i1 ").append(value).append(")").append(dbg).append("\n");
+    }
+
+    private String generateArraySize(Ast.EArraySize arraySizeExp) {
+        String dbg = ", !dbg !" + debugMetaData.getLineId(arraySizeExp.pos().line);
+        String arrayRegister = generateExpression(arraySizeExp.array());
+        String structType = getArrayStructType(arraySizeExp.array().type());
+        String sizePtr = generateRegister();
+        sb.append(sizePtr)
+                .append(" = getelementptr inbounds ")
+                .append(structType)
+                .append(", ")
+                .append(structType)
+                .append("* ")
+                .append(arrayRegister)
+                .append(", i32 0, i32 0").append(dbg).append("\n");
+
+        String sizeValue = generateRegister();
+        sb.append(sizeValue)
+                .append(" = load i32, i32* ")
+                .append(sizePtr)
+                .append(dbg).append("\n");
+        return sizeValue;
     }
 
 }

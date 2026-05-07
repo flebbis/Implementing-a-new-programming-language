@@ -222,8 +222,14 @@ public class AstExpressionBuilder extends GrammarBaseVisitor<Ast.Exp> {
                         throw new IllegalArgumentException("append requires one argument");
                     }
                     expr = new Ast.EAppend(expr, arg, expr.type(), pos);
+                } else if("size".equals(method)) {
+                    // size expects no arguments
+                    if (op.expSeparator() != null && op.expSeparator().exp() != null && !op.expSeparator().exp().isEmpty()) {
+                        throw new IllegalArgumentException("size does not take any arguments");
+                    }
+                    expr = new Ast.EArraySize(expr, new Ast.TInt(), pos);
                 } else {
-                    throw new IllegalArgumentException("Unknown dotted method: " + method);
+                    throw new IllegalArgumentException("Unknown method: " + method);
                 }
             } else {
                 throw new IllegalArgumentException("Unknown postfix operator");
