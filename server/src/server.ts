@@ -668,10 +668,10 @@ async function handleReplacementSuggestions(
     const acceptCascade: MessageActionItem = { title: "Accept & cascade" };
     const ignore: MessageActionItem = { title: "Ignore" };
 
-    // Read per-document/server settings; this falls back to global/default settings if client doesn't provide them
     const docSettings = await getDocumentSettings(uri);
-    // If user enabled the setting, always auto-accept & cascade (no popup)
-    let autoMode = !!docSettings.autoCascadeTypeChanges || autoAcceptCascade.get(uri) === true;
+
+    // If setting is autoAccept, never prompt
+    let autoMode = docSettings.autoCascadeTypeChanges === "autoAccept";
     let appliedAny = false;
 
     if ((cascadePassCount.get(uri) ?? 0) > MAX_CASCADE_PASSES) {
