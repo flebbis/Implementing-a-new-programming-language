@@ -87,6 +87,12 @@
             "default": "nill",
             "description": "The currently avaliabe type inference insertion options"
           },
+          "languageServer.autoCascadeTypeChanges": {
+            "type": "boolean",
+            "default": false,
+            "description": "Automatically accept and cascade type change suggestions",
+            "scope": "resource"
+          },
           "languageServer.inlineTypeHint": {
             "scope": "resource",
             "type": "boolean",
