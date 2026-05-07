@@ -114,10 +114,10 @@ enum TypeInferenceSetting {
 
 // global defult settings if client does not support workspace/configuration requests
 interface ServerSettings {
-  maxNumberOfProblems: number;
-  insertionIntensity: TypeInferenceSetting;
-  inlineTypeHint: boolean;
-    autoCascadeTypeChanges: boolean;
+    maxNumberOfProblems: number;
+    insertionIntensity: TypeInferenceSetting;
+    inlineTypeHint: boolean;
+    autoCascadeTypeChanges: 'ask' | 'autoAccept';
 }
 
 // default settings if client does not support 
@@ -126,7 +126,7 @@ const defaultSettings: ServerSettings = {
     maxNumberOfProblems: 1000,
     insertionIntensity: TypeInferenceSetting.Nill,
     inlineTypeHint: false,
-    autoCascadeTypeChanges: false,
+    autoCascadeTypeChanges: 'autoAccept',
 }
 
 let globalSettings: ServerSettings = defaultSettings;

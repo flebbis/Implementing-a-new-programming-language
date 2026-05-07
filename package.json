@@ -88,9 +88,17 @@
             "description": "The currently avaliabe type inference insertion options"
           },
           "languageServer.autoCascadeTypeChanges": {
-            "type": "boolean",
-            "default": false,
-            "description": "Automatically accept and cascade type change suggestions",
+            "type": "string",
+            "enum": [
+              "ask",
+              "autoAccept"
+            ],
+            "enumItemLabels": [
+              "Always ask",
+              "Always auto-accept"
+            ],
+            "default": "ask",
+            "markdownDescription": "Whether to always prompt for type change suggestions or automatically accept and cascade them",
             "scope": "resource"
           },
           "languageServer.inlineTypeHint": {
