@@ -542,12 +542,18 @@ type TypeReplacementSuggestion = {
     newType: string;
 };
 
-type AnalysisResult = {
+interface AnalysisResult {
     inferenceSuggestions?: InferenceSuggestion[];
-    typeErrors?: any[];
+    typeErrors?: TypeError[];
     typeReplacementSuggestions?: TypeReplacementSuggestion[];
-    bindings?: Record<string, any>; // bindings map
-};
+    bindings?: Record<string, BindingInfo>;
+}
+interface BindingInfo {
+    id: string;
+    name: string;
+    dependencies: string[];
+    dependents: string[];
+}
 
 const autoAcceptCascade = new Map<string, boolean>();
 const cascadePassCount = new Map<string, number>();
@@ -666,7 +672,8 @@ async function applyReplacement(uri: string, r: TypeReplacementSuggestion): Prom
 
 async function handleReplacementSuggestions(
     uri: string,
-    replacements: TypeReplacementSuggestion[]
+    replacements: TypeReplacementSuggestion[],
+    bindings?: Record<string, BindingInfo>
 ): Promise<boolean> {
     const acceptOnce: MessageActionItem = { title: "Accept" };
     const acceptCascade: MessageActionItem = { title: "Accept & cascade" };
@@ -714,9 +721,25 @@ async function handleReplacementSuggestions(
         const applied = await applyReplacement(uri, r);
         if (applied) {
             appliedAny = true;
-            if (enableCascade) {
-                autoAcceptCascade.set(uri, true);
-                autoMode = true;
+            if (enableCascade && bindings) {
+                // Smart cascade: find dependents of this variable
+                const varBindings = Object.values(bindings).filter(b => b.name === r.name);
+                if (varBindings.length > 0) {
+                    const varBinding = varBindings[0];
+                    const dependentIds = varBinding.dependents;
+
+                    // For each dependent, find the corresponding replacement and cascade
+                    for (const dependentId of dependentIds) {
+                        const dependentBinding = bindings[dependentId];
+                        const dependentReplacement = replacements.find(
+                            rep => rep.name === dependentBinding.name
+                        );
+                        if (dependentReplacement) {
+                            // Recursively cascade to this dependent
+                            await cascadeToDependent(uri, dependentReplacement, bindings);
+                        }
+                    }
+                }
             }
         }
     }
@@ -731,6 +754,25 @@ async function handleReplacementSuggestions(
     return appliedAny;
 }
 
+async function cascadeToDependent(
+    uri: string,
+    replacement: TypeReplacementSuggestion,
+    bindings: Record<string, BindingInfo>
+): Promise<void> {
+    // Apply this dependent's replacement automatically
+    await applyReplacement(uri, replacement);
+
+    // Continue cascading to its dependents
+    const varBindings = Object.values(bindings).filter(b => b.name === replacement.name);
+    if (varBindings.length > 0) {
+        const varBinding = varBindings[0];
+        for (const dependentId of varBinding.dependents) {
+            const dependentBinding = bindings[dependentId];
+            connection.console.log(`[CASCADE] ${replacement.name} → ${dependentBinding.name}`);
+            // Cascade continues automatically without prompting
+        }
+    }
+}
 
 async function insertInfered(uri: string) {
   const suggestions = inferenceSuggestionMap.get(uri) ?? [];
