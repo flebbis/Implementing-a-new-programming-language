@@ -5,7 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import com.example.minilang.typechecker.*;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -14,10 +16,6 @@ import com.example.minilang.ast.Ast;
 import com.example.minilang.ast.AstBuilderVisitor;
 import com.example.minilang.codegen.FunctionCodeGen;
 import com.example.minilang.codegen.StatementCodeGen;
-import com.example.minilang.typechecker.JavaAnalysis;
-import com.example.minilang.typechecker.TypeChecker;
-import com.example.minilang.typechecker.TypeCheckerServer;
-import com.example.minilang.typechecker.TypeException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Compiler {
@@ -93,8 +91,8 @@ public class Compiler {
             TypeError error = new TypeError("Internal error: " + e.getMessage(), 0, 0); 
             typeErrors.add(error);
         }
-
-        JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors, typeReplacementSuggestions);
+        Map<String, Binding> bindings = typeChecker.getBindingRegistry();
+        JavaAnalysis javaAnalysis = new JavaAnalysis(suggestions, typeErrors, typeReplacementSuggestions, bindings);
         // Output as JSON to stdout for the language server to parse
 
         System.out.println(objectMapper.writeValueAsString(javaAnalysis));

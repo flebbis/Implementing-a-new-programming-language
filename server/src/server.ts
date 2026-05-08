@@ -546,6 +546,7 @@ type AnalysisResult = {
     inferenceSuggestions?: InferenceSuggestion[];
     typeErrors?: any[];
     typeReplacementSuggestions?: TypeReplacementSuggestion[];
+    bindings?: Record<string, any>; // bindings map
 };
 
 const autoAcceptCascade = new Map<string, boolean>();
@@ -575,9 +576,12 @@ async function inferenceAnalysis(uri: string, document: TextDocument, version: n
 
     try {
         const result = (await runJavaAnalysis(uri, document)) as AnalysisResult;
+        //TODO REMOVE THESE
         connection.console.log(
             `[ANALYSIS] keys=${Object.keys(result ?? {}).join(",")} replacements=${(result.typeReplacementSuggestions ?? []).length}`
+
         );
+        connection.console.log(`[BINDINGS] ${JSON.stringify(result.bindings)}`);
         const suggestions: InferenceSuggestion[] = result.inferenceSuggestions ?? [];
         const replacements: TypeReplacementSuggestion[] = result.typeReplacementSuggestions ?? [];
 

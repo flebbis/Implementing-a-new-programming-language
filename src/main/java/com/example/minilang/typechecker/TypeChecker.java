@@ -252,5 +252,7 @@ private boolean definitelyReturnsStmt(Ast.Stmt stmt) {
     public List<TypeReplacementSuggestion> getTypeReplacementSuggestions() {
         return typeReplacementSuggestions;
     }
-
+    public HashMap<String, Binding> getBindingRegistry() {
+        return context.getBindingRegistry();
+    }
 }
