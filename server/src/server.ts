@@ -591,13 +591,15 @@ async function inferenceAnalysis(uri: string, document: TextDocument, version: n
         if (cascadeSet && cascadeSet.size > 0) {
             connection.console.log(`[CASCADE] Cascading mode active, auto-accepting ${replacements.length} replacements`);
 
-            // Update cascade set with newly found variables
             if (replacements.length > 0) {
+                // More replacements found, keep cascading
                 replacements.forEach(rep => cascadeSet.add(rep.name));
                 autoAcceptCascade.set(uri, true);
             } else {
-                // No more replacements, cascade is done
+                // No more replacements, cascade is DONE — clear the flag!
+                connection.console.log(`[CASCADE] No more replacements, ending cascade`);
                 cascadingVariables.delete(uri);
+                autoAcceptCascade.delete(uri);  // <-- Clear this!
             }
         }
 
