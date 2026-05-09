@@ -559,7 +559,7 @@ const autoAcceptCascade = new Map<string, boolean>();
 const cascadePassCount = new Map<string, number>();
 const MAX_CASCADE_PASSES = 10;
 const cascadingVariables = new Map<string, Set<string>>();
-
+const previousBindings = new Map<string, Record<string, BindingInfo>>();
 const inferenceSuggestionMap = new Map<string, InferenceSuggestion[]>();
 
 
@@ -588,31 +588,40 @@ async function inferenceAnalysis(uri: string, document: TextDocument, version: n
 
         // Check if we should continue cascading
         const cascadeSet = cascadingVariables.get(uri);
-        if (cascadeSet && cascadeSet.size > 0 && result.bindings) {
-            // Filter replacements to only those that depend on cascading variables
-            replacements = replacements.filter(rep => {
-                const varBindings = Object.values(result.bindings!).filter(b => b.name === rep.name);
-                if (varBindings.length > 0) {
-                    const varBinding = varBindings[0];
-                    // Check if any of its dependencies are in the cascading set
-                    return varBinding.dependencies.some(depId => {
-                        const depBinding = result.bindings![depId];
-                        return cascadeSet.has(depBinding.name);
-                    });
-                }
-                return false;
-            });
+        if (cascadeSet && cascadeSet.size > 0) {
+            // Use PREVIOUS bindings to find dependents (current bindings are stale after edit)
+            const oldBindings = previousBindings.get(uri);
+            if (oldBindings) {
+                // Filter replacements to only those that depend on cascading variables
+                replacements = replacements.filter(rep => {
+                    const varBindings = Object.values(oldBindings).filter(b => b.name === rep.name);
+                    if (varBindings.length > 0) {
+                        const varBinding = varBindings[0];
+                        // Check if any of its dependencies are in the cascading set
+                        return varBinding.dependencies.some(depId => {
+                            const depBinding = oldBindings[depId];
+                            return cascadeSet.has(depBinding.name);
+                        });
+                    }
+                    return false;
+                });
 
-            // If we found cascading replacements, force autoMode
-            if (replacements.length > 0) {
-                connection.console.log(`[CASCADE] Found ${replacements.length} dependent replacements to apply`);
-                autoAcceptCascade.set(uri, true);
-            } else {
-                // No more cascading needed
-                cascadingVariables.delete(uri);
+                // If we found cascading replacements, force autoMode
+                if (replacements.length > 0) {
+                    connection.console.log(`[CASCADE] Found ${replacements.length} dependent replacements to apply`);
+                    autoAcceptCascade.set(uri, true);
+                } else {
+                    // No more cascading needed
+                    cascadingVariables.delete(uri);
+                }
             }
         } else {
             cascadingVariables.delete(uri);
+        }
+
+        // Store current bindings for next cascade iteration
+        if (result.bindings) {
+            previousBindings.set(uri, result.bindings);
         }
 
         // Handle replacement popup/edit first
