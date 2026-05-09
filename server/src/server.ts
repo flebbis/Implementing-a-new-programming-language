@@ -593,7 +593,7 @@ async function inferenceAnalysis(uri: string, document: TextDocument, version: n
 
         // Handle replacement popup/edit first
         if (isLatest(uri, version) && replacements.length > 0) {
-            await handleReplacementSuggestions(uri, replacements);
+            await handleReplacementSuggestions(uri, replacements, result.bindings);
         }
 
         // Then store inference suggestions for existing infer insert/inlay flows
