@@ -755,16 +755,13 @@ async function cascadeToDependent(
 ): Promise<void> {
     // Apply this dependent's replacement automatically
     await applyReplacement(uri, replacement);
+    connection.console.log(`[CASCADE] Applied ${replacement.name}`);
 
-    // Continue cascading to its dependents
-    const varBindings = Object.values(bindings).filter(b => b.name === replacement.name);
-    if (varBindings.length > 0) {
-        const varBinding = varBindings[0];
-        for (const dependentId of varBinding.dependents) {
-            const dependentBinding = bindings[dependentId];
-            connection.console.log(`[CASCADE] ${replacement.name} → ${dependentBinding.name}`);
-            // Cascade continues automatically without prompting
-        }
+    // Trigger a new type check to get fresh bindings and find next cascade target
+    const doc = documents.get(uri);
+    if (doc) {
+        // Re-run analysis to get updated bindings
+        await inferenceAnalysis(uri, doc, (latestDocumentVersions.get(uri) ?? 0) + 1);
     }
 }
 
