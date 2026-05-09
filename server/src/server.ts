@@ -589,37 +589,19 @@ async function inferenceAnalysis(uri: string, document: TextDocument, version: n
         // Check if we should continue cascading
         const cascadeSet = cascadingVariables.get(uri);
         if (cascadeSet && cascadeSet.size > 0) {
-            // Use PREVIOUS bindings to find dependents (current bindings are stale after edit)
-            const oldBindings = previousBindings.get(uri);
-            if (oldBindings) {
-                // Filter replacements to only those that depend on cascading variables
-                replacements = replacements.filter(rep => {
-                    const varBindings = Object.values(oldBindings).filter(b => b.name === rep.name);
-                    if (varBindings.length > 0) {
-                        const varBinding = varBindings[0];
-                        // Check if any of its dependencies are in the cascading set
-                        return varBinding.dependencies.some(depId => {
-                            const depBinding = oldBindings[depId];
-                            return cascadeSet.has(depBinding.name);
-                        });
-                    }
-                    return false;
-                });
+            connection.console.log(`[CASCADE] Cascading mode active, auto-accepting ${replacements.length} replacements`);
 
-                // If we found cascading replacements, force autoMode
-                if (replacements.length > 0) {
-                    connection.console.log(`[CASCADE] Found ${replacements.length} dependent replacements to apply`);
-                    autoAcceptCascade.set(uri, true);
-                } else {
-                    // No more cascading needed
-                    cascadingVariables.delete(uri);
-                }
+            // Update cascade set with newly found variables
+            if (replacements.length > 0) {
+                replacements.forEach(rep => cascadeSet.add(rep.name));
+                autoAcceptCascade.set(uri, true);
+            } else {
+                // No more replacements, cascade is done
+                cascadingVariables.delete(uri);
             }
-        } else {
-            cascadingVariables.delete(uri);
         }
 
-        // Store current bindings for next cascade iteration
+        // Store current bindings for reference
         if (result.bindings) {
             previousBindings.set(uri, result.bindings);
         }
@@ -713,7 +695,7 @@ async function handleReplacementSuggestions(
     const ignore: MessageActionItem = { title: "Ignore" };
 
     const docSettings = await getDocumentSettings(uri);
-    let autoMode = docSettings.autoCascadeTypeChanges === "autoAccept";
+    let autoMode = docSettings.autoCascadeTypeChanges === "autoAccept" || autoAcceptCascade.get(uri) === true;
     let appliedAny = false;
 
     if ((cascadePassCount.get(uri) ?? 0) > MAX_CASCADE_PASSES) {
@@ -727,9 +709,11 @@ async function handleReplacementSuggestions(
         let enableCascade = false;
 
         if (autoMode) {
+            // Auto mode: apply everything
             shouldApply = true;
             enableCascade = true;
         } else {
+            // Ask mode: prompt user
             const action = await connection.window.showWarningMessage(
                 `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}.`,
                 acceptOnce,
@@ -742,8 +726,11 @@ async function handleReplacementSuggestions(
             } else if (action?.title === acceptCascade.title) {
                 shouldApply = true;
                 enableCascade = true;
-            } else {
-                shouldApply = false;
+                // Mark for cascading
+                const cascadeSet = cascadingVariables.get(uri) ?? new Set<string>();
+                cascadeSet.add(r.name);
+                cascadingVariables.set(uri, cascadeSet);
+                connection.console.log(`[CASCADE] Marking ${r.name} for cascading to dependents`);
             }
         }
 
@@ -752,13 +739,6 @@ async function handleReplacementSuggestions(
         const applied = await applyReplacement(uri, r);
         if (applied) {
             appliedAny = true;
-            if (enableCascade && bindings) {
-                // Store cascade info for next analysis pass
-                const cascadeSet = cascadingVariables.get(uri) ?? new Set<string>();
-                cascadeSet.add(r.name);
-                cascadingVariables.set(uri, cascadeSet);
-                connection.console.log(`[CASCADE] Marking ${r.name} for cascading to dependents`);
-            }
         }
     }
 
@@ -767,11 +747,11 @@ async function handleReplacementSuggestions(
     } else {
         autoAcceptCascade.delete(uri);
         cascadePassCount.delete(uri);
+        cascadingVariables.delete(uri);
     }
 
     return appliedAny;
 }
-
 
 
 async function insertInfered(uri: string) {
