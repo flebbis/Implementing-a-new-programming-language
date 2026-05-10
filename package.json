@@ -3,7 +3,7 @@
   "description": "language server following lsp for the fika programming language",
   "author": "Cole",
   "license": "MIT",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "publisher": "Grupp17A",
   "repository": {
     "type": "git",
