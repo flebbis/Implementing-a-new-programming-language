@@ -174,7 +174,14 @@ public class StatementCodeGen extends Helper {
                 } else {
                     initValue = "0";
                 }
-                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue).append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
+
+                if(convertType(declStmt.type()).equals("void")) {
+                    return; //DO NAAATHING
+                }
+
+                String debugId = debugMetaData.declareGlobalVariable(declStmt.name(), convertType(declStmt.type()), declStmt.pos().line);
+                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue)
+                    .append(", !dbg !").append(debugId).append("\n");
                 environment.pushToCurrentScope(declStmt.name(), globalName);
                 return;
             }
@@ -206,6 +213,7 @@ public class StatementCodeGen extends Helper {
                 } else {
                     initValue = "0";
                 }
+                
                 String debugId = debugMetaData.declareGlobalVariable(initStmt.name(), convertType(initStmt.type()), initStmt.pos().line);
                 globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue)
                     .append(", !dbg !").append(debugId).append("\n");
