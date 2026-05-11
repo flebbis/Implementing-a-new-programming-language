@@ -192,9 +192,9 @@ public class StatementCodeGen extends Helper {
         .append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
         sb.append(debugMetaData.declareVariable(declStmt.name(), convertType(declStmt.type()), register, declStmt.pos().line));
         environment.pushToCurrentScope(declStmt.name(), register);
-        // }
+    }
     
-}
+
     private void generateInit(SInit initStmt) {
         if (!environment.existsInCurrentScope(initStmt.name()) && !(initStmt.type() instanceof TArray)) {
             // Variable not declared yet, so we need to allocate space for it
