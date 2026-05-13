@@ -53,10 +53,10 @@ connection.onInitialize((params: InitializeParams) => {
     capabilities.workspace &&
     !!capabilities.workspace.configuration
   ),
-  hasWorkspaceFolderCapability = !!(
-    capabilities.workspace &&
-    !!capabilities.workspace.workspaceFolders
-  );
+    hasWorkspaceFolderCapability = !!(
+      capabilities.workspace &&
+      !!capabilities.workspace.workspaceFolders
+    );
   hasDiagnosticRelatedInformationCapability = !!(
     capabilities.textDocument &&
     capabilities.textDocument.publishDiagnostics &&
@@ -218,21 +218,22 @@ connection.languages.diagnostics.on(async (params) => {
   }
 })
 
-
-const alternatingCaps = /\b(([a-z][A-Z]){2,}|([A-Z][a-z]){2,})\b/g
-const notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
-const doInf = /do *(inf|\(inf\))/g
-const whileTrue = /\bwhile *(true|\(true\))/g
-
 async function validateTextDocument(document: TextDocument): Promise<Diagnostic[]> {
+  return (await validateTextDocumentKeyword(document)).concat(await validateDocumentTypeAndSyntax(document.uri, document))
+}
+
+const notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
+const whileTrue = /\bwhile *(true|\(true\))/g
+const todo = /\bTODO.*/g
+
+async function validateTextDocumentKeyword(document: TextDocument): Promise<Diagnostic[]> {
   //lookup document settings
   let settings = await getDocumentSettings(document.uri);
 
   let diagnostics: Diagnostic[] = [];
 
-  diagnostics = diagnosePattern(alternatingCaps, 'alternating upper/lower-case test', DiagnosticSeverity.Warning, settings, document, diagnostics);
+  diagnostics = diagnosePattern(todo, '', DiagnosticSeverity.Information, settings, document, diagnostics)
   diagnostics = diagnosePattern(notRecVarName, 'not reccomended variable name', DiagnosticSeverity.Warning, settings, document, diagnostics);
-  diagnostics = diagnosePattern(doInf, 'DON\'T DO THIS', DiagnosticSeverity.Error, settings, document, diagnostics);
   diagnostics = diagnosePattern(whileTrue, 'This may never terminate', DiagnosticSeverity.Warning, settings, document, diagnostics);
 
   // don't send computed diagnostics, that is handeled by the diagnostics handler
@@ -256,7 +257,7 @@ function diagnosePattern(pattern: RegExp, message: string, severity: DiagnosticS
         start: document.positionAt(m.index),
         end: document.positionAt(m.index + m[0].length)
       },
-      message: `${m[0]} is detected!`,
+      message: `${m[0]}`,
       source: 'fika-diagnostics'
     };
     if (hasDiagnosticRelatedInformationCapability) {
@@ -311,7 +312,6 @@ function lineRange(line: number, endAt: number): Range {
 }
 
 connection.onHover((params: HoverParams) => {
-  // connection.console.log("onHover:")
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
   let pos = params.position;
@@ -319,7 +319,6 @@ connection.onHover((params: HoverParams) => {
     if (!inComment(pos, doc) //don't match inside comments
       && !inString(pos, doc) // don't match inside strings
       && wordChar.test(doc.getText(charRange(pos)))) { //only match if word
-      // connection.console.log("onHover: WORD DETECTED")
       const { word, range } = findWordAt(pos, doc)
       // connection.console.log("onHover: " + word)
       let m: RegExpMatchArray | null = doc.getText().match("\\b" + word + "\\b");
@@ -891,14 +890,14 @@ documents.onWillSaveWaitUntil(async (params) => {
 // -----------------------------------ERROR STUFF--------------------------------------------------
 // Syntax error collector
 
-documents.onDidChangeContent((change) => {
+/* documents.onDidChangeContent((change) => {
   validateDocument(change.document.uri, change.document);
 });
 
 
 documents.onDidOpen((event) => {
   validateDocument(event.document.uri, event.document);
-});
+}); */
 
 class SyntaxErrorCollector implements ANTLRErrorListener<any> {
   private diagnostics: Diagnostic[] = []
@@ -991,7 +990,7 @@ class SyntaxErrorCollector implements ANTLRErrorListener<any> {
 }
 
 // Validate document - checks both syntax and type errors
-async function validateDocument(uri: string, document: TextDocument): Promise<void> {
+async function validateDocumentTypeAndSyntax(uri: string, document: TextDocument): Promise<Diagnostic[]> {
   const text = document.getText();
   const allDiagnostics: Diagnostic[] = [];
 
@@ -1027,25 +1026,25 @@ async function validateDocument(uri: string, document: TextDocument): Promise<vo
         const typeErrors = await checkTypes(uri, text);
         console.log(`Type checker returned ${typeErrors.length} errors`);
 
-      const typeDiagnostics = typeErrors.map((error: any) => {
-        const startLine = error.line - 1;
-        const startChar = error.column;
+        const typeDiagnostics = typeErrors.map((error: any) => {
+          const startLine = error.line - 1;
+          const startChar = error.column;
 
-        // Get the actual line text to find where it ends
-        const lineText = documents.get(document.uri)?.getText({
-          start: { line: startLine, character: 0 },
-          end: { line: startLine, character: 999 }
-        }) ?? '';
+          // Get the actual line text to find where it ends
+          const lineText = documents.get(document.uri)?.getText({
+            start: { line: startLine, character: 0 },
+            end: { line: startLine, character: 999 }
+          }) ?? '';
 
-        return {
-          severity: error.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
-          range: {
-            start: { line: startLine, character: startChar },
-            end: { line: startLine, character: lineText.trimEnd().length }
-          },
-          message: error.message
-        };
-      });
+          return {
+            severity: error.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+            range: {
+              start: { line: startLine, character: startChar },
+              end: { line: startLine, character: lineText.trimEnd().length }
+            },
+            message: error.message
+          };
+        });
 
         allDiagnostics.push(...typeDiagnostics);
 
@@ -1060,11 +1059,10 @@ async function validateDocument(uri: string, document: TextDocument): Promise<vo
      * mismatched input '\n' expecting {'(', '{', 'return', 'while', 'do', 'if', TYPE, STRING, INT, DOUBLE, BOOL, 'not', ID, '['}
      */
     // Send all diagnostics to the editor
-    connection.sendDiagnostics({ uri: document.uri, diagnostics: allDiagnostics });
+    // connection.sendDiagnostics({ uri: document.uri, diagnostics: allDiagnostics });
 
   } catch (error) {
     console.error('Parser error:', error);
-
     connection.sendDiagnostics({
       uri: document.uri,
       diagnostics: [{
@@ -1074,10 +1072,10 @@ async function validateDocument(uri: string, document: TextDocument): Promise<vo
           end: { line: 0, character: 1 }
         },
         message: `Fatal parser error: ${error}`
-
       }]
     });
   }
+  return allDiagnostics
 }
 
 
