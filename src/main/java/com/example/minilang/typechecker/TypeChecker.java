@@ -4,10 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import com.example.minilang.InferenceSuggestion;
-import com.example.minilang.Pos;
-import com.example.minilang.TypeConverter;
-import com.example.minilang.TypeError;
+import com.example.minilang.*;
 import com.example.minilang.ast.Ast;
 
 public class TypeChecker {
@@ -18,11 +15,12 @@ public class TypeChecker {
     private Context inferenceContext;
     private List<InferenceSuggestion> inferenceSuggestions = new ArrayList<>();
     private List<TypeError> typeErrors = new ArrayList<>();
+    private List<TypeReplacementSuggestion>  typeReplacementSuggestions = new ArrayList<>();
 
     public TypeChecker() {
         this.context = new Context();
         this.inferenceContext = new Context();
-        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions);
+        this.statementTypeChecker = new StatementTypeChecker(context, functionSignatures, inferenceContext, inferenceSuggestions, typeReplacementSuggestions);
     }
 
     public Ast.Program typeCheck(Ast.Program program) {
@@ -36,8 +34,8 @@ public class TypeChecker {
         // InferenceSuggestion list is the real list for inference pass, the other pass will use a temp list
 
         List<InferenceSuggestion> tempInferenceSuggestions = new ArrayList<>();
-        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions);
-
+        List<TypeReplacementSuggestion> tempTypeReplacementSuggestions = new ArrayList<>();
+        StatementTypeChecker tempChecker = new StatementTypeChecker(tempContext, functionSignatures, new Context(), tempInferenceSuggestions, tempTypeReplacementSuggestions);
         // Swap to temp environment
         Context realContext = this.context;
         StatementTypeChecker realChecker = this.statementTypeChecker;
@@ -88,7 +86,18 @@ public class TypeChecker {
     private List<Ast.Func> extractFunctionSignatures(List<Ast.Func> functions) {
         List<Ast.Func> funcs = new ArrayList<>();
         for (Ast.Func func : functions) {
+
             String name = func.name();
+            if(functionSignatures.containsKey(name)) {
+                addTypeError(new TypeException("Duplicate function name: " + name, func.pos()));
+                continue;
+            }
+
+            if(IllegalIDs.illegalIDs.contains(name)) {
+                addTypeError(new TypeException("Illegal function name: " + name, func.pos()));
+                continue;
+            }
+
             Ast.Type returnType = func.returnType();
 
             List<Ast.Type> paramTypes = new ArrayList<>();
@@ -240,4 +249,10 @@ private boolean definitelyReturnsStmt(Ast.Stmt stmt) {
         return inferenceSuggestions;
     }
 
+    public List<TypeReplacementSuggestion> getTypeReplacementSuggestions() {
+        return typeReplacementSuggestions;
+    }
+    public HashMap<String, Binding> getBindingRegistry() {
+        return context.getBindingRegistry();
+    }
 }

@@ -3,7 +3,7 @@
   "description": "language server following lsp for the fika programming language",
   "author": "Cole",
   "license": "MIT",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "publisher": "Grupp17A",
   "repository": {
     "type": "git",
@@ -28,7 +28,11 @@
           "Fika",
           "FIKA"
         ],
-        "configuration": "./language-tools/language-configuration.json"
+        "configuration": "./language-tools/language-configuration.json",
+        "icon": {
+          "light": "./icons/fikaLangLogo_light.png",
+          "dark": "./icons/fikaLangLogo_light.png"
+        }
       },
       {
         "id": "asm-preview",
@@ -86,6 +90,20 @@
             ],
             "default": "nill",
             "description": "The currently avaliabe type inference insertion options"
+          },
+          "languageServer.autoCascadeTypeChanges": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "autoAccept"
+            ],
+            "enumItemLabels": [
+              "Always ask",
+              "Always auto-accept"
+            ],
+            "default": "ask",
+            "markdownDescription": "Whether to always prompt for type change suggestions or automatically accept and cascade them",
+            "scope": "resource"
           },
           "languageServer.inlineTypeHint": {
             "scope": "resource",

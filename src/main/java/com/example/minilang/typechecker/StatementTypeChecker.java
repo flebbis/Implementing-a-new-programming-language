@@ -7,6 +7,7 @@ import java.util.List;
 import com.example.minilang.InferenceSuggestion;
 import com.example.minilang.Pos;
 import com.example.minilang.TypeConverter;
+import com.example.minilang.TypeReplacementSuggestion;
 import com.example.minilang.ast.Ast;
 
 public class StatementTypeChecker {
@@ -19,16 +20,17 @@ public class StatementTypeChecker {
     private List<InferenceSuggestion> inferenceSuggestions; // For collecting suggestions during inference phase
     private List<String> calledFunctions = new ArrayList<>(); // For tracking called functions during inference phase
     private UnresolvedTypeHelper unresolvedTypeHelper;
+    private List<TypeReplacementSuggestion>  typeReplacementSuggestions;
 
     public StatementTypeChecker(Context context, HashMap<String, Signature> functionSignatures,
-            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions) {
+            Context inferenceContext, List<InferenceSuggestion> inferenceSuggestions, List<TypeReplacementSuggestion>  typeReplacementSuggestions) {
         this.context = context;
         this.functionSignatures = functionSignatures;
         this.inferenceContext = inferenceContext;
         this.inferenceSuggestions = inferenceSuggestions;
         this.unresolvedTypeHelper = new UnresolvedTypeHelper(context, currentFunction, functionSignatures);
         this.expressionTypeChecker = new ExpressionTypeChecker(context, functionSignatures, unresolvedTypeHelper);
-
+        this.typeReplacementSuggestions = typeReplacementSuggestions;
     }
 
     public List<String> getCalledFunctions() {
@@ -53,54 +55,58 @@ public class StatementTypeChecker {
         Ast.Exp value = expressionTypeChecker.typeCheck(sInit.value());
         Ast.Type typeToCheck = sInit.type();
 
-        // Logical Check: Is this a redeclaration or an assignment?
-        // We look up if the variable exists in the current scope chain.
         Ast.Type existingType = context.lookupLatest(sInit.name());
 
-        // If the variable exists and this is an implicit statement (e.g. "x = 5" not "int x = 5"),
-        // treat it as an Assignment to the existing variable.
+        // If it's an implicit assignment to an existing variable:
         if (existingType != null && typeToCheck instanceof Ast.TUnknown) {
-            // Transform to an expression
             Ast.EAss assign = new Ast.EAss(sInit.name(), value, Ast.AssOp.ASSIGN, existingType, sInit.pos());
-            return new Ast.SExp(expressionTypeChecker.typeCheck(assign), sInit.pos());
+            Ast.Exp typedAssign = expressionTypeChecker.typeCheck(assign);
+            return new Ast.SExp(typedAssign, sInit.pos());
         }
 
-        // If we reach here, it is a new Declaration.
+        // New declaration / inference
+        if (typeToCheck instanceof Ast.TUnknown && !(value.type() instanceof Ast.TUnknown)) {
+            typeToCheck = value.type();
 
-        // Infer type if unknown
-        if (typeToCheck instanceof Ast.TUnknown) {
-            if (!(value.type() instanceof Ast.TUnknown)) {
-                typeToCheck = value.type();
+            InferenceSuggestion suggestion = new InferenceSuggestion(
+                    sInit.name(),
+                    TypeConverter.typeToString(typeToCheck),
+                    sInit.pos().line,
+                    sInit.pos().column,
+                    sInit.pos().line,
+                    sInit.pos().column + sInit.name().length(),
+                    "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name()
+            );
 
-                if (typeToCheck instanceof Ast.TArray) {
-                    inferenceCheckArray((Ast.TArray) typeToCheck, sInit.name(), sInit.pos());
-                } else {
-                    InferenceSuggestion inferenceSuggestion = new InferenceSuggestion(
-                            sInit.name(),
-                            TypeConverter.typeToString(typeToCheck),
-                            sInit.pos().line,
-                            sInit.pos().column,
-                            sInit.pos().line,
-                            sInit.pos().column + sInit.name().length(),
-                            "Suggestion: " + TypeConverter.typeToString(typeToCheck) + " " + sInit.name());
-
-                    // Avoid duplicates for multiple inference passes
-                    if (!inferenceSuggestions.contains(inferenceSuggestion)) {
-                        inferenceSuggestions.add(inferenceSuggestion);
-                    }
-                }
+            if (!inferenceSuggestions.contains(suggestion)) {
+                inferenceSuggestions.add(suggestion);
             }
         }
 
-        // Verify types match for explicit declarations
-        // Allow TUnknown values to bypass checks during inference pass
+        // Type compatibility
         if (typeToCheck instanceof Ast.TArray) {
             typeToCheck = checkTypeCompatabilityArrays((Ast.TArray) typeToCheck, value);
         } else {
-            value = checkTypeCompatabilityNonArrays(typeToCheck, value);
+            value = checkTypeCompatabilityNonArrays(typeToCheck, value, sInit);
         }
 
-        context.pushToCurrentScope(sInit.name(), typeToCheck, sInit.pos());
+        // Create binding for this variable
+        // Create binding for this variable
+        String bindingId = context.createBinding(
+                sInit.name(),
+                Binding.Kind.VARIABLE,
+                sInit.pos(),
+                typeToCheck,
+                typeToCheck,
+                !(sInit.type() instanceof Ast.TUnknown)
+        ).id;  // Get the binding ID from the returned Binding object
+
+// Record dependencies from value expression to this binding
+        List<String> usedBindingIds = extractVariableBindingIds(value);
+        for (String usedId : usedBindingIds) {
+            context.addDependency(bindingId, usedId);
+        }
+
         return new Ast.SInit(typeToCheck, sInit.name(), value, sInit.pos());
     }
     
@@ -134,12 +140,21 @@ public class StatementTypeChecker {
         return sInitType;
     }
     
-    private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value) {
+    private Ast.Exp checkTypeCompatabilityNonArrays(Ast.Type sInitType, Ast.Exp value,  Ast.SInit sInit) {
         if (!compareTypes(sInitType, value.type()) && !(value.type() instanceof Ast.TUnknown)) {
             if (sInitType instanceof Ast.TDouble && value.type() instanceof Ast.TInt) {
                 value = new Ast.EDInt(value, new Ast.TDouble(), value.pos());
                 return value;
             } else {
+                typeReplacementSuggestions.add(new TypeReplacementSuggestion(
+                        sInit.name(),
+                        TypeConverter.typeToString(sInitType),
+                        sInit.pos().line,
+                        sInit.pos().column,
+                        sInit.pos().line,
+                        sInit.pos().column + TypeConverter.typeToString(sInitType).length(),
+                        TypeConverter.typeToString(value.type())
+                ));
                 throw new TypeException(
                         "Type mismatch:", TypeConverter.typeToString(sInitType),
                         TypeConverter.typeToString(value.type()),
@@ -347,5 +362,111 @@ public class StatementTypeChecker {
 
     public void updateInferenceContext(Context context) {
         inferenceContext = context;
+    }
+    private List<String> extractVariableBindingIds(Ast.Exp exp) {
+        List<String> bindingIds = new ArrayList<>();
+
+        if (exp instanceof Ast.EId eId) {
+            // Look up the binding ID for this variable
+            Binding binding = findBindingByName(eId.name());
+            if (binding != null) {
+                bindingIds.add(binding.id);
+            }
+        } else if (exp instanceof Ast.EOpp eOpp) {
+            bindingIds.addAll(extractVariableBindingIds(eOpp.left()));
+            bindingIds.addAll(extractVariableBindingIds(eOpp.right()));
+        } else if (exp instanceof Ast.ELogic eLogic) {
+            bindingIds.addAll(extractVariableBindingIds(eLogic.left()));
+            bindingIds.addAll(extractVariableBindingIds(eLogic.right()));
+        } else if (exp instanceof Ast.ECmp cmp) {
+            bindingIds.addAll(extractVariableBindingIds(cmp.left()));
+            bindingIds.addAll(extractVariableBindingIds(cmp.right()));
+        } else if (exp instanceof Ast.EUnary eUnary) {
+            bindingIds.addAll(extractVariableBindingIds(eUnary.exp()));
+        } else if (exp instanceof Ast.ECall eCall) {
+            for (Ast.Exp arg : eCall.args()) {
+                bindingIds.addAll(extractVariableBindingIds(arg));
+            }
+        } else if (exp instanceof Ast.EArrayIndex eArrayIndex) {
+            bindingIds.addAll(extractVariableBindingIds(eArrayIndex.array()));
+            bindingIds.addAll(extractVariableBindingIds(eArrayIndex.index()));
+        } else if (exp instanceof Ast.EArray eArray) {
+            for (Ast.Exp elem : eArray.elements()) {
+                bindingIds.addAll(extractVariableBindingIds(elem));
+            }
+        }
+
+        return bindingIds;
+    }
+
+    private Binding findBindingByName(String name) {
+        // Search through the binding registry for the most recent binding with this name
+        HashMap<String, Binding> registry = context.getBindingRegistry();
+        Binding result = null;
+        int maxScopeLevel = -1;
+
+        for (Binding binding : registry.values()) {
+            if (binding.name.equals(name) && binding.scopeLevel > maxScopeLevel) {
+                result = binding;
+                maxScopeLevel = binding.scopeLevel;
+            }
+        }
+        return result;
+    }
+    /**
+     * Extract all binding IDs from identifiers referenced in an expression.
+     * This finds all EId nodes and resolves their names to binding IDs via context lookup.
+     */
+
+    /**
+     * Recursively walk an expression tree and collect all binding IDs from EId (identifier) nodes.
+     */
+    private void collectBindingIdsFromExpression(Ast.Exp exp, List<String> out) {
+        if (exp == null) return;
+
+        if (exp instanceof Ast.EId eId) {
+            // This is a variable reference ? look it up in the binding registry
+            // We need to find the binding ID for this variable name
+            String varName = eId.name();
+            // Search through the binding registry for a binding with this name
+            for (Binding b : context.getBindingRegistry().values()) {
+                if (b.name.equals(varName) && b.scopeLevel <= context.getScopeLevel()) {
+                    // Add this binding (prefer the most recent scope)
+                    if (!out.contains(b.id)) {
+                        out.add(b.id);
+                    }
+                    break; // Take the first (most recent) match
+                }
+            }
+        } else if (exp instanceof Ast.EInt) {
+            // Leaf node, no dependencies
+        } else if (exp instanceof Ast.EString) {
+            // Leaf node, no dependencies
+        } else if (exp instanceof Ast.EDouble) {
+            // Leaf node, no dependencies
+        } else if (exp instanceof Ast.EBool) {
+            // Leaf node, no dependencies
+        } else if (exp instanceof Ast.EAss eAss) {
+            // Assignment: var = expr ? depends on expr
+            collectBindingIdsFromExpression(eAss.value(), out);
+        } else if (exp instanceof Ast.EOpp EOpp) {
+            // Binary operation: left op right
+            collectBindingIdsFromExpression(EOpp.left(), out);
+            collectBindingIdsFromExpression(EOpp.right(), out);
+        } else if (exp instanceof Ast.ECall eCall) {
+            // Function call: func(args) ? depends on all args
+            for (Ast.Exp arg : eCall.args()) {
+                collectBindingIdsFromExpression(arg, out);
+            }
+        } else if (exp instanceof Ast.EArray eArray) {
+            // Array literal: [e1, e2, ...] ? depends on all elements
+            for (Ast.Exp elem : eArray.elements()) {
+                collectBindingIdsFromExpression(elem, out);
+            }
+        } else if (exp instanceof Ast.EDInt eDInt) {
+            // Double integer cast: depends on inner exp
+            collectBindingIdsFromExpression(eDInt.exp(), out);
+        }
+        // Add more cases as needed for other Ast.Exp subtypes
     }
 }

@@ -22,6 +22,70 @@ export const instructions: Record<string, arguments> = {
         isReg(arg1) && isConst(arg2) ? `Load ${val(arg2!)} into register`:
         `Copy register into register`,
 
+    movl: (arg1, arg2) => {
+        const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
+        const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
+        if (ripDst && isConst(arg1))  return `${ripDst[1]} = ${val(arg1!)}`;
+        if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
+        if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
+        return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+                isConst(arg1) && isReg(arg2)  ? `Load ${val(arg1!)} into register` :
+                isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
+                    `Copy register into register`;
+    },
+
+    movq: (arg1, arg2) => {
+        const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
+        const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
+        if (ripDst && isConst(arg1))  return `${ripDst[1]} = ${val(arg1!)}`;
+        if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
+        if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
+        return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+            isConst(arg1) && isReg(arg2)  ? `Load ${val(arg1!)} into register` :
+            isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
+                    `Copy register into register`;
+    },
+
+    movb: (arg1, arg2) => {
+        const ripDst = arg2?.match(/^(.+)\(%rip\)$/);
+        const ripSrc = arg1?.match(/^(.+)\(%rip\)$/);
+        if (ripDst && isConst(arg1))  return `${ripDst[1]} = ${val(arg1!)}`;
+        if (ripDst && isReg(arg1))    return `${ripDst[1]} = register`;
+        if (ripSrc && isReg(arg2))    return `Load ${ripSrc[1]} into register`;
+        return isConst(arg1) && isVar(arg2) ? `${arg2} = ${val(arg1!)}` :
+            isConst(arg1) && isReg(arg2)  ? `Load ${val(arg1!)} into register` :
+                isVar(arg1)   && isReg(arg2) ? `Load ${arg1} into register` :
+                    isReg(arg1)   && isVar(arg2) ? `${arg2} = register` :
+                        `Copy register into register`;
+    },
+
+    test:  (arg1, arg2) => `Test ${arg2} against ${arg1} (set flags)`,
+    testb: (arg1, arg2) => `Test boolean value (set flags for branch)`,
+    testw: (arg1, arg2) => `Test ${arg2} against ${arg1} (set flags)`,
+    testl: (arg1, arg2) => `Test ${arg2} against ${arg1} (set flags)`,
+
+// In instructions - add these to the callq entry:
+    callq: (arg1) =>
+    arg1 === 'int_to_string'             ? `Convert int to string` :
+    arg1 === 'double_to_string'          ? `Convert double to string` :
+    arg1 === 'bool_to_string'            ? `Convert bool to string` :
+    arg1 === 'string_concat'             ? `Concatenate two strings` :
+    arg1 === 'array_int_to_string'       ? `Convert int array to string` :
+    arg1 === 'array_double_to_string'    ? `Convert double array to string` :
+    arg1 === 'array_bool_to_string'      ? `Convert bool array to string` :
+    arg1 === 'array_string_to_string'    ? `Convert string array to string` :
+    arg1 === 'array_int_copy'            ? `Copy int array (pass by value)` :
+    arg1 === 'array_double_copy'         ? `Copy double array (pass by value)` :
+    arg1 === 'array_bool_copy'           ? `Copy bool array (pass by value)` :
+    arg1 === 'array_string_copy'         ? `Copy string array (pass by value)` :
+    arg1 === 'array_index_out_of_bounds' ? `Runtime error: index out of bounds` :
+    arg1 === 'printf'                    ? `Print to console` :
+    arg1 === 'malloc'                    ? `Allocate heap memory` :
+    arg1 === 'free'                      ? `Free heap memory` :
+    `Call ${arg1}`,
+
     // arm/arm64: ldr r0, [sp, #4]
     // arm/arm64: ldr r0, x       
     ldr: (_arg1, arg2) =>
@@ -235,6 +299,8 @@ export const extendedInstructions: Record<string, arguments> = {
             `Copies data between registers during a computation\n\n` +
             `- **${arg1}** — source register\n` +
             `- **${arg2}** — destination register`,
+    movl: (arg1, arg2) => extendedInstructions.mov(arg1, arg2),
+    movq: (arg1, arg2) => extendedInstructions.mov(arg1, arg2),
 
     ldr: (arg1, arg2, arg3) =>
         isReg(arg1) && isVar(arg2) ? 
@@ -620,6 +686,137 @@ export const extendedInstructions: Record<string, arguments> = {
         `## call - Call Function\n\n` +
         `Calls a function and saves the return adress on the stack\n\n` +
         `- **${arg1}** — the name of the function being called\n`,
+
+    callq: (arg1) =>
+    arg1 === 'int_to_string' ?
+        `## int_to_string — Runtime Function\n\n` +
+        `Converts an integer value to its string representation\n\n` +
+        `- Takes the integer in the argument register (\`%edi\`)\n` +
+        `- Allocates a 32-byte buffer via malloc\n` +
+        `- Returns a pointer to the string in \`%rax\`\n\n` +
+        `Used when you write something like \`string(x)\` in your source code` :
+
+    arg1 === 'double_to_string' ?
+        `## double_to_string — Runtime Function\n\n` +
+        `Converts a double value to its string representation\n\n` +
+        `- Takes the double in the float argument register (\`%xmm0\`)\n` +
+        `- Allocates a 64-byte buffer via malloc\n` +
+        `- Returns a pointer to the string in \`%rax\`\n\n` +
+        `Used when you write something like \`string(x)\` on a double in your source code` :
+
+    arg1 === 'bool_to_string' ?
+        `## bool_to_string — Runtime Function\n\n` +
+        `Converts a boolean value to either \`"true"\` or \`"false"\`\n\n` +
+        `- Takes the bool in the argument register (\`%edi\`)\n` +
+        `- Returns a pointer to a static string literal — no allocation needed\n` +
+        `- Returns a pointer to the string in \`%rax\`\n\n` +
+        `Used when you write something like \`string(b)\` on a bool in your source code` :
+
+    arg1 === 'string_concat' ?
+        `## string_concat — Runtime Function\n\n` +
+        `Concatenates two strings into a new heap-allocated string\n\n` +
+        `- \`%rdi\` — pointer to the left-hand string\n` +
+        `- \`%rsi\` — pointer to the right-hand string\n` +
+        `- Allocates a new buffer of size len(a) + len(b) + 1\n` +
+        `- Returns a pointer to the result string in \`%rax\`\n\n` +
+        `Used when you write \`a + b\` on two strings in your source code` :
+
+    arg1 === 'array_int_to_string' ?
+        `## array_int_to_string — Runtime Function\n\n` +
+        `Converts an int array to a string like \`[1, 2, 3]\`\n\n` +
+        `- \`%rdi\` — pointer to the int data buffer\n` +
+        `- \`%rsi\` — number of elements\n` +
+        `- Returns a pointer to the formatted string in \`%rax\`\n\n` +
+        `Used when you print or convert an int array to string` :
+
+    arg1 === 'array_double_to_string' ?
+        `## array_double_to_string — Runtime Function\n\n` +
+        `Converts a double array to a string like \`[1.5, 2.0]\`\n\n` +
+        `- \`%rdi\` — pointer to the double data buffer\n` +
+        `- \`%rsi\` — number of elements\n` +
+        `- Returns a pointer to the formatted string in \`%rax\`\n\n` +
+        `Used when you print or convert a double array to string` :
+
+    arg1 === 'array_bool_to_string' ?
+        `## array_bool_to_string — Runtime Function\n\n` +
+        `Converts a bool array to a string like \`[true, false]\`\n\n` +
+        `- \`%rdi\` — pointer to the bool data buffer\n` +
+        `- \`%rsi\` — number of elements\n` +
+        `- Returns a pointer to the formatted string in \`%rax\`\n\n` +
+        `Used when you print or convert a bool array to string` :
+
+    arg1 === 'array_string_to_string' ?
+        `## array_string_to_string — Runtime Function\n\n` +
+        `Converts a string array to a string like \`["a", "b"]\`\n\n` +
+        `- \`%rdi\` — pointer to the string pointer array\n` +
+        `- \`%rsi\` — number of elements\n` +
+        `- Returns a pointer to the formatted string in \`%rax\`\n\n` +
+        `Used when you print or convert a string array to string` :
+
+    arg1 === 'array_int_copy' ?
+        `## array_int_copy — Runtime Function\n\n` +
+        `Creates a full deep copy of an int array on the heap\n\n` +
+        `- \`%rdi\` — pointer to the source array struct\n` +
+        `- Allocates a new struct and a new data buffer\n` +
+        `- Copies all elements from source to the new buffer\n` +
+        `- Returns a pointer to the new array struct in \`%rax\`\n\n` +
+        `Called automatically when passing an array to a function — arrays are passed by value in fika` :
+
+    arg1 === 'array_double_copy' ?
+        `## array_double_copy — Runtime Function\n\n` +
+        `Creates a full deep copy of a double array on the heap\n\n` +
+        `- \`%rdi\` — pointer to the source array struct\n` +
+        `- Allocates a new struct and a new data buffer\n` +
+        `- Returns a pointer to the new array struct in \`%rax\`\n\n` +
+        `Called automatically when passing a double array to a function` :
+
+    arg1 === 'array_bool_copy' ?
+        `## array_bool_copy — Runtime Function\n\n` +
+        `Creates a full deep copy of a bool array on the heap\n\n` +
+        `- \`%rdi\` — pointer to the source array struct\n` +
+        `- Allocates a new struct and a new data buffer\n` +
+        `- Returns a pointer to the new array struct in \`%rax\`\n\n` +
+        `Called automatically when passing a bool array to a function` :
+
+    arg1 === 'array_string_copy' ?
+        `## array_string_copy — Runtime Function\n\n` +
+        `Creates a shallow copy of a string array on the heap\n\n` +
+        `- \`%rdi\` — pointer to the source array struct\n` +
+        `- Allocates a new struct and pointer array (strings themselves are not duplicated)\n` +
+        `- Returns a pointer to the new array struct in \`%rax\`\n\n` +
+        `Called automatically when passing a string array to a function` :
+
+    arg1 === 'array_index_out_of_bounds' ?
+        `## array_index_out_of_bounds — Runtime Error\n\n` +
+        `Called when an array access is out of range — this will crash the program\n\n` +
+        `- \`%rdi\` — the index that was accessed\n` +
+        `- \`%rsi\` — the actual size of the array\n` +
+        `- Prints a red error message to stderr and calls \`exit(1)\`\n\n` +
+        `This is a safety check inserted by the compiler before every array index operation` :
+
+    arg1 === 'printf' ?
+        `## printf — C Standard Library\n\n` +
+        `Prints formatted output to the console\n\n` +
+        `- \`%rdi\` — pointer to the format string (e.g. \`"%s\\n"\`)\n` +
+        `- \`%rsi\` — the value to print\n` +
+        `- Returns the number of characters printed in \`%rax\`\n\n` +
+        `Generated by the compiler for every \`print()\` call in your source code` :
+
+    arg1 === 'malloc' ?
+        `## malloc — C Standard Library\n\n` +
+        `Allocates a block of memory on the heap\n\n` +
+        `- \`%rdi\` — number of bytes to allocate\n` +
+        `- Returns a pointer to the allocated memory in \`%rax\`\n\n` +
+        `Used by the compiler to allocate arrays and their data buffers` :
+
+    arg1 === 'free' ?
+        `## free — C Standard Library\n\n` +
+        `Releases a previously heap-allocated block of memory\n\n` +
+        `- \`%rdi\` — pointer to the memory block to release\n\n` +
+        `Called when an array needs to grow — the old buffer is freed after copying to the new one` :
+
+    // fall through to generic
+    extendedInstructions.call(arg1),
 
     idiv: (arg1) =>
         `## idiv - Signed Integer Divide\n\n` +

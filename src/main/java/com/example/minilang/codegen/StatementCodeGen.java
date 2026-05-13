@@ -174,7 +174,14 @@ public class StatementCodeGen extends Helper {
                 } else {
                     initValue = "0";
                 }
-                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue).append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
+
+                if(convertType(declStmt.type()).equals("void")) {
+                    return; //DO NAAATHING
+                }
+
+                String debugId = debugMetaData.declareGlobalVariable(declStmt.name(), convertType(declStmt.type()), declStmt.pos().line);
+                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue)
+                    .append(", !dbg !").append(debugId).append("\n");
                 environment.pushToCurrentScope(declStmt.name(), globalName);
                 return;
             }
@@ -185,13 +192,13 @@ public class StatementCodeGen extends Helper {
         .append(", !dbg !").append(debugMetaData.getLineId(declStmt.pos().line)).append("\n");
         sb.append(debugMetaData.declareVariable(declStmt.name(), convertType(declStmt.type()), register, declStmt.pos().line));
         environment.pushToCurrentScope(declStmt.name(), register);
-        // }
+    }
     
-}
+
     private void generateInit(SInit initStmt) {
         if (!environment.existsInCurrentScope(initStmt.name()) && !(initStmt.type() instanceof TArray)) {
             // Variable not declared yet, so we need to allocate space for it
-            if (Compiler.isGlobal){
+            if (Compiler.isGlobal) {
                 String globalName = "@" + initStmt.name();
                 String type = convertType(initStmt.type());
                 String initValue;
@@ -206,15 +213,17 @@ public class StatementCodeGen extends Helper {
                 } else {
                     initValue = "0";
                 }
-                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue).append("\n");
+                
+                String debugId = debugMetaData.declareGlobalVariable(initStmt.name(), convertType(initStmt.type()), initStmt.pos().line);
+                globals.append(globalName).append(" = global ").append(type).append(" ").append(initValue)
+                    .append(", !dbg !").append(debugId).append("\n");
                 environment.pushToCurrentScope(initStmt.name(), globalName);
-            } else{
-            String register = generateRegister();
-
-            sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type()))
-            .append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
-            sb.append(debugMetaData.declareVariable(initStmt.name(), convertType(initStmt.type()), register, initStmt.pos().line));
-            environment.pushToCurrentScope(initStmt.name(), register);
+            } else {
+                String register = generateRegister();
+                sb.append(" ").append(register).append(" = alloca ").append(convertType(initStmt.type()))
+                .append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
+                sb.append(debugMetaData.declareVariable(initStmt.name(), convertType(initStmt.type()), register, initStmt.pos().line));
+                environment.pushToCurrentScope(initStmt.name(), register);
             }
         }
         
@@ -225,9 +234,11 @@ public class StatementCodeGen extends Helper {
             String slot = generateRegister();
             if (Compiler.isGlobal) {
                 slot = "@" + initStmt.name();
-                globals.append(slot).append(" = global ").append(structType).append("* ").append("zeroinitializer").append(", !dbg !").append(debugMetaData.getLineId(initStmt.pos().line)).append("\n");
+                String debugId = debugMetaData.declareGlobalVariable(initStmt.name(), convertType(initStmt.type()), initStmt.pos().line);
+                globals.append(slot).append(" = global ").append(structType).append(" zeroinitializer")
+                    .append(", !dbg !").append(debugId).append("\n");
             } else {
-            sb.append(slot).append(" = alloca " + structType + "*\n"); // slot holds a pointer-to-struct
+                sb.append(slot).append(" = alloca ").append(structType).append("*\n");
             }
             // Store the pointer to the array struct in the allocated slot
             sb.append("store " + structType +" ")
