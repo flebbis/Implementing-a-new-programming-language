@@ -311,8 +311,10 @@ function lineRange(line: number, endAt: number): Range {
   return lineFromTo(line, 0, endAt)
 }
 
-
 connection.onHover(hoverHandler);
+
+
+
 
 function hoverHandler(params: HoverParams): Hover | null {
   const doc = documents.get(params.textDocument.uri)
@@ -323,12 +325,7 @@ function hoverHandler(params: HoverParams): Hover | null {
       && !inString(hoverPos, doc) // don't match inside strings
       && wordChar.test(doc.getText(charRange(hoverPos)))) { //only match if word-character
       const { word, range } = findWordAt(hoverPos, doc)
-      // connection.console.log("onHover: " + word)
       let m: RegExpMatchArray | null = doc.getText().match("\\b" + word + "\\b");
-      // firstDefInScope(doc, word, range) //find first occurences 
-      let description = ""
-      // connection.console.log("onHover: length = " + m?.length)
-      // connection.console.log("onHover: index = " + m?.index)
       if (!excluded.test(word) //exclude numerics, litterals and types
         && m && (m.index || m.index == 0)) { //ensures there is only one match (always true), 0 = false :/
         const mPos = doc.positionAt(m.index);
