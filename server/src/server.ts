@@ -318,7 +318,7 @@ function hoverHandler(params: HoverParams): Hover | null {
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
   let hoverPos = params.position;
-  if (doc != undefined) {
+  if (doc != undefined) { //ensure document exists
     if (!inComment(hoverPos, doc) //don't match inside comments
       && !inString(hoverPos, doc) // don't match inside strings
       && wordChar.test(doc.getText(charRange(hoverPos)))) { //only match if word-character
