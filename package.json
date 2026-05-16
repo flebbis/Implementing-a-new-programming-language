@@ -68,7 +68,7 @@
             "scope": "resource",
             "type": "boolean",
             "default": "true",
-            "description": "``Show Assembly`` will run every time the document is saved"
+            "description": "`Show Assembly` will run every time the document is saved"
           },
           "languageServer.insertionIntensity": {
             "scope": "resource",
@@ -86,7 +86,7 @@
             "markdownEnumDescriptions": [
               "No insertion",
               "Whenever the document is saved",
-              "Immediately when valid syntax allows inference"
+              "Immediately when valid syntax allows inference, overrides inlay-hints"
             ],
             "default": "nill",
             "description": "The currently avaliabe type inference insertion options"
@@ -105,11 +105,11 @@
             "markdownDescription": "Whether to always prompt for type change suggestions or automatically accept and cascade them",
             "scope": "resource"
           },
-          "languageServer.inlineTypeHint": {
+          "languageServer.inlayTypeHint": {
             "scope": "resource",
             "type": "boolean",
             "default": "true",
-            "description": "Display inline hint for infered types"
+            "description": "Display inlay-hints for infered types. Is overridden by `Immediate` insertion intensity"
           }
         }
       }

@@ -116,7 +116,7 @@ enum TypeInferenceSetting {
 interface ServerSettings {
     maxNumberOfProblems: number;
     insertionIntensity: TypeInferenceSetting;
-    inlineTypeHint: boolean;
+    inlayTypeHint: boolean;
     autoCascadeTypeChanges: 'ask' | 'autoAccept';
 }
 
@@ -125,7 +125,7 @@ interface ServerSettings {
 const defaultSettings: ServerSettings = {
     maxNumberOfProblems: 1000,
     insertionIntensity: TypeInferenceSetting.Nill,
-    inlineTypeHint: false,
+    inlayTypeHint: false,
     autoCascadeTypeChanges: 'autoAccept',
 }
 
@@ -219,7 +219,7 @@ connection.languages.diagnostics.on(async (params) => {
 })
 
 async function validateTextDocument(document: TextDocument): Promise<Diagnostic[]> {
-  return (await validateTextDocumentKeyword(document)).concat(await validateDocumentTypeAndSyntax(document.uri, document))
+  return (await validateDocumentTypeAndSyntax(document.uri, document)).concat(await validateTextDocumentKeyword(document))
 }
 
 const notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
@@ -311,15 +311,18 @@ function lineRange(line: number, endAt: number): Range {
   return lineFromTo(line, 0, endAt)
 }
 
-connection.onHover((params: HoverParams) => {
+
+connection.onHover(hoverHandler);
+
+function hoverHandler(params: HoverParams): Hover | null {
   const doc = documents.get(params.textDocument.uri)
   let res: Hover | null = null
-  let pos = params.position;
+  let hoverPos = params.position;
   if (doc != undefined) {
-    if (!inComment(pos, doc) //don't match inside comments
-      && !inString(pos, doc) // don't match inside strings
-      && wordChar.test(doc.getText(charRange(pos)))) { //only match if word
-      const { word, range } = findWordAt(pos, doc)
+    if (!inComment(hoverPos, doc) //don't match inside comments
+      && !inString(hoverPos, doc) // don't match inside strings
+      && wordChar.test(doc.getText(charRange(hoverPos)))) { //only match if word-character
+      const { word, range } = findWordAt(hoverPos, doc)
       // connection.console.log("onHover: " + word)
       let m: RegExpMatchArray | null = doc.getText().match("\\b" + word + "\\b");
       // firstDefInScope(doc, word, range) //find first occurences 
@@ -330,7 +333,7 @@ connection.onHover((params: HoverParams) => {
         && m && (m.index || m.index == 0)) { //ensures there is only one match (always true), 0 = false :/
         const mPos = doc.positionAt(m.index);
         // connection.console.log(positionString(mPos))
-        let description = firstDefInScope(doc, word, mPos, pos); //remove trailing and leading whitespace 
+        let description = firstDefInScope(doc, word, mPos, hoverPos); //remove trailing and leading whitespace 
         let contents: MarkupContent = {
           kind: MarkupKind.Markdown,
           value: [
@@ -345,7 +348,7 @@ connection.onHover((params: HoverParams) => {
     }
   }
   return res
-})
+}
 
 function firstDefInScope(doc: TextDocument, word: string, mPos: Position, hoverPos: Position): string {
   const start = shiftChar(mPos, word.length)
@@ -808,7 +811,7 @@ documents.onDidChangeContent(async change => {
   latestDocumentVersions.set(uri, version); // Set document version on change, used to discard outdated analysis results
 
   // Type check & inference phase
-  if (settings.inlineTypeHint || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
+  if (settings.inlayTypeHint || settings.insertionIntensity == TypeInferenceSetting.InsertOnChange) {
 
     if (isLatest(uri, version)) {
       await inferenceAnalysis(uri, doc, version);
@@ -820,7 +823,7 @@ documents.onDidChangeContent(async change => {
       // connection.console.log("inserting...")
       insertInfered(uri);
     }
-    if (isLatest(uri, version) && settings.inlineTypeHint) { // Refresh inlay hints
+    if (isLatest(uri, version) && settings.inlayTypeHint) { // Refresh inlay hints
       connection.languages.inlayHint.refresh();
     }
     // connection.console.log("done.")
@@ -834,7 +837,7 @@ documents.onDidChangeContent(async change => {
 connection.languages.inlayHint.on(async (params) => {
   const uri = params.textDocument.uri;
   const settings = await getDocumentSettings(uri)
-  if (settings.inlineTypeHint) {
+  if (settings.inlayTypeHint) {
     const suggestions = inferenceSuggestionMap.get(uri) ?? [];
     connection.console.log("Suggestiosn : " + suggestions)
     return suggestions.map((s) => ({
@@ -880,7 +883,7 @@ documents.onWillSaveWaitUntil(async (params) => {
       inferenceSuggestionMap.clear();
     }
   }
-  if (settings.inlineTypeHint) {
+  if (settings.inlayTypeHint) {
     connection.languages.inlayHint.refresh();
   }
   // connection.console.log("done.")
