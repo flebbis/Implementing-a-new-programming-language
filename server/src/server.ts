@@ -329,7 +329,6 @@ function hoverHandler(params: HoverParams): Hover | null {
       if (!excluded.test(word) //exclude numerics, litterals and types
         && m && (m.index || m.index == 0)) { //ensures there is only one match (always true), 0 = false :/
         const mPos = doc.positionAt(m.index);
-        // connection.console.log(positionString(mPos))
         let description = firstDefInScope(doc, word, mPos, hoverPos); //remove trailing and leading whitespace 
         let contents: MarkupContent = {
           kind: MarkupKind.Markdown,
