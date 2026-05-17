@@ -717,7 +717,7 @@ async function handleReplacementSuggestions(
         } else {
             // Ask mode: prompt user
             const action = await connection.window.showWarningMessage(
-                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Change ${r.name} to ${r.newType}?`,
+                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Change '${r.name}' to ${r.newType}?`,
                 acceptOnce,
                 acceptCascade,
                 ignore
