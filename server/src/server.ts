@@ -693,7 +693,7 @@ async function handleReplacementSuggestions(
     bindings?: Record<string, BindingInfo>
 ): Promise<boolean> {
     const acceptOnce: MessageActionItem = { title: "Accept" };
-    const acceptCascade: MessageActionItem = { title: "Accept & cascade" };
+    const acceptCascade: MessageActionItem = { title: "Accept & Cascade" };
     const ignore: MessageActionItem = { title: "Ignore" };
 
     const docSettings = await getDocumentSettings(uri);
@@ -717,7 +717,7 @@ async function handleReplacementSuggestions(
         } else {
             // Ask mode: prompt user
             const action = await connection.window.showWarningMessage(
-                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}.`,
+                `Type mismatch for '${r.name}': declared ${r.currentType}, value suggests ${r.newType}. Change ${r.name} to ${r.newType}?`,
                 acceptOnce,
                 acceptCascade,
                 ignore
