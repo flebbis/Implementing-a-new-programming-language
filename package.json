@@ -30,8 +30,8 @@
         ],
         "configuration": "./language-tools/language-configuration.json",
         "icon": {
-          "light": "./icons/fikaLangLogo_light.png",
-          "dark": "./icons/fikaLangLogo_light.png"
+          "light": "./icons/fikaLangLogo_light-notext.png",
+          "dark": "./icons/fikaLangLogo_light-notext.png"
         }
       },
       {
