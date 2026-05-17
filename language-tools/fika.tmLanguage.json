@@ -218,10 +218,24 @@
     },
     "ArgumentDeclaration": {
       "name": "meta.function.declaration.argument",
-      "match": "([a-z]+) *([a-zA-Z_][a-zA-Z0-9]*)",
+      "patterns":[
+        {"include":"#ArgumentDeclarationTyped"},
+        {"include":"#ArgumentDeclarationUntyped"}
+      ]
+    },
+    "ArgumentDeclarationTyped": {
+      "name": "meta.function.declaration.argument.typed",
+      "match": "([a-z]+) +([a-zA-Z_][a-zA-Z0-9]*)",
       "captures":{
         "1": {"name": "storage.type"},
         "2": {"name": "variable.parameter"}
+      }
+    },
+    "ArgumentDeclarationUntyped": {
+      "name": "meta.function.declaration.argument.untyped",
+      "match": "([a-zA-Z_][a-zA-Z0-9]*)",
+      "captures":{
+        "1": {"name": "variable.parameter"}
       }
     },
     "ArgumentDeclarationArray": {

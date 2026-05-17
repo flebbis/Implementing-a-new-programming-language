@@ -223,8 +223,8 @@ async function validateTextDocument(document: TextDocument): Promise<Diagnostic[
 }
 
 const notRecVarName: RegExp = /\b(if|else|while|do|true|false|return|and|or)(?= *\=)/g
-const whileTrue = /\bwhile *(true|\(true\))/g
-const todo = /\bTODO.*/g
+const whileTrue: RegExp = /\bwhile *(true|\(true\))/g
+const todo: RegExp = /\bTODO.*/g
 
 async function validateTextDocumentKeyword(document: TextDocument): Promise<Diagnostic[]> {
   //lookup document settings
