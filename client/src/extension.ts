@@ -14,6 +14,7 @@ import { countReset } from "console";
 import { PROFILES } from "./architecture";
 import { buildStackMap, buildVarMap, zippedVarMap } from "./varMap";
 import { descriptionPanel } from "./descriptionPanel";
+import * as fs from 'fs';
 
 
 // a custom API, that makes the document readonly 
@@ -500,11 +501,33 @@ export async function activate(context: ExtensionContext) {
       const filePath = editor.document.uri.fsPath;
       const scriptPath = context.asAbsolutePath(path.join('.', 'run-fika.ps1'));
 
-      const terminal = vscode.window.createTerminal('FIKA Run');
-      terminal.show(true);
-      terminal.sendText(`powershell -ExecutionPolicy Bypass -File "${scriptPath}" "${filePath}"`);
+      const workspaceRoot = findProjectRoot(filePath)
+      console.log(workspaceRoot + " roooot")
+      if (!fikaTerminal || fikaTerminal.exitStatus !== undefined) {
+        fikaTerminal = vscode.window.createTerminal('FIKA Run');
+      }
+      fikaTerminal.show(true);
+      fikaTerminal.sendText(
+        `powershell -ExecutionPolicy Bypass -File "${scriptPath}" -Source "${filePath}" -ProjectRoot "${workspaceRoot}"`
+      );
     })
   );
+
+  let fikaTerminal: vscode.Terminal | undefined;
+
+function findProjectRoot(filePath: string): string | undefined {
+  let dir = path.dirname(filePath);
+  while (true) {
+    if (fs.existsSync(path.join(dir, 'runtime', 'runtime.c'))) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return undefined;
+    dir = parent;
+  }
+}
+
+  
 
   // Auto-run on save for .fika files
   let debounceTimer: NodeJS.Timeout | undefined;
@@ -524,6 +547,7 @@ export async function activate(context: ExtensionContext) {
     })
   );
 }
+
 
 
 

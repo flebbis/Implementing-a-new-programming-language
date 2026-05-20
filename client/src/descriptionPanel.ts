@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export class descriptionPanel implements x {
+export class descriptionPanel implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
 
   resolveWebviewView(webviewView: vscode.WebviewView) {

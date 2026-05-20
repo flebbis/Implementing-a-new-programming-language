@@ -1,5 +1,6 @@
 ﻿param(
-    [string]$Source = ".\src\test\resources\syntax\good\good.fika"
+    [string]$Source = ".\src\test\resources\syntax\good\good.fika",
+    [string]$ProjectRoot = $PSScriptRoot  # fallback när man kör direkt
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,7 +9,8 @@ $PSNativeCommandUseErrorActionPreference = $false
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $jar = Join-Path $scriptDir "LLVMINI-1.0-SNAPSHOT.jar"
-$runtime = Join-Path $scriptDir "runtime\runtime.c"
+# Ändra runtime-raden:
+$runtime = Join-Path $ProjectRoot "runtime\runtime.c"
 
 if (!(Test-Path $Source)) {
     throw "Source file not found: $Source"
