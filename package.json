@@ -232,6 +232,15 @@
           "group": "navigation"
         }
       ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "fika.descriptionPanel",
+          "name": "Instruction Description"
+        }
+      ]
     }
   },
   "scripts": {

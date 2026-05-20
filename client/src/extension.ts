@@ -13,6 +13,7 @@ import {
 import { countReset } from "console";
 import { PROFILES } from "./architecture";
 import { buildStackMap, buildVarMap, zippedVarMap } from "./varMap";
+import { descriptionPanel } from "./descriptionPanel";
 
 
 // a custom API, that makes the document readonly 
@@ -83,6 +84,11 @@ export async function activate(context: ExtensionContext) {
   // Start the client. This will also launch the server
   client.start();
 
+  const descPanel = new descriptionPanel();
+  context.subscriptions.push(
+  vscode.window.registerWebviewViewProvider('fika.descriptionPanel', descPanel) 
+  );
+
   // Makes so you cant edit the assembly file
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument(async e => {
@@ -102,6 +108,8 @@ export async function activate(context: ExtensionContext) {
       
     })
   );
+
+  
 
      
   // ------ Show assembly -------- 
@@ -252,6 +260,8 @@ export async function activate(context: ExtensionContext) {
     }
   }
 
+
+
   // ------------ SHOW TEXT TO ASSEMBLYCODE -------------------------------------
   // This solution are meant to show for arm64 and arm86 
   // Register inlayHints for assembly
@@ -296,7 +306,7 @@ export async function activate(context: ExtensionContext) {
           const stripped = tokens[0].replace(/[lq]$/, '');
           const clearOp = (instructions[tokens[0]] || extendedInstructions[tokens[0]]) ? tokens[0] : stripped;
           const operand = instructions[clearOp];
-          const extended = extendedInstructions[clearOp];
+          //const extended = extendedInstructions[clearOp];
           const pos = new vscode.Position(i, document.lineAt(i).text.length);
           // If tokens have any variables, change them to to varaible and then push hint %4exp -> i
           if (operand) {
@@ -307,20 +317,20 @@ export async function activate(context: ExtensionContext) {
             // for a given operand, make it a inlayhint and create markdownString for the extended hint, push the hint
             const text = operand(tokens[1], tokens[2], tokens[3], tokens[4]);
             const hint = new vscode.InlayHint(pos, text);
-            if (extended) {
-              let extendedText = extended(tokens[1], tokens[2], tokens[3], tokens[4]);
-              const memoryLines: string[] = [];
-              for (const [slot, varName] of slotMap) {
-                if (trimmed.includes(slot)) {
-                  memoryLines.push(`\`${slot}\` → \`${varName}\``);
-                }
-              }
-              if (memoryLines.length > 0) {
-                extendedText += `\n\n---\n\n**Memory:** ${memoryLines.join(', ')}`;
-              }
-              const md = new vscode.MarkdownString(extendedText);
-              hint.tooltip = md;
-            }
+            // if (extended) {
+            //   let extendedText = extended(tokens[1], tokens[2], tokens[3], tokens[4]);
+            //   const memoryLines: string[] = [];
+            //   for (const [slot, varName] of slotMap) {
+            //     if (trimmed.includes(slot)) {
+            //       memoryLines.push(`\`${slot}\` → \`${varName}\``);
+            //     }
+            //   }
+            //   if (memoryLines.length > 0) {
+            //     extendedText += `\n\n---\n\n**Memory:** ${memoryLines.join(', ')}`;
+            //   }
+            //   const md = new vscode.MarkdownString(extendedText);
+            //   hint.tooltip = md;
+            // }
             hints.push(hint);
           } 
         }
@@ -387,9 +397,26 @@ export async function activate(context: ExtensionContext) {
       // set decoration on source line
       srcEditor.setDecorations(decoration, [srcRange]);
       activeEditor = srcEditor;
+
+      const rawLine = e.textEditor.document.lineAt(clickedLine).text.trim();
+      const resolvedTokens = rawLine.split(/\s+/)
+      .map((t: string) => t.replace(",", "").replace("#", ""));
+      const stripped = resolvedTokens[0].replace(/[lq]$/, '');
+      const clearOp = (instructions[resolvedTokens[0]] || extendedInstructions[resolvedTokens[0]])
+      ? resolvedTokens[0] : stripped;
+      const extended = extendedInstructions[clearOp];
+      if (extended) {
+        descPanel.update(extended(resolvedTokens[1], resolvedTokens[2], resolvedTokens[3], resolvedTokens[4]));
+      } else {
+        descPanel.update(`<em style="color:var(--vscode-descriptionForeground)">${resolvedTokens[0] || 'No instruction selected'}</em>`);
+      }
       } 
     })
   )
+
+  
+
+
 
   // commands for optimazation
   //vsCode trigger this when show assembly opens, runs what is inside
