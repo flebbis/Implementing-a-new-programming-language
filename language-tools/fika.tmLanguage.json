@@ -8,11 +8,10 @@
     "Statement": {
       "patterns": [
         {"include": "#ControllStatement"},
-        {"include": "#Expression"},
-        {"include": "#StatementBlock"},
         {"include": "#VariableDeclaration"},
-        {"include": "#VariableDeclarationArray"}
-        
+        {"include": "#VariableDeclarationArray"},
+        {"include": "#Expression"},
+        {"include": "#StatementBlock"}
       ]
     },
     "StatementBlock": {
@@ -31,7 +30,8 @@
         {"include": "#Assignment"},
         {"include": "#Operator"},
         {"include": "#FunctionApplication"},
-        {"include": "#Litteral"}
+        {"include": "#Litteral"},
+        {"include": "#Variable"}
       ]
     },
     "ParensExp": {
@@ -39,7 +39,7 @@
       "begin": "\\(",
       "end": "\\)",
       "patterns": [
-        {"include": "#Comment"},
+        {"include":"#Comment"},
         {"include":"#Expression"}]
     },
     "Operator": {
@@ -145,12 +145,16 @@
         { "name": "constant.numeric.expression.litteral.double",
           "match": "\\b[1-9][0-9]*\\.[0-9]*|[0-9]*\\.[0-9]*\\b"},
         { "name": "constant.numeric.expression.litteral.integer",
-          "match": "\\b[1-9][0-9]*\\b"},
+          "match": "\\b[0-9][0-9]*\\b"},
         { "name": "constant.language.expression.litteral.boolean",
           "match": "\\b(true|false)\\b"},
         { "name": "string.quoted.double.expression.litteral.string",
           "begin": "\"",
           "end": "\""}]
+    },
+    "Variable": {
+      "name": "variable",
+      "match": "[a-zA-Z_][a-zA-Z0-9]*"
     },
     "FunctionApplication": {
       "name": "meta.function-application",
@@ -204,7 +208,7 @@
     },
     "FunctionDeclaration": {
       "name": "meta.statement.definition.function",
-      "begin": "(\\b[a-zA-Z_][a-zA-Z0-9]*\\b)? *(\\bfunc\\b) *(\\b[a-zA-Z_][a-zA-Z0-9]*\\b) *\\(",
+      "begin": "(\\b[a-zA-Z_][a-zA-Z0-9]*\\b|\\[[a-zA-Z_][a-zA-Z0-9]*\\])? *(\\bfunc\\b) *(\\b[a-zA-Z_][a-zA-Z0-9]*\\b) *\\(",
       "end": "\\)",
       "patterns": [
         {"include": "#ArgumentDeclaration"},
