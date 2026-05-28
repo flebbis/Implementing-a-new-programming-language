@@ -170,8 +170,11 @@
     "ControllStatement": {
       "name": "keyword.controll.statement",
       "patterns": [
-        { "name": "keyword.controll.statement.return",
-          "match": "\\breturn\\b"},
+        { "match": "( *)(\\breturn\\b)",
+          "captures": {
+            "2": {"name": "keyword.controll.statement.return"}
+          }
+        },
         { "name": "keyword.controll.statement.while",
           "match": "\\bwhile\\b"},
         { "name": "keyword.controll.statement.do",
@@ -265,21 +268,21 @@
     },
     "VariableDeclaration": {
       "name": "meta.statement.declaration.variable",
-      "match": "(?=^|.*;) *([a-z]{3,7})? *\\b([a-zA-Z_][a-zA-Z0-9]*) *(?=;|=|$|//|/\\*)",
+      "match": "(^|;) *(\\b[a-z]{3,7}\\b)? *(\\b[a-zA-Z_][a-zA-Z0-9_]*)",
       "captures":{
-        "1":{"name": "storage.type"},
-        "2":{"name": "variable"}
+        "2":{"name": "storage.type"},
+        "3":{"name": "variable"}
       }
     },
     "VariableDeclarationArray": {
       "name": "meta.statement.declaration.variable.array",
-      "begin": "(?=^|.*;) *\\[",
-      "end": "\\] *\\b([a-zA-Z_][a-zA-Z0-9]*) *(?=;|=|$|//|/\\*)",
+      "begin": "(^|;) *\\[",
+      "end": "\\] *(\\b[a-zA-Z_][a-zA-Z0-9]*\\b)",
       "patterns":[
         {"include": "#Type"},
         {"include": "#ArrayRecursive"}
       ],
-      "captures":{
+      "endcaptures":{
         "1":{"name": "variable"}
       }
     },
