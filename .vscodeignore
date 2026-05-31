@@ -8,7 +8,6 @@ server/node_modules
 .claude/
 target/
 src/
-runtime/
 tsconfig.json
 .gitignore
 *.iml
